@@ -71,9 +71,7 @@ class LLMClient:
             "max_tokens": self.max_tokens,
         }
 
-        # 请求 JSON 格式输出时添加 response_format
-        if response_format == "json":
-            kwargs["response_format"] = {"type": "json_object"}
+        # Minimax 不支持 response_format，通过 prompt 要求 JSON 输出
 
         try:
             response = self.client.chat.completions.create(**kwargs)

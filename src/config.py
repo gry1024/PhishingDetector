@@ -18,7 +18,7 @@ load_dotenv(ROOT_DIR / ".env")
 class LLMConfig(BaseModel):
     """LLM API 配置"""
     api_key: str = os.getenv("MINIMAX_API_KEY", "")
-    base_url: str = os.getenv("MINIMAX_BASE_URL", "https://api.minimaxi.chat/v1")
+    base_url: str = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
     model: str = os.getenv("MINIMAX_MODEL", "MiniMax-Text-01")
     temperature: float = 0.1  # 检测任务需要低温度保证一致性
     max_tokens: int = 2048

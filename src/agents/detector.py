@@ -1,250 +1,132 @@
 """
 多维关联检测 Agent（Agent #2）
 ==============================
-从多个维度检测邮件的技术特征：
-- 发件人可信度分析
-- URL/链接安全性分析
-- 内容特征标记检测
+核心职责：从技术维度检测邮件的安全特征。
 
-这个 Agent 结合了规则检测和 LLM 分析，弥补纯语义分析的盲区。
+工具集：
+- analyze_url: 分析 URL 安全特征（IP域名、短链、可疑TLD等）
+- check_sender_domain: 检测发件人域名可信度
+- scan_phishing_patterns: 正则扫描钓鱼话术
+- extract_urls: 提取邮件中的 URL
+
+工作流：
+1. 调用工具对每个 URL 做安全分析
+2. 调用工具检测发件人域名
+3. 调用工具扫描关键词模式
+4. 将工具结果 + 邮件全文传给 LLM 做深度技术分析
+5. 融合工具分数和 LLM 分析结果
 """
 
-import re
-import logging
-from urllib.parse import urlparse
-
-from src.agents.base import BaseAgent
+from src.agents.base import BaseAgent, EventCallback
 from src.models import EmailInput, DetectionResult, SemanticResult
+from src.tools import DETECTOR_TOOLS, extract_urls
 
 
-# Agent #2 系统提示词
-SYSTEM_PROMPT = """你是一个邮件安全技术检测专家。你需要从技术维度分析邮件的安全性。
+SYSTEM_PROMPT = """你是一个邮件安全技术检测专家。基于工具预扫描结果，进行深度技术分析。
 
-请分析以下维度：
-1. 发件人可信度：域名是否可疑、是否冒充知名机构、是否存在拼写变体（如 g00gle.com）
-2. URL安全性：域名是否新注册、是否使用短链、URL中是否包含IP地址、是否有可疑路径
-3. 内容标记：是否要求输入凭证、是否包含品牌冒充、是否有异常的格式化要求
+分析维度：
+1. 发件人可信度(0-1): 域名仿冒、免费邮箱、格式异常
+2. URL安全性(0-1): 可疑域名、短链、IP地址、异常端口
+3. 内容标记: suspicious_link, brand_impersonation, credential_request, urgency_language 等
 
-请以严格的 JSON 格式返回：
+以严格JSON返回：
 {
-    "sender_score": 0.0到1.0之间的发件人可信度（1.0=完全可信），
-    "sender_analysis": "发件人分析说明",
-    "url_score": 0.0到1.0之间的URL安全评分（1.0=完全安全），
-    "url_analysis": "URL分析说明",
-    "content_flags": ["检测到的内容标记列表"],
-    "explanation": "综合技术分析说明"
+    "sender_score": 0.0到1.0,
+    "sender_analysis": "发件人分析",
+    "url_score": 0.0到1.0,
+    "url_analysis": "URL分析",
+    "content_flags": ["标记列表"],
+    "explanation": "综合分析说明"
 }"""
-
-# 已知的高可信域名后缀（用于规则检测辅助 LLM 判断）
-TRUSTED_DOMAINS = {
-    "gmail.com", "outlook.com", "hotmail.com", "yahoo.com",
-    "qq.com", "163.com", "126.com", "foxmail.com",
-    "microsoft.com", "google.com", "apple.com",
-}
-
-# 常见钓鱼关键词模式（作为 LLM 分析的补充）
-PHISHING_PATTERNS = [
-    r"(verify|confirm|update|secure)\s+(your|my)\s+(account|password|card)",
-    r"(click|visit|open)\s+(here|this|the link)",
-    r"(suspended|locked|restricted|compromised)\s*(account|card)",
-    r"(urgent|immediate|action required|respond within)",
-    r"(wire transfer|bank detail|tax refund|lottery|prize)",
-    r"(验证|确认|更新|冻结|锁定)\s*(账户|密码|银行)",
-    r"(紧急|立即|马上|限时)\s*(操作|处理|回复|转账)",
-    r"(中奖|退款|汇款|转账|打款)",
-]
 
 
 class DetectorAgent(BaseAgent):
-    """
-    多维关联检测 Agent
-    
-    工作流程：
-    1. 规则引擎快速扫描（URL格式、发件人域名、关键词匹配）
-    2. LLM 深度技术分析（结合规则扫描结果 + 邮件全文）
-    3. 融合规则分数和 LLM 分析结果
-    
-    设计原则：
-    - 规则引擎处理明确的特征（快速、低成本）
-    - LLM 处理模糊的判断（慢速、高准确度）
-    - 两者融合，互为补充
-    """
+    """多维关联检测 Agent"""
 
     name = "多维关联检测"
+    icon = "🔍"
+    tools = DETECTOR_TOOLS
 
     def analyze(
         self,
         email: EmailInput,
-        semantic_result: SemanticResult | None = None,
+        callback: EventCallback = None,
+        semantic_result: SemanticResult = None,
+        **kwargs,
     ) -> dict:
         """
-        执行多维检测分析
-        
-        Args:
-            email: 待分析邮件
-            semantic_result: Agent#1 的语义分析结果（用于交叉验证）
-        
-        Returns:
-            包含 detection 结果和 workflow_log 的字典
+        执行多维检测
+
+        流程：URL分析 → 发件人检测 → 关键词扫描 → LLM深度分析 → 分数融合
         """
-        log = []
-        log.append(self.log_step("开始多维关联检测..."))
+        # ---- Step 1: 提取并分析所有 URL ----
+        combined_text = f"{email.subject} {email.body}"
+        url_extract = self.call_tool("extract_urls", combined_text, callback=callback)
 
-        # ---- 第一层：规则引擎快速扫描 ----
-        rule_results = self._rule_scan(email)
-        log.append(self.log_step(
-            f"规则扫描完成 → 发件人规则分: {rule_results['sender_score']:.2f} | "
-            f"URL规则分: {rule_results['url_score']:.2f} | "
-            f"标记数: {len(rule_results['content_flags'])}"
-        ))
+        all_urls = email.urls.copy()
+        # 从提取结果中解析 URL
+        if url_extract.output.startswith("提取到"):
+            import re
+            extracted = re.findall(r'https?://\S+', url_extract.output)
+            all_urls.extend(extracted)
+        all_urls = list(set(all_urls))
 
-        # ---- 第二层：LLM 深度分析 ----
-        log.append(self.log_step("正在调用 LLM 进行深度技术分析..."))
-        user_prompt = self._build_prompt(email, rule_results, semantic_result)
-        llm_result = self.llm.chat_json(
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=user_prompt,
+        # 逐个分析 URL
+        url_tool_results = []
+        for url in all_urls[:5]:  # 最多分析 5 个
+            r = self.call_tool("analyze_url", url, callback=callback)
+            url_tool_results.append(r)
+
+        # ---- Step 2: 发件人域名检测 ----
+        sender_result = self.call_tool("check_sender_domain", email.sender, callback=callback)
+
+        # ---- Step 3: 关键词扫描 ----
+        pattern_result = self.call_tool("scan_phishing_patterns", combined_text, callback=callback)
+
+        # ---- Step 4: LLM 深度分析 ----
+        user_prompt = self._build_prompt(email, all_urls, semantic_result)
+        llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+
+        # ---- Step 5: 分数融合（工具 + LLM） ----
+        # 发件人分数：从工具结果解析
+        sender_trust = self._parse_score(sender_result.output, "可信度")
+        llm_sender = float(llm_result.get("sender_score", 0.5))
+        sender_score = sender_trust / 100 * 0.4 + llm_sender * 0.6
+
+        # URL 分数：取所有 URL 中最低的风险分的反转
+        url_risk = max(
+            (self._parse_score(r.output, "风险分") for r in url_tool_results),
+            default=0,
         )
+        llm_url = float(llm_result.get("url_score", 0.5))
+        url_score = (1 - url_risk / 100) * 0.4 + llm_url * 0.6
 
-        # ---- 第三层：融合规则分数和 LLM 分析 ----
         detection = DetectionResult(
-            # 规则分数和 LLM 分数加权融合（LLM 权重更高）
-            sender_score=self._fuse_score(
-                rule_results["sender_score"],
-                float(llm_result.get("sender_score", 0.5)),
-                llm_weight=0.7,
-            ),
-            sender_analysis=llm_result.get("sender_analysis", ""),
-            url_score=self._fuse_score(
-                rule_results["url_score"],
-                float(llm_result.get("url_score", 0.5)),
-                llm_weight=0.7,
-            ),
+            sender_score=max(0, min(1, sender_score)),
+            sender_analysis=llm_result.get("sender_analysis", sender_result.output),
+            url_score=max(0, min(1, url_score)),
             url_analysis=llm_result.get("url_analysis", ""),
-            # 合并规则和 LLM 的内容标记
             content_flags=list(set(
-                rule_results["content_flags"] +
                 llm_result.get("content_flags", [])
             )),
             explanation=llm_result.get("explanation", ""),
         )
 
-        log.append(self.log_step(
-            f"检测完成 → 发件人分: {detection.sender_score:.2f} | "
-            f"URL分: {detection.url_score:.2f} | "
-            f"标记: {', '.join(detection.content_flags) or '无'}"
-        ))
+        return {"detection": detection}
 
-        return {
-            "detection": detection,
-            "workflow_log": log,
-        }
-
-    def _rule_scan(self, email: EmailInput) -> dict:
-        """
-        规则引擎快速扫描
-        
-        不依赖 LLM，纯规则匹配。用于提供 baseline 分数。
-        """
-        sender_score = 1.0
-        url_score = 1.0
-        content_flags = []
-
-        # --- 发件人规则 ---
-        if email.sender:
-            domain = email.sender.split("@")[-1].lower() if "@" in email.sender else ""
-            # 检查是否冒充可信域名（如 g00gle.com, micr0soft.com）
-            for trusted in TRUSTED_DOMAINS:
-                if trusted not in domain and self._is_typo(domain, trusted):
-                    sender_score -= 0.5
-                    content_flags.append("domain_typo_squatting")
-                    break
-            # 免费邮箱发送商务邮件
-            free_domains = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "qq.com", "163.com"}
-            if domain in free_domains and any(
-                kw in email.subject.lower()
-                for kw in ["invoice", "payment", "银行", "转账", "发票"]
-            ):
-                sender_score -= 0.3
-                content_flags.append("free_email_business_claim")
-
-        # --- URL 规则 ---
-        all_urls = email.urls + self._extract_urls(email.body)
-        for url in all_urls:
-            parsed = urlparse(url)
-            # IP 地址作为域名
-            if re.match(r"\d+\.\d+\.\d+\.\d+", parsed.hostname or ""):
-                url_score -= 0.4
-                content_flags.append("ip_based_url")
-            # 短链服务
-            shorteners = {"bit.ly", "t.co", "tinyurl.com", "goo.gl", "is.gd"}
-            if parsed.hostname in shorteners:
-                url_score -= 0.2
-                content_flags.append("url_shortener")
-            # URL 中包含 @ 符号（重定向欺骗）
-            if "@" in url:
-                url_score -= 0.3
-                content_flags.append("url_with_at_sign")
-            # 过多的子域名
-            if parsed.hostname and parsed.hostname.count(".") > 3:
-                url_score -= 0.2
-                content_flags.append("excessive_subdomains")
-
-        # --- 内容规则 ---
-        combined_text = f"{email.subject} {email.body}".lower()
-        for pattern in PHISHING_PATTERNS:
-            if re.search(pattern, combined_text, re.IGNORECASE):
-                content_flags.append("phishing_keyword_pattern")
-                break
-
-        # 限制分数范围
-        sender_score = max(0.0, min(1.0, sender_score))
-        url_score = max(0.0, min(1.0, url_score))
-
-        return {
-            "sender_score": sender_score,
-            "url_score": url_score,
-            "content_flags": list(set(content_flags)),
-        }
-
-    def _is_typo(self, domain: str, trusted: str) -> bool:
-        """
-        检测域名是否为可信域名的拼写变体（简化的编辑距离检测）
-        
-        例：g00gle.com vs google.com
-        """
-        if not domain or not trusted:
-            return False
-        # 移除 TLD 后比较
-        d_base = domain.split(".")[0]
-        t_base = trusted.split(".")[0]
-        if len(d_base) != len(t_base):
-            return False
-        # 允许 1-2 个字符差异
-        diff = sum(1 for a, b in zip(d_base, t_base) if a != b)
-        return 1 <= diff <= 2
-
-    def _extract_urls(self, text: str) -> list[str]:
-        """从文本中提取所有 URL"""
-        url_pattern = r'https?://[^\s<>"\')\]]+'
-        return re.findall(url_pattern, text)
-
-    def _fuse_score(
-        self,
-        rule_score: float,
-        llm_score: float,
-        llm_weight: float = 0.7,
-    ) -> float:
-        """加权融合规则分数和 LLM 分数"""
-        return rule_score * (1 - llm_weight) + llm_score * llm_weight
+    def _parse_score(self, text: str, prefix: str) -> float:
+        """从工具输出文本中解析分数（如 '风险分: 45/100' → 45.0）"""
+        import re
+        match = re.search(rf'{prefix}:\s*(\d+)', text)
+        return float(match.group(1)) if match else 50.0
 
     def _build_prompt(
         self,
         email: EmailInput,
-        rule_results: dict,
-        semantic_result: SemanticResult | None,
+        urls: list[str],
+        semantic: SemanticResult = None,
     ) -> str:
-        """构造 LLM 分析提示，包含规则扫描结果和语义分析结果"""
+        """构造 LLM 提示"""
         parts = []
         if email.subject:
             parts.append(f"主题: {email.subject}")
@@ -252,20 +134,10 @@ class DetectorAgent(BaseAgent):
             parts.append(f"发件人: {email.sender}")
         if email.body:
             parts.append(f"正文:\n{email.body}")
-        
-        all_urls = email.urls + self._extract_urls(email.body)
-        if all_urls:
-            parts.append(f"包含的URL: {', '.join(all_urls)}")
+        if urls:
+            parts.append(f"URL列表: {', '.join(urls)}")
 
-        parts.append(f"\n--- 规则扫描预处理结果 ---")
-        parts.append(f"发件人规则评分: {rule_results['sender_score']:.2f}")
-        parts.append(f"URL规则评分: {rule_results['url_score']:.2f}")
-        if rule_results["content_flags"]:
-            parts.append(f"规则检测标记: {', '.join(rule_results['content_flags'])}")
-
-        if semantic_result:
-            parts.append(f"\n--- 语义分析结果 ---")
-            parts.append(f"判定意图: {semantic_result.intent}")
-            parts.append(f"话术类型: {', '.join(semantic_result.persuasion_techniques)}")
+        if semantic:
+            parts.append(f"\n[语义分析结果] 意图:{semantic.intent} 话术:{','.join(semantic.persuasion_techniques)}")
 
         return "请对以下邮件进行技术安全分析：\n\n" + "\n".join(parts)

@@ -1,24 +1,26 @@
 """
-FastAPI 路由定义
-================
-提供 REST API 接口：
-- POST /api/analyze: 分析邮件（支持 SSE 流式响应）
-- GET  /api/emails: 获取历史邮件列表
-- GET  /api/reports: 获取历史报告列表
-- GET  /api/stats: 获取统计概览
+FastAPI 路由
+============
+API 端点：
+- POST /api/analyze/stream: 流式分析邮件（JSON Lines SSE）
+- POST /api/analyze: 同步分析邮件
+- GET  /api/emails: 历史邮件列表
+- GET  /api/reports: 历史报告列表
+- GET  /api/stats: 统计概览
 """
 
 import json
-import asyncio
 import logging
+from queue import Queue
+from threading import Thread
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from src.workflow.graph import build_workflow
 from src.models import EmailInput
+from src.workflow.graph import run_analysis, AGENT_PIPELINE
 from src import database as db
 
 logger = logging.getLogger(__name__)
@@ -27,190 +29,133 @@ router = APIRouter(prefix="/api")
 
 
 class AnalyzeRequest(BaseModel):
-    """邮件分析请求体"""
+    """邮件分析请求"""
     subject: str = ""
     sender: str = ""
     recipients: str = ""
-    body: str
+    body: str = ""
     urls: list[str] = []
     headers: dict = {}
     has_attachment: bool = False
     raw_text: str = ""
 
 
-class AnalyzeResponse(BaseModel):
-    """邮件分析响应体"""
-    email_id: int
-    report_id: int
-    is_phishing: bool
-    risk_score: float
-    risk_level: str
-    semantic: dict
-    detection: dict
-    risk: dict
-    response: dict
-    workflow_log: list[str]
-
-
-@router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_email(req: AnalyzeRequest):
-    """
-    分析邮件（同步模式）
-    
-    将邮件发送到 4-Agent 检测工作流，等待全部完成后返回完整报告。
-    适用于需要一次性获取完整结果的场景。
-    """
-    # 构造邮件输入
-    email = EmailInput(
-        subject=req.subject,
-        sender=req.sender,
-        recipients=req.recipients,
-        body=req.body,
-        urls=req.urls,
-        headers=req.headers,
-        has_attachment=req.has_attachment,
-        raw_text=req.raw_text,
-    )
-
-    # 保存到数据库
-    email_id = db.save_email(email.model_dump())
-
-    # 执行工作流
-    graph = build_workflow()
-    initial_state = {
-        "email": email.model_dump(),
-        "workflow_log": [],
-    }
-
-    try:
-        result = graph.invoke(initial_state)
-    except Exception as e:
-        logger.error(f"工作流执行失败: {e}")
-        raise HTTPException(status_code=500, detail=f"分析失败: {str(e)}")
-
-    # 保存报告
-    report_data = {
-        "is_phishing": result.get("is_phishing", False),
-        "risk_score": result.get("risk", {}).get("risk_score", 0),
-        "risk_level": result.get("risk", {}).get("risk_level", "unknown"),
-        "semantic_result": result.get("semantic", {}),
-        "detection_result": result.get("detection", {}),
-        "risk_result": result.get("risk", {}),
-        "response_result": result.get("response", {}),
-        "workflow_log": result.get("workflow_log", []),
-    }
-    report_id = db.save_report(email_id, report_data)
-
-    return AnalyzeResponse(
-        email_id=email_id,
-        report_id=report_id,
-        is_phishing=result.get("is_phishing", False),
-        risk_score=result.get("risk", {}).get("risk_score", 0),
-        risk_level=result.get("risk", {}).get("risk_level", "unknown"),
-        semantic=result.get("semantic", {}),
-        detection=result.get("detection", {}),
-        risk=result.get("risk", {}),
-        response=result.get("response", {}),
-        workflow_log=result.get("workflow_log", []),
-    )
-
-
 @router.post("/analyze/stream")
-async def analyze_email_stream(req: AnalyzeRequest):
+async def analyze_stream(req: AnalyzeRequest):
     """
-    分析邮件（SSE 流式模式）
-    
-    使用 Server-Sent Events 逐步返回每个 Agent 的执行结果，
-    适用于 UI 实时展示工作流执行过程。
-    
+    流式分析邮件（JSON Lines 格式）
+
+    每行一个 JSON 对象：{"type": "EVENT_TYPE", "data": {...}}
+
     事件类型：
     - agent_start: Agent 开始执行
-    - agent_log: Agent 执行日志
-    - agent_done: Agent 完成，附带结果
-    - complete: 全部完成，附带最终报告
+    - thinking: Agent 思考过程（LLM 输出）
+    - tool_call: 工具调用结果
+    - agent_done: Agent 完成
+    - complete: 全流程完成，附带完整报告
     - error: 执行出错
     """
     email = EmailInput(
         subject=req.subject,
         sender=req.sender,
         recipients=req.recipients,
-        body=req.body,
+        body=req.body or req.raw_text,
         urls=req.urls,
         headers=req.headers,
         has_attachment=req.has_attachment,
         raw_text=req.raw_text,
     )
+
+    # 保存邮件到数据库
     email_id = db.save_email(email.model_dump())
 
-    async def event_generator() -> AsyncGenerator[str, None]:
-        """SSE 事件生成器"""
-        graph = build_workflow()
-        initial_state = {
-            "email": email.model_dump(),
-            "workflow_log": [],
-        }
+    def event_generator() -> AsyncGenerator[str, None]:
+        """在后台线程中运行分析，通过队列传递事件"""
+        event_queue = Queue()
 
-        try:
-            # 使用 LangGraph stream 模式逐节点执行
-            final_state = initial_state.copy()
-            for chunk in graph.stream(initial_state, stream_mode="updates"):
-                # chunk 是 {node_name: state_updates} 的字典
-                for node_name, updates in chunk.items():
-                    # 发送 Agent 开始事件
-                    yield _sse_event("agent_start", {"node": node_name})
-                    await asyncio.sleep(0)
+        def callback(event: dict):
+            """Agent 回调：将事件放入队列"""
+            event_queue.put(event)
 
-                    # 发送日志事件
-                    new_logs = updates.get("workflow_log", [])
-                    for log_line in new_logs:
-                        if log_line not in final_state.get("workflow_log", []):
-                            yield _sse_event("agent_log", {
-                                "node": node_name,
-                                "message": log_line,
-                            })
-                    
-                    # 更新最终状态
-                    final_state.update(updates)
-
-                    # 发送 Agent 完成事件
-                    yield _sse_event("agent_done", {
-                        "node": node_name,
-                        "result": {k: v for k, v in updates.items() if k != "workflow_log"},
+        def run_in_thread():
+            """后台线程：执行工作流"""
+            try:
+                report = run_analysis(email, callback=callback)
+                # 保存报告
+                if "error" not in report:
+                    report["email_id"] = email_id
+                    report_id = db.save_report(email_id, {
+                        "is_phishing": report.get("is_phishing", False),
+                        "risk_score": report.get("risk_score", 0),
+                        "risk_level": report.get("risk_level", "unknown"),
+                        "semantic_result": report.get("semantic", {}),
+                        "detection_result": report.get("detection", {}),
+                        "risk_result": report.get("risk", {}),
+                        "response_result": report.get("response", {}),
                     })
+            except Exception as e:
+                event_queue.put({"type": "error", "data": {"message": str(e)}})
+            finally:
+                event_queue.put(None)  # 结束信号
 
-            # 保存报告
-            report_data = {
-                "is_phishing": final_state.get("is_phishing", False),
-                "risk_score": final_state.get("risk", {}).get("risk_score", 0) if isinstance(final_state.get("risk"), dict) else 0,
-                "risk_level": final_state.get("risk", {}).get("risk_level", "unknown") if isinstance(final_state.get("risk"), dict) else "unknown",
-                "semantic_result": final_state.get("semantic", {}),
-                "detection_result": final_state.get("detection", {}),
-                "risk_result": final_state.get("risk", {}),
-                "response_result": final_state.get("response", {}),
-                "workflow_log": final_state.get("workflow_log", []),
-            }
-            report_id = db.save_report(email_id, report_data)
+        thread = Thread(target=run_in_thread, daemon=True)
+        thread.start()
 
-            # 发送完成事件
-            yield _sse_event("complete", {
-                "email_id": email_id,
-                "report_id": report_id,
-                **report_data,
-            })
-
-        except Exception as e:
-            logger.error(f"流式分析失败: {e}")
-            yield _sse_event("error", {"message": str(e)})
+        # 从队列中读取事件并输出 JSON Lines
+        while True:
+            event = event_queue.get()
+            if event is None:
+                break
+            yield json.dumps(event, ensure_ascii=False) + "\n"
 
     return StreamingResponse(
         event_generator(),
-        media_type="text/event-stream",
+        media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/analyze")
+async def analyze_sync(req: AnalyzeRequest):
+    """同步分析邮件（等待全部完成后返回）"""
+    email = EmailInput(
+        subject=req.subject,
+        sender=req.sender,
+        recipients=req.recipients,
+        body=req.body or req.raw_text,
+        urls=req.urls,
+        headers=req.headers,
+        has_attachment=req.has_attachment,
+        raw_text=req.raw_text,
+    )
+
+    email_id = db.save_email(email.model_dump())
+
+    try:
+        report = run_analysis(email)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if "error" in report:
+        raise HTTPException(status_code=500, detail=report["error"])
+
+    report_id = db.save_report(email_id, {
+        "is_phishing": report.get("is_phishing", False),
+        "risk_score": report.get("risk_score", 0),
+        "risk_level": report.get("risk_level", "unknown"),
+        "semantic_result": report.get("semantic", {}),
+        "detection_result": report.get("detection", {}),
+        "risk_result": report.get("risk", {}),
+        "response_result": report.get("response", {}),
+    })
+
+    report["email_id"] = email_id
+    report["report_id"] = report_id
+    return report
 
 
 @router.get("/emails")
@@ -231,6 +176,7 @@ async def get_stats():
     return db.get_stats()
 
 
-def _sse_event(event_type: str, data: dict) -> str:
-    """格式化 SSE 事件"""
-    return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+@router.get("/pipeline")
+async def get_pipeline():
+    """获取工作流 Agent 列表（供前端渲染）"""
+    return AGENT_PIPELINE

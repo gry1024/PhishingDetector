@@ -1,4 +1,3 @@
-# 工作流模块包
-from .graph import build_workflow
+from .graph import run_analysis, AGENT_PIPELINE
 
-__all__ = ["build_workflow"]
+__all__ = ["run_analysis", "AGENT_PIPELINE"]

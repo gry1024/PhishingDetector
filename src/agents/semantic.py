@@ -1,110 +1,83 @@
 """
 语义意图分析 Agent（Agent #1）
 ==============================
-核心 Agent：使用 LLM 理解邮件的真实意图，而非依赖关键词匹配。
-识别钓鱼邮件常用的社会工程话术：紧急感、权威施压、恐惧诱导等。
+核心职责：用 LLM 理解邮件的真实意图，而非关键词匹配。
 
-这是整个检测管线的第一步，也是最关键的一步——
-即使邮件语法完美、无可疑链接，只要意图是欺诈就能识别。
+工具集：
+- scan_phishing_patterns: 正则扫描已知钓鱼话术模式
+- extract_urls: 提取邮件中的 URL
+
+工作流：
+1. 先调用工具做规则预扫描（快速、低成本）
+2. 将预扫描结果 + 邮件全文传给 LLM 做深度语义分析
+3. 输出意图分类、话术类型、置信度
 """
 
-from src.agents.base import BaseAgent
+from src.agents.base import BaseAgent, EventCallback
 from src.models import EmailInput, SemanticResult
+from src.tools import SEMANTIC_TOOLS
 
 
-# Agent #1 系统提示词：定义语义分析的角色和输出格式
-SYSTEM_PROMPT = """你是一个专业的钓鱼邮件语义分析专家。你的任务是分析邮件的真实意图，而非仅仅检查关键词或格式。
+SYSTEM_PROMPT = """你是一个钓鱼邮件语义分析专家。你的核心能力是理解邮件的真实意图，而不是依赖关键词匹配。
 
-你需要判断：
-1. 这封邮件的真实意图是什么？（phishing=钓鱼 / legitimate=正常 / suspicious=可疑）
-2. 邮件中使用了哪些社会工程话术？
-3. 你的分析推理过程是什么？
+分析维度：
+1. 邮件意图分类：phishing（钓鱼）/ legitimate（正常）/ suspicious（可疑）
+2. 社会工程话术识别：
+   - urgency: 制造紧急感（"立即"、"24小时内"、"账户冻结"）
+   - authority: 冒充权威（CEO、IT部门、银行）
+   - fear: 恐惧诱导（"账户被盗"、"法律后果"）
+   - greed: 利益诱惑（"中奖"、"退款"）
+   - impersonation: 身份冒充
+   - credential_theft: 凭证窃取（要求输入密码/验证码）
+   - secrecy: 要求保密（BEC特征）
+3. AI生成特征：语法完美但意图可疑、缺乏个性化细节
 
-常见的社会工程话术类型：
-- urgency: 制造紧急感（"立即行动"、"24小时内"、"账户将被冻结"）
-- authority: 冒充权威（"CEO"、"IT部门"、"银行"、"税务局"）
-- fear: 引发恐惧（"账户被盗"、"法律后果"、"数据泄露"）
-- greed: 利益诱惑（"中奖"、"退款"、"高额回报"）
-- curiosity: 引发好奇（"查看您的文件"、"重要更新"）
-- impersonation: 身份冒充（冒充同事、领导、服务商）
-- credential_theft: 凭证窃取（要求输入密码、验证码）
-
-请以严格的 JSON 格式返回分析结果：
+以严格JSON返回：
 {
-    "intent": "phishing 或 legitimate 或 suspicious",
-    "persuasion_techniques": ["检测到的话术类型列表"],
-    "explanation": "详细的分析推理过程",
-    "confidence": 0.0到1.0之间的置信度
+    "intent": "phishing/legitimate/suspicious",
+    "persuasion_techniques": ["话术类型列表"],
+    "explanation": "详细分析推理过程",
+    "confidence": 0.0到1.0
 }"""
 
 
 class SemanticAgent(BaseAgent):
-    """
-    语义意图分析 Agent
-    
-    工作流程：
-    1. 将邮件内容发送给 LLM，附带专业分析提示词
-    2. LLM 返回结构化的意图分析结果
-    3. 解析 JSON 响应并封装为 SemanticResult 模型
-    
-    这个 Agent 的关键价值：
-    - 不依赖关键词黑名单，能识别 AI 生成的高质量钓鱼邮件
-    - 识别社会工程话术，理解"邮件想让人做什么"
-    - 提供可解释的分析推理过程
-    """
+    """语义意图分析 Agent"""
 
     name = "语义意图分析"
+    icon = "🧠"
+    tools = SEMANTIC_TOOLS
 
-    def analyze(self, email: EmailInput) -> dict:
+    def analyze(self, email: EmailInput, callback: EventCallback = None, **kwargs) -> dict:
         """
         执行语义意图分析
-        
-        Args:
-            email: 待分析邮件
-        
-        Returns:
-            包含 semantic 结果和 workflow_log 的字典
+
+        流程：工具预扫描 → LLM 深度分析 → 结果封装
         """
-        log = []
-        log.append(self.log_step("开始语义意图分析..."))
+        # ---- Step 1: 工具预扫描 ----
+        combined_text = f"{email.subject} {email.body}"
 
-        # 构造用户提示：将邮件各字段组合为自然语言描述
+        self.call_tool("scan_phishing_patterns", combined_text, callback=callback)
+
+        url_result = self.call_tool("extract_urls", combined_text, callback=callback)
+
+        # ---- Step 2: 构造 LLM 提示 ----
         user_prompt = self._build_prompt(email)
-        log.append(self.log_step(f"邮件长度: {len(user_prompt)} 字符"))
 
-        # 调用 LLM 进行语义分析
-        log.append(self.log_step("正在调用 LLM 分析邮件意图..."))
-        result = self.llm.chat_json(
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-        )
+        # ---- Step 3: LLM 语义分析 ----
+        result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
 
-        # 解析 LLM 返回的 JSON 结果
         semantic = SemanticResult(
             intent=result.get("intent", "suspicious"),
             persuasion_techniques=result.get("persuasion_techniques", []),
-            explanation=result.get("explanation", "LLM 未返回分析说明"),
+            explanation=result.get("explanation", ""),
             confidence=float(result.get("confidence", 0.5)),
         )
 
-        log.append(self.log_step(
-            f"分析完成 → 意图: {semantic.intent} | "
-            f"置信度: {semantic.confidence:.0%} | "
-            f"话术: {', '.join(semantic.persuasion_techniques) or '无'}"
-        ))
-
-        return {
-            "semantic": semantic,
-            "workflow_log": log,
-        }
+        return {"semantic": semantic}
 
     def _build_prompt(self, email: EmailInput) -> str:
-        """
-        将邮件数据构造为 LLM 可理解的自然语言提示
-        
-        如果 raw_text 存在，直接使用原始文本（适合用户直接粘贴场景）；
-        否则拼接各字段。
-        """
+        """构造 LLM 分析提示"""
         if email.raw_text:
             return f"请分析以下邮件的意图：\n\n{email.raw_text}"
 
@@ -113,13 +86,11 @@ class SemanticAgent(BaseAgent):
             parts.append(f"主题: {email.subject}")
         if email.sender:
             parts.append(f"发件人: {email.sender}")
-        if email.recipients:
-            parts.append(f"收件人: {email.recipients}")
         if email.body:
             parts.append(f"正文:\n{email.body}")
         if email.urls:
-            parts.append(f"包含的URL: {', '.join(email.urls)}")
+            parts.append(f"URL: {', '.join(email.urls)}")
         if email.has_attachment:
-            parts.append("注意: 此邮件包含附件")
+            parts.append("⚠️ 包含附件")
 
         return f"请分析以下邮件的意图：\n\n" + "\n".join(parts)

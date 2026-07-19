@@ -1,153 +1,191 @@
 """
-LangGraph 工作流定义
-====================
-使用 LangGraph 构建有向图状态机，编排 4 个 Agent 的执行顺序。
+检测工作流
+===========
+串行执行 4 个 Agent，通过回调函数实时推送事件到前端。
 
-工作流拓扑：
-    START → semantic_analysis → multi_detection → risk_assessment → response → END
+流程：语义分析 → 多维检测 → 风险研判 → 响应处置
 
-每个节点是一个 Agent，读取并更新 WorkflowState。
-支持流式输出每个节点的执行日志。
+每个 Agent 执行期间，通过 callback 推送：
+- agent_start: Agent 开始
+- thinking: 思考过程（含 LLM 原始输出）
+- tool_call: 工具调用结果
+- agent_done: Agent 完成，附带结果摘要
+- complete: 全流程完成
+- error: 执行出错
 """
 
-from typing import TypedDict, Optional, Annotated
-from langgraph.graph import StateGraph, START, END
+import logging
+from typing import Callable, Optional
 
-from src.models import (
-    EmailInput, SemanticResult, DetectionResult,
-    RiskResult, ResponseResult,
-)
+from src.models import EmailInput
 from src.agents.semantic import SemanticAgent
 from src.agents.detector import DetectorAgent
 from src.agents.risk import RiskAgent
 from src.agents.response import ResponseAgent
 
+logger = logging.getLogger(__name__)
 
-class PhishingState(TypedDict):
+# Agent 元数据（名称、图标、顺序）
+AGENT_PIPELINE = [
+    {"name": "语义意图分析", "icon": "🧠"},
+    {"name": "多维关联检测", "icon": "🔍"},
+    {"name": "风险研判", "icon": "⚖️"},
+    {"name": "响应处置", "icon": "🛡️"},
+]
+
+
+def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
     """
-    LangGraph 状态类型定义
-    
-    使用 TypedDict 而非 Pydantic，因为 LangGraph 原生支持 TypedDict 状态。
-    每个节点函数接收此状态并返回需要更新的字段。
+    执行完整的邮件检测工作流
+
+    Args:
+        email: 待分析的邮件
+        callback: 事件回调函数，每次 Agent 产生事件时调用
+
+    Returns:
+        完整的分析报告字典
     """
-    # 输入
-    email: dict                  # EmailInput 的字典形式
-    # Agent #1 输出
-    semantic: Optional[dict]     # SemanticResult 的字典形式
-    # Agent #2 输出
-    detection: Optional[dict]    # DetectionResult 的字典形式
-    # Agent #3 输出
-    risk: Optional[dict]         # RiskResult 的字典形式
-    # Agent #4 输出
-    response: Optional[dict]     # ResponseResult 的字典形式
-    # 流程控制
-    is_phishing: bool            # 最终判定
-    workflow_log: list[str]      # 全流程日志（用于流式输出）
+    def emit(event_type: str, data: dict):
+        """推送事件到前端"""
+        if callback:
+            callback({"type": event_type, "data": data})
 
+    # ---- 初始化 Agent 实例 ----
+    semantic_agent = SemanticAgent()
+    detector_agent = DetectorAgent()
+    risk_agent = RiskAgent()
+    response_agent = ResponseAgent()
 
-# ---- Agent 实例（模块级单例） ----
-_semantic_agent = SemanticAgent()
-_detector_agent = DetectorAgent()
-_risk_agent = RiskAgent()
-_response_agent = ResponseAgent()
+    # ---- 存储各 Agent 结果 ----
+    semantic_result = None
+    detection_result = None
+    risk_result = None
+    response_result = None
+    is_phishing = False
 
+    try:
+        # ============================================================
+        # Agent #1: 语义意图分析
+        # ============================================================
+        emit("agent_start", {"agent": "语义意图分析", "icon": "🧠", "index": 0})
 
-def semantic_node(state: PhishingState) -> dict:
-    """
-    节点 #1：语义意图分析
-    
-    读取邮件输入，调用语义分析 Agent，
-    返回意图分析结果和流程日志。
-    """
-    email = EmailInput(**state["email"])
-    result = _semantic_agent.analyze(email)
-    return {
-        "semantic": result["semantic"].model_dump(),
-        "workflow_log": state.get("workflow_log", []) + result["workflow_log"],
+        result1 = semantic_agent.analyze(email, callback=callback)
+        semantic_result = result1["semantic"]
+
+        emit("agent_done", {
+            "agent": "语义意图分析",
+            "result": {
+                "intent": semantic_result.intent,
+                "confidence": semantic_result.confidence,
+                "techniques": semantic_result.persuasion_techniques,
+                "explanation": semantic_result.explanation[:200],
+            }
+        })
+
+        # ============================================================
+        # Agent #2: 多维关联检测
+        # ============================================================
+        emit("agent_start", {"agent": "多维关联检测", "icon": "🔍", "index": 1})
+
+        result2 = detector_agent.analyze(
+            email, callback=callback, semantic_result=semantic_result
+        )
+        detection_result = result2["detection"]
+
+        emit("agent_done", {
+            "agent": "多维关联检测",
+            "result": {
+                "sender_score": detection_result.sender_score,
+                "url_score": detection_result.url_score,
+                "content_flags": detection_result.content_flags,
+                "explanation": detection_result.explanation[:200],
+            }
+        })
+
+        # ============================================================
+        # Agent #3: 风险研判
+        # ============================================================
+        emit("agent_start", {"agent": "风险研判", "icon": "⚖️", "index": 2})
+
+        result3 = risk_agent.analyze(
+            email, callback=callback,
+            semantic_result=semantic_result,
+            detection_result=detection_result,
+        )
+        risk_result = result3["risk"]
+        is_phishing = result3["is_phishing"]
+
+        emit("agent_done", {
+            "agent": "风险研判",
+            "result": {
+                "risk_score": risk_result.risk_score,
+                "risk_level": risk_result.risk_level,
+                "attack_techniques": risk_result.attack_techniques,
+                "explanation": risk_result.explanation[:200],
+            }
+        })
+
+        # ============================================================
+        # Agent #4: 响应处置
+        # ============================================================
+        emit("agent_start", {"agent": "响应处置", "icon": "🛡️", "index": 3})
+
+        result4 = response_agent.analyze(
+            email, callback=callback,
+            semantic_result=semantic_result,
+            detection_result=detection_result,
+            risk_result=risk_result,
+        )
+        response_result = result4["response"]
+
+        emit("agent_done", {
+            "agent": "响应处置",
+            "result": {
+                "action": response_result.action,
+                "alert_message": response_result.alert_message,
+                "recommendation": response_result.recommendation,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"工作流执行失败: {e}", exc_info=True)
+        emit("error", {"message": str(e)})
+        return {"error": str(e)}
+
+    # ============================================================
+    # 汇总完整报告
+    # ============================================================
+    report = {
+        "is_phishing": is_phishing,
+        "risk_score": risk_result.risk_score if risk_result else 0,
+        "risk_level": risk_result.risk_level if risk_result else "unknown",
+        "semantic": {
+            "intent": semantic_result.intent,
+            "confidence": semantic_result.confidence,
+            "persuasion_techniques": semantic_result.persuasion_techniques,
+            "explanation": semantic_result.explanation,
+        } if semantic_result else {},
+        "detection": {
+            "sender_score": detection_result.sender_score,
+            "sender_analysis": detection_result.sender_analysis,
+            "url_score": detection_result.url_score,
+            "url_analysis": detection_result.url_analysis,
+            "content_flags": detection_result.content_flags,
+            "explanation": detection_result.explanation,
+        } if detection_result else {},
+        "risk": {
+            "risk_score": risk_result.risk_score,
+            "risk_level": risk_result.risk_level,
+            "attack_techniques": risk_result.attack_techniques,
+            "explanation": risk_result.explanation,
+        } if risk_result else {},
+        "response": {
+            "action": response_result.action,
+            "alert_message": response_result.alert_message,
+            "trace_report": response_result.trace_report,
+            "recommendation": response_result.recommendation,
+        } if response_result else {},
     }
 
-
-def detection_node(state: PhishingState) -> dict:
-    """
-    节点 #2：多维关联检测
-    
-    读取邮件输入和语义分析结果，
-    执行规则扫描 + LLM 深度分析。
-    """
-    email = EmailInput(**state["email"])
-    semantic = SemanticResult(**state["semantic"]) if state.get("semantic") else None
-    result = _detector_agent.analyze(email, semantic_result=semantic)
-    return {
-        "detection": result["detection"].model_dump(),
-        "workflow_log": state.get("workflow_log", []) + result["workflow_log"],
-    }
-
-
-def risk_node(state: PhishingState) -> dict:
-    """
-    节点 #3：风险研判
-    
-    综合语义分析和多维检测结果，
-    进行最终风险评估。
-    """
-    email = EmailInput(**state["email"])
-    semantic = SemanticResult(**state["semantic"])
-    detection = DetectionResult(**state["detection"])
-    result = _risk_agent.analyze(email, semantic, detection)
-    return {
-        "risk": result["risk"].model_dump(),
-        "is_phishing": result["is_phishing"],
-        "workflow_log": state.get("workflow_log", []) + result["workflow_log"],
-    }
-
-
-def response_node(state: PhishingState) -> dict:
-    """
-    节点 #4：自主响应
-    
-    根据风险等级决定处置动作，
-    生成告警消息和溯源报告。
-    """
-    email = EmailInput(**state["email"])
-    semantic = SemanticResult(**state["semantic"])
-    detection = DetectionResult(**state["detection"])
-    risk = RiskResult(**state["risk"])
-    result = _response_agent.analyze(email, semantic, detection, risk)
-    return {
-        "response": result["response"].model_dump(),
-        "workflow_log": state.get("workflow_log", []) + result["workflow_log"],
-    }
-
-
-def build_workflow() -> StateGraph:
-    """
-    构建并编译检测工作流图
-    
-    返回编译后的 LangGraph CompiledGraph 实例，
-    可直接调用 invoke() 或 stream() 执行检测。
-    
-    使用方式:
-        graph = build_workflow()
-        result = graph.invoke({"email": email_dict})
-        # 或流式执行
-        for chunk in graph.stream({"email": email_dict}):
-            print(chunk)
-    """
-    # 创建状态图
-    graph = StateGraph(PhishingState)
-
-    # 添加 4 个 Agent 节点
-    graph.add_node("semantic_analysis", semantic_node)
-    graph.add_node("multi_detection", detection_node)
-    graph.add_node("risk_assessment", risk_node)
-    graph.add_node("response", response_node)
-
-    # 定义边：串行流水线
-    graph.add_edge(START, "semantic_analysis")
-    graph.add_edge("semantic_analysis", "multi_detection")
-    graph.add_edge("multi_detection", "risk_assessment")
-    graph.add_edge("risk_assessment", "response")
-    graph.add_edge("response", END)
-
-    # 编译图
-    return graph.compile()
+    emit("complete", report)
+    return report
