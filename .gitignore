@@ -40,3 +40,19 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Hidden venv used during dev
+.venv/
+
+# Test payloads & outputs
+*_req.json
+*_resp*.json
+body.html
+root.html
+headers.txt
+docs.html
+analyze_req.json
+analyze_resp.json
+analyze_resp_clean.json
+benign_req.json
+benign_resp.json
