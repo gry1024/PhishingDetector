@@ -3,832 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhishingDetector - AI 钓鱼邮件智能检测系统</title>
-<style>
-/* ===== CSS Variables (TREEHOLE Style) ===== */
-:root {
-  --bg: #F5F5F7;
-  --card: #FFFFFF;
-  --border: #E8E8ED;
-  --fg: #1D1D1F;
-  --fg2: #6E6E73;
-  --accent: #0071E3;
-  --danger: #FF3B30;
-  --success: #34C759;
-  --warn: #FF9500;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
-}
-
-/* ===== Reset & Base ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
-  background: var(--bg);
-  color: var(--fg);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ===== Layout ===== */
-.app-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 32px 64px;
-}
-
-/* ===== Header ===== */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 32px;
-  max-width: 1400px;
-  margin: 0 auto;
-  position: sticky;
-  top: 0;
-  background: rgba(245,245,247,0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 100;
-  border-bottom: 1px solid var(--border);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.header-logo {
-  width: 38px;
-  height: 38px;
-  background: linear-gradient(135deg, var(--accent), #5856D6);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.header-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--fg);
-  letter-spacing: -0.3px;
-}
-
-.header-subtitle {
-  font-size: 12px;
-  color: var(--fg2);
-  margin-top: 1px;
-}
-
-/* ===== Demo Dropdown ===== */
-.demo-dropdown {
-  position: relative;
-}
-
-.demo-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 18px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--fg);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.demo-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-.demo-btn svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 0.2s;
-}
-
-.demo-dropdown.open .demo-btn svg { transform: rotate(180deg); }
-
-.demo-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  width: 360px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-8px);
-  transition: all 0.2s ease;
-  z-index: 200;
-  overflow: hidden;
-}
-
-.demo-dropdown.open .demo-menu {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.demo-menu-header {
-  padding: 12px 16px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--fg2);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.demo-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-}
-
-.demo-item:hover { background: #F5F5F7; }
-
-.demo-item-icon {
-  font-size: 16px;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.demo-item-info { flex: 1; min-width: 0; }
-
-.demo-item-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fg);
-  line-height: 1.4;
-}
-
-.demo-item-tag {
-  display: inline-block;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-top: 3px;
-  font-weight: 500;
-}
-
-.demo-item-tag.phishing { background: #FFF0F0; color: var(--danger); }
-.demo-item-tag.legit { background: #F0FFF4; color: var(--success); }
-
-/* ===== Sections ===== */
-.section {
-  margin-top: 24px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.section-header-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-.section-body {
-  padding: 24px;
-}
-
-/* ===== Email Input Section ===== */
-.input-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--fg2);
-  margin-bottom: 6px;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--fg);
-  background: #FAFAFA;
-  transition: all 0.2s;
-  outline: none;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  border-color: var(--accent);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(0,113,227,0.1);
-}
-
-.form-group textarea {
-  min-height: 160px;
-  resize: vertical;
-  line-height: 1.7;
-}
-
-.input-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.analyze-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 28px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.analyze-btn:hover { background: #0062CC; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,113,227,0.3); }
-.analyze-btn:active { transform: translateY(0); }
-.analyze-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.analyze-btn .spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===== Workflow Section ===== */
-.workflow-pipeline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 24px 0;
-  margin-bottom: 8px;
-}
-
-.pipeline-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.pipeline-node:hover { transform: translateY(-2px); }
-
-.node-box {
-  width: 140px;
-  padding: 18px 12px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  text-align: center;
-  transition: all 0.3s;
-  position: relative;
-}
-
-.node-box .node-index {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
-  background: var(--bg);
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--fg2);
-  transition: all 0.3s;
-}
-
-.node-box .node-icon {
-  font-size: 24px;
-  margin-bottom: 6px;
-}
-
-.node-box .node-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.node-box .node-sublabel {
-  font-size: 11px;
-  color: var(--fg2);
-  margin-top: 2px;
-}
-
-/* Node states */
-.node-box.idle { border-color: var(--border); }
-
-.node-box.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(0,113,227,0.12), 0 4px 12px rgba(0,113,227,0.15);
-  animation: nodeGlow 2s ease-in-out infinite;
-}
-
-.node-box.active .node-index { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-@keyframes nodeGlow {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(0,113,227,0.12), 0 4px 12px rgba(0,113,227,0.15); }
-  50% { box-shadow: 0 0 0 6px rgba(0,113,227,0.18), 0 4px 16px rgba(0,113,227,0.2); }
-}
-
-.node-box.done-safe {
-  border-color: var(--success);
-  background: #F8FFF8;
-}
-.node-box.done-safe .node-index { background: var(--success); border-color: var(--success); color: #fff; }
-
-.node-box.done-danger {
-  border-color: var(--danger);
-  background: #FFF8F8;
-}
-.node-box.done-danger .node-index { background: var(--danger); border-color: var(--danger); color: #fff; }
-
-.node-box.done-warn {
-  border-color: var(--warn);
-  background: #FFFCF5;
-}
-.node-box.done-warn .node-index { background: var(--warn); border-color: var(--warn); color: #fff; }
-
-.node-box.error {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 4px rgba(255,59,48,0.1);
-}
-
-/* Pipeline arrows */
-.pipeline-arrow {
-  display: flex;
-  align-items: center;
-  padding: 0 4px;
-  margin-bottom: 20px;
-}
-
-.pipeline-arrow svg {
-  width: 60px;
-  height: 20px;
-}
-
-.pipeline-arrow .arrow-line {
-  stroke: var(--border);
-  stroke-width: 2;
-  fill: none;
-  transition: stroke 0.3s;
-}
-
-.pipeline-arrow .arrow-head {
-  fill: var(--border);
-  transition: fill 0.3s;
-}
-
-.pipeline-arrow.active .arrow-line { stroke: var(--accent); }
-.pipeline-arrow.active .arrow-head { fill: var(--accent); }
-.pipeline-arrow.done .arrow-line { stroke: var(--success); }
-.pipeline-arrow.done .arrow-head { fill: var(--success); }
-
-/* ===== Agent Detail Panel ===== */
-.agent-detail {
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #FAFBFC;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
-}
-
-.agent-detail.visible {
-  max-height: 2000px;
-  opacity: 1;
-  margin-top: 16px;
-}
-
-.agent-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.agent-detail-body {
-  padding: 16px 20px;
-}
-
-.detail-block {
-  margin-bottom: 16px;
-}
-
-.detail-block:last-child { margin-bottom: 0; }
-
-.detail-block-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--fg2);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.thinking-text {
-  font-size: 13px;
-  color: var(--fg);
-  line-height: 1.8;
-  padding: 12px 16px;
-  background: var(--card);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.thinking-text .cursor {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  background: var(--accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Tool call badges */
-.tool-calls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tool-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 12px;
-  color: var(--fg);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tool-badge:hover {
-  border-color: var(--accent);
-  background: #F0F7FF;
-}
-
-.tool-badge .tool-name { font-weight: 500; }
-
-.tool-badge .tool-check { color: var(--success); font-weight: 700; }
-
-.tool-badge .tool-duration { color: var(--fg2); font-size: 11px; }
-
-.tool-detail {
-  display: none;
-  margin-top: 8px;
-  padding: 12px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.tool-detail.expanded { display: block; }
-
-.tool-detail-label {
-  font-weight: 600;
-  color: var(--fg2);
-  margin-bottom: 4px;
-}
-
-.tool-detail-value {
-  color: var(--fg);
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-  font-size: 12px;
-  word-break: break-all;
-  white-space: pre-wrap;
-}
-
-/* Agent result summary */
-.agent-result {
-  padding: 12px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.result-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.result-label {
-  font-weight: 600;
-  color: var(--fg2);
-  white-space: nowrap;
-  min-width: 60px;
-}
-
-.result-value { color: var(--fg); }
-
-.result-tag {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.result-tag.phishing { background: #FFF0F0; color: var(--danger); }
-.result-tag.legitimate { background: #F0FFF4; color: var(--success); }
-.result-tag.suspicious { background: #FFFCF5; color: var(--warn); }
-.result-tag.critical { background: #FFF0F0; color: var(--danger); }
-.result-tag.high { background: #FFF5F0; color: #E04400; }
-.result-tag.medium { background: #FFFCF5; color: var(--warn); }
-.result-tag.low { background: #F0FFF4; color: var(--success); }
-.result-tag.safe { background: #F0FFF4; color: var(--success); }
-
-/* ===== Report Section ===== */
-.report-section {
-  display: none;
-}
-
-.report-section.visible { display: block; }
-
-.report-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-/* Risk Gauge */
-.gauge-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px;
-  background: #FAFBFC;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-}
-
-.gauge-svg {
-  width: 220px;
-  height: 130px;
-}
-
-.gauge-score {
-  font-size: 42px;
-  font-weight: 700;
-  margin-top: 8px;
-  letter-spacing: -1px;
-}
-
-.gauge-label {
-  font-size: 14px;
-  font-weight: 600;
-  margin-top: 4px;
-  padding: 4px 16px;
-  border-radius: 20px;
-}
-
-.gauge-label.critical { background: #FFF0F0; color: var(--danger); }
-.gauge-label.high { background: #FFF5F0; color: #E04400; }
-.gauge-label.medium { background: #FFFCF5; color: var(--warn); }
-.gauge-label.low { background: #F5FFF8; color: #30B84D; }
-.gauge-label.safe { background: #F0FFF4; color: var(--success); }
-
-/* Report details */
-.report-details {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.report-card {
-  padding: 16px 20px;
-  background: #FAFBFC;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.report-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg2);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.report-card-body {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--fg);
-}
-
-.report-card-body .kv-row {
-  display: flex;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid #F0F0F2;
-}
-
-.report-card-body .kv-row:last-child { border-bottom: none; }
-
-.kv-key {
-  font-weight: 500;
-  color: var(--fg2);
-  min-width: 90px;
-  flex-shrink: 0;
-}
-
-.kv-val { color: var(--fg); word-break: break-word; }
-
-.action-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.action-badge.isolate { background: #FFF0F0; color: var(--danger); }
-.action-badge.quarantine { background: #FFF5F0; color: #E04400; }
-.action-badge.alert { background: #FFFCF5; color: var(--warn); }
-.action-badge.pass { background: #F0FFF4; color: var(--success); }
-
-/* ===== Workflow hidden state ===== */
-.workflow-section { display: none; }
-.workflow-section.visible { display: block; }
-
-/* ===== Email Preview ===== */
-.email-preview {
-  display: none;
-  margin-top: 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #FAFBFC;
-}
-
-.email-preview.visible { display: block; }
-
-.email-preview-header {
-  padding: 12px 16px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--fg2);
-}
-
-.email-preview-header div { padding: 2px 0; }
-.email-preview-header strong { color: var(--fg); font-weight: 500; }
-
-.email-preview-body {
-  padding: 16px;
-  font-size: 13px;
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--fg);
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-/* ===== Scrollbar ===== */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #A1A1A6; }
-
-/* ===== Utility ===== */
-.fade-in {
-  animation: fadeIn 0.4s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Toggle preview button */
-.toggle-preview {
-  font-size: 12px;
-  color: var(--accent);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 0;
-  font-family: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.toggle-preview:hover { color: #0062CC; }
-
-/* log lines in agent detail */
-.log-lines {
-  font-size: 12px;
-  color: var(--fg2);
-  line-height: 1.8;
-  padding: 8px 12px;
-  background: var(--card);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-.log-lines .log-line {
-  padding: 2px 0;
-  border-bottom: 1px solid #F5F5F7;
-}
-
-.log-lines .log-line:last-child { border-bottom: none; }
-</style>
+<title>PhishingDetector — AI 钓鱼邮件智能检测系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/industrial.css">
 </head>
 <body>
 
@@ -836,29 +15,33 @@ body {
 <header class="header">
   <div class="header-left">
     <div class="header-logo">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
     </div>
     <div>
       <div class="header-title">PhishingDetector</div>
-      <div class="header-subtitle">AI 钓鱼邮件智能检测系统 &middot; Multi-Agent Workflow</div>
+      <div class="header-subtitle">AI Email Threat Detection &middot; Multi-Agent</div>
     </div>
+  </div>
+  <div class="header-led">
+    <div class="header-led-dot"></div>
+    <span class="header-led-label">SYSTEM ONLINE</span>
   </div>
   <div class="demo-dropdown" id="demoDropdown">
     <button class="demo-btn" onclick="toggleDemoMenu()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
       </svg>
-      演示样例
+      SAMPLES / 演示样例
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 12 15 18 9"/>
       </svg>
     </button>
     <div class="demo-menu" id="demoMenu">
-      <div class="demo-menu-header">钓鱼邮件样例</div>
+      <div class="demo-menu-header">PHISHING SAMPLES / 钓鱼邮件</div>
       <div id="demoListPhishing"></div>
-      <div class="demo-menu-header" style="border-top:1px solid var(--border); margin-top:4px; padding-top:12px;">正常邮件样例</div>
+      <div class="demo-menu-header" style="border-top:1px solid rgba(0,0,0,0.06); margin-top:4px; padding-top:12px;">LEGITIMATE SAMPLES / 正常邮件</div>
       <div id="demoListLegit"></div>
     </div>
   </div>
@@ -866,18 +49,18 @@ body {
 
 <div class="app-container">
 
-  <!-- ===== Email Input Section ===== -->
-  <div class="section fade-in">
-    <div class="section-header">
-      <div class="section-header-icon" style="background:#EEF4FF; color:var(--accent);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- ===== Email Input ===== -->
+  <div class="input-section">
+    <div class="input-header">
+      <div class="input-header-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
           <polyline points="22,6 12,13 2,6"/>
         </svg>
       </div>
-      邮件输入
+      邮件输入 / EMAIL INPUT
     </div>
-    <div class="section-body">
+    <div class="input-body">
       <div class="input-row">
         <div class="form-group">
           <label>邮件主题</label>
@@ -897,13 +80,11 @@ body {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          开始分析
+          开始分析 / ANALYZE
         </button>
       </div>
-
-      <!-- Email Preview -->
       <div style="text-align:right; margin-top:8px;">
-        <button class="toggle-preview" onclick="togglePreview()">预览邮件内容</button>
+        <button class="toggle-preview" onclick="togglePreview()">PREVIEW / 预览邮件</button>
       </div>
       <div class="email-preview" id="emailPreview">
         <div class="email-preview-header">
@@ -915,326 +96,112 @@ body {
     </div>
   </div>
 
-  <!-- ===== Workflow Section ===== -->
-  <div class="section workflow-section" id="workflowSection">
-    <div class="section-header">
-      <div class="section-header-icon" style="background:#F0F0FF; color:#5856D6;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-      </div>
-      检测工作流
-    </div>
-    <div class="section-body">
-      <!-- Pipeline -->
-      <div class="workflow-pipeline" id="pipeline">
-        <!-- Node 0: 语义分析 -->
-        <div class="pipeline-node" onclick="showAgentDetail(0)">
-          <div class="node-box idle" id="node0">
-            <div class="node-index">1</div>
-            <div class="node-icon">🧠</div>
-            <div class="node-label">语义分析</div>
-            <div class="node-sublabel">Intent Analysis</div>
-          </div>
-        </div>
-        <div class="pipeline-arrow" id="arrow0">
-          <svg viewBox="0 0 60 20">
-            <line class="arrow-line" x1="0" y1="10" x2="48" y2="10"/>
-            <polygon class="arrow-head" points="46,5 56,10 46,15"/>
-          </svg>
-        </div>
-        <!-- Node 1: 多维检测 -->
-        <div class="pipeline-node" onclick="showAgentDetail(1)">
-          <div class="node-box idle" id="node1">
-            <div class="node-index">2</div>
-            <div class="node-icon">🔍</div>
-            <div class="node-label">多维检测</div>
-            <div class="node-sublabel">Multi-Detection</div>
-          </div>
-        </div>
-        <div class="pipeline-arrow" id="arrow1">
-          <svg viewBox="0 0 60 20">
-            <line class="arrow-line" x1="0" y1="10" x2="48" y2="10"/>
-            <polygon class="arrow-head" points="46,5 56,10 46,15"/>
-          </svg>
-        </div>
-        <!-- Node 2: 风险研判 -->
-        <div class="pipeline-node" onclick="showAgentDetail(2)">
-          <div class="node-box idle" id="node2">
-            <div class="node-index">3</div>
-            <div class="node-icon">⚖️</div>
-            <div class="node-label">风险研判</div>
-            <div class="node-sublabel">Risk Assessment</div>
-          </div>
-        </div>
-        <div class="pipeline-arrow" id="arrow2">
-          <svg viewBox="0 0 60 20">
-            <line class="arrow-line" x1="0" y1="10" x2="48" y2="10"/>
-            <polygon class="arrow-head" points="46,5 56,10 46,15"/>
-          </svg>
-        </div>
-        <!-- Node 3: 响应处置 -->
-        <div class="pipeline-node" onclick="showAgentDetail(3)">
-          <div class="node-box idle" id="node3">
-            <div class="node-index">4</div>
-            <div class="node-icon">🛡️</div>
-            <div class="node-label">响应处置</div>
-            <div class="node-sublabel">Response</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agent Detail Panels (one per node) -->
-      <div class="agent-detail" id="agentDetail0">
-        <div class="agent-detail-header">🧠 语义意图分析 Agent</div>
-        <div class="agent-detail-body">
-          <div class="detail-block">
-            <div class="detail-block-title">💭 思考过程</div>
-            <div class="thinking-text" id="thinking0"><span class="cursor"></span></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">🔧 工具调用</div>
-            <div class="tool-calls" id="tools0"></div>
-            <div id="toolDetails0"></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">📋 执行日志</div>
-            <div class="log-lines" id="logs0"></div>
-          </div>
-          <div class="detail-block" style="display:none" id="resultBlock0">
-            <div class="detail-block-title">📤 分析结果</div>
-            <div class="agent-result" id="result0"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="agent-detail" id="agentDetail1">
-        <div class="agent-detail-header">🔍 多维关联检测 Agent</div>
-        <div class="agent-detail-body">
-          <div class="detail-block">
-            <div class="detail-block-title">💭 思考过程</div>
-            <div class="thinking-text" id="thinking1"><span class="cursor"></span></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">🔧 工具调用</div>
-            <div class="tool-calls" id="tools1"></div>
-            <div id="toolDetails1"></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">📋 执行日志</div>
-            <div class="log-lines" id="logs1"></div>
-          </div>
-          <div class="detail-block" style="display:none" id="resultBlock1">
-            <div class="detail-block-title">📤 检测结果</div>
-            <div class="agent-result" id="result1"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="agent-detail" id="agentDetail2">
-        <div class="agent-detail-header">⚖️ 风险研判 Agent</div>
-        <div class="agent-detail-body">
-          <div class="detail-block">
-            <div class="detail-block-title">💭 思考过程</div>
-            <div class="thinking-text" id="thinking2"><span class="cursor"></span></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">🔧 工具调用</div>
-            <div class="tool-calls" id="tools2"></div>
-            <div id="toolDetails2"></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">📋 执行日志</div>
-            <div class="log-lines" id="logs2"></div>
-          </div>
-          <div class="detail-block" style="display:none" id="resultBlock2">
-            <div class="detail-block-title">📤 研判结果</div>
-            <div class="agent-result" id="result2"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="agent-detail" id="agentDetail3">
-        <div class="agent-detail-header">🛡️ 响应处置 Agent</div>
-        <div class="agent-detail-body">
-          <div class="detail-block">
-            <div class="detail-block-title">💭 思考过程</div>
-            <div class="thinking-text" id="thinking3"><span class="cursor"></span></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">🔧 工具调用</div>
-            <div class="tool-calls" id="tools3"></div>
-            <div id="toolDetails3"></div>
-          </div>
-          <div class="detail-block">
-            <div class="detail-block-title">📋 执行日志</div>
-            <div class="log-lines" id="logs3"></div>
-          </div>
-          <div class="detail-block" style="display:none" id="resultBlock3">
-            <div class="detail-block-title">📤 处置方案</div>
-            <div class="agent-result" id="result3"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- ===== Workflow Card Stream ===== -->
+  <div class="workflow-stream" id="workflowStream">
+    <!-- Cards inserted dynamically -->
   </div>
 
   <!-- ===== Report Section ===== -->
-  <div class="section report-section" id="reportSection">
-    <div class="section-header">
-      <div class="section-header-icon" style="background:#FFF5F0; color:var(--danger);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <div class="report-section" id="reportSection">
+    <div class="report-header">
+      <div class="input-header-icon" style="background:#FFF5F0; color:var(--danger);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
         </svg>
       </div>
-      分析报告
+      综合分析报告 / FINAL REPORT
     </div>
-    <div class="section-body">
-      <div class="report-grid">
-        <!-- Gauge -->
-        <div class="gauge-container" id="gaugeContainer">
-          <svg class="gauge-svg" viewBox="0 0 220 130" id="gaugeSvg">
-            <defs>
-              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#34C759"/>
-                <stop offset="35%" stop-color="#FFD60A"/>
-                <stop offset="65%" stop-color="#FF9500"/>
-                <stop offset="100%" stop-color="#FF3B30"/>
-              </linearGradient>
-            </defs>
-            <!-- Background arc -->
-            <path d="M 20 120 A 90 90 0 0 1 200 120" fill="none" stroke="#E8E8ED" stroke-width="14" stroke-linecap="round"/>
-            <!-- Value arc -->
-            <path id="gaugeArc" d="M 20 120 A 90 90 0 0 1 200 120" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="283" style="transition: stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1)"/>
-            <!-- Needle -->
-            <line id="gaugeNeedle" x1="110" y1="120" x2="110" y2="40" stroke="var(--fg)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90, 110, 120)" style="transition: transform 1.5s cubic-bezier(0.4,0,0.2,1)"/>
-            <circle cx="110" cy="120" r="5" fill="var(--fg)"/>
-            <!-- Labels -->
-            <text x="15" y="128" font-size="10" fill="var(--fg2)" font-family="inherit">0</text>
-            <text x="103" y="20" font-size="10" fill="var(--fg2)" font-family="inherit">50</text>
-            <text x="195" y="128" font-size="10" fill="var(--fg2)" font-family="inherit">100</text>
-          </svg>
-          <div class="gauge-score" id="gaugeScore">--</div>
-          <div class="gauge-label" id="gaugeLabel">等待分析</div>
-        </div>
-
-        <!-- Details -->
-        <div class="report-details" id="reportDetails">
-          <!-- Dynamic content inserted by JS -->
-        </div>
-      </div>
+    <div class="report-body" id="reportBody">
+      <!-- Dynamic -->
     </div>
   </div>
 
 </div>
 
 <script>
-// ===== Demo Emails Data =====
+// ============================================================
+// DEMO EMAILS
+// ============================================================
 const DEMO_EMAILS = [
   {
-    id: 'phish-bank',
-    icon: '🎣',
-    title: '假冒银行紧急通知',
-    tag: 'phishing',
-    tagText: '钓鱼邮件',
+    id: 'phish-bank', icon: '🎣', title: '假冒银行紧急通知', tag: 'phishing', tagText: '钓鱼邮件',
     subject: '【紧急】您的银行账户存在异常，请立即验证',
     sender: 'security@bankofchina-verify.com',
     body: '尊敬的用户：\n\n我们检测到您的账户存在异常登录行为。为保护您的资金安全，请在24小时内点击以下链接完成身份验证：\n\nhttp://192.168.1.100:8080/verify?id=user123\n\n如未在24小时内完成验证，您的账户将被临时冻结。\n\n中国银行安全中心'
   },
   {
-    id: 'phish-ceo',
-    icon: '🎣',
-    title: 'AI生成CEO诈骗',
-    tag: 'phishing',
-    tagText: '钓鱼邮件',
+    id: 'phish-ceo', icon: '🎣', title: 'AI生成CEO诈骗', tag: 'phishing', tagText: '钓鱼邮件',
     subject: '关于紧急资金调拨的机密指示',
     sender: 'ceo.wang@company.com',
     body: '张总：\n\n我正在参加一个机密的投资方会议，需要立即完成一笔资金调拨。这是我们与红杉资本合作项目的预付款，金额为 48 万欧元。\n\n请将款项转入以下账户（对方财务已确认）：\n开户行：德意志银行法兰克福分行\nIBAN：DE89 3704 0044 0532 0130 00\n户名：Sequoia Capital Partners GmbH\n\n这是高度机密项目，请勿向其他人透露。我会议结束后会详细解释。\n\n王总'
   },
   {
-    id: 'phish-cred',
-    icon: '🎣',
-    title: '英文凭证窃取',
-    tag: 'phishing',
-    tagText: '钓鱼邮件',
+    id: 'phish-cred', icon: '🎣', title: '英文凭证窃取', tag: 'phishing', tagText: '钓鱼邮件',
     subject: 'Action Required: Verify Your Microsoft 365 Account',
     sender: 'noreply@mircosoft-security.com',
     body: 'Dear User,\n\nWe have detected unusual sign-in activity on your Microsoft 365 account from an unrecognized device.\n\nTo secure your account, please verify your identity immediately by clicking the link below:\n\nhttps://login.mircosoft-verify.com/@secure-login/validate\n\nIf you do not verify within 24 hours, your account will be suspended.\n\nMicrosoft Security Team'
   },
   {
-    id: 'legit-weekly',
-    icon: '✅',
-    title: '团队周报',
-    tag: 'legit',
-    tagText: '正常邮件',
+    id: 'legit-weekly', icon: '✅', title: '团队周报', tag: 'legit', tagText: '正常邮件',
     subject: '本周工作总结和下周计划',
     sender: 'li.ming@company.com',
     body: 'Hi all,\n\n以下是本周的工作总结和下周计划：\n\n本周完成：\n1. 完成了用户认证模块的重构\n2. 修复了3个线上bug\n3. 参加了客户需求评审会议\n\n下周计划：\n1. 开始新功能的开发\n2. 准备版本发布的测试用例\n\n如有问题请随时沟通。\n\n李明'
   },
   {
-    id: 'legit-meeting',
-    icon: '✅',
-    title: '会议邀请',
-    tag: 'legit',
-    tagText: '正常邮件',
+    id: 'legit-meeting', icon: '✅', title: '会议邀请', tag: 'legit', tagText: '正常邮件',
     subject: 'Q3 季度评审会议邀请',
     sender: 'hr@company.com',
     body: '各位同事好，\n\nQ3 季度评审会议定于下周三（10月16日）下午2:00在3楼大会议室举行。\n\n议程：\n1. 各部门 Q3 业绩汇报\n2. Q4 目标讨论\n3. 年度评优提名\n\n请各部门负责人提前准备汇报材料。\n\n人力资源部'
   }
 ];
 
-// Agent node names mapping (backend node name -> display info)
-const AGENT_NODES = [
-  { node: 'semantic_analysis', label: '语义意图分析', index: 0 },
-  { node: 'multi_detection', label: '多维关联检测', index: 1 },
-  { node: 'risk_assessment', label: '风险研判', index: 2 },
-  { node: 'response', label: '响应处置', index: 3 }
+const AGENT_META = [
+  { name: '语义意图分析', icon: '🧠', index: 0, subtitle: 'SEMANTIC INTENT ANALYSIS' },
+  { name: '多维关联检测', icon: '🔍', index: 1, subtitle: 'MULTI-VECTOR DETECTION' },
+  { name: '风险研判', icon: '⚖️', index: 2, subtitle: 'RISK ASSESSMENT ENGINE' },
+  { name: '响应处置', icon: '🛡️', index: 3, subtitle: 'AUTO RESPONSE PROTOCOL' }
 ];
 
-// State
-let isAnalyzing = false;
-let activeAgentIndex = -1;
-let agentStates = [{}, {}, {}, {}]; // per-agent state
+const AGENT_CONNECTORS = [
+  '→ 进入多维技术检测，扫描邮件安全特征链路...',
+  '→ 综合前序分析结果，启动风险研判引擎...',
+  '→ 根据风险等级，激活自动化响应处置协议...'
+];
 
-// ===== Init =====
+// ============================================================
+// STATE
+// ============================================================
+let isAnalyzing = false;
+let activeCardIdx = -1;
+let cardElements = {};
+let cardToolCount = {};
+
+// ============================================================
+// INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   renderDemoMenu();
-  // Close dropdown on outside click
   document.addEventListener('click', (e) => {
     const dd = document.getElementById('demoDropdown');
-    if (!dd.contains(e.target)) {
-      dd.classList.remove('open');
-    }
+    if (!dd.contains(e.target)) dd.classList.remove('open');
   });
 });
 
-// ===== Demo Menu =====
+// ============================================================
+// DEMO MENU
+// ============================================================
 function renderDemoMenu() {
-  const phishContainer = document.getElementById('demoListPhishing');
-  const legitContainer = document.getElementById('demoListLegit');
-
-  DEMO_EMAILS.filter(e => e.tag === 'phishing').forEach(email => {
-    phishContainer.appendChild(createDemoItem(email));
-  });
-  DEMO_EMAILS.filter(e => e.tag === 'legit').forEach(email => {
-    legitContainer.appendChild(createDemoItem(email));
-  });
+  const phish = document.getElementById('demoListPhishing');
+  const legit = document.getElementById('demoListLegit');
+  DEMO_EMAILS.filter(e => e.tag === 'phishing').forEach(e => phish.appendChild(createDemoItem(e)));
+  DEMO_EMAILS.filter(e => e.tag === 'legit').forEach(e => legit.appendChild(createDemoItem(e)));
 }
 
 function createDemoItem(email) {
   const btn = document.createElement('button');
   btn.className = 'demo-item';
-  btn.innerHTML = `
-    <span class="demo-item-icon">${email.icon}</span>
-    <div class="demo-item-info">
-      <div class="demo-item-title">${email.title}</div>
-      <span class="demo-item-tag ${email.tag}">${email.tagText}</span>
-    </div>
-  `;
+  btn.innerHTML = `<span class="demo-item-icon">${email.icon}</span><div class="demo-item-info"><div class="demo-item-title">${email.title}</div><span class="demo-item-tag ${email.tag}">${email.tagText}</span></div>`;
   btn.addEventListener('click', () => {
     fillDemoEmail(email);
     document.getElementById('demoDropdown').classList.remove('open');
@@ -1242,10 +209,7 @@ function createDemoItem(email) {
   return btn;
 }
 
-function toggleDemoMenu() {
-  const dd = document.getElementById('demoDropdown');
-  dd.classList.toggle('open');
-}
+function toggleDemoMenu() { document.getElementById('demoDropdown').classList.toggle('open'); }
 
 function fillDemoEmail(email) {
   document.getElementById('inputSubject').value = email.subject;
@@ -1254,59 +218,48 @@ function fillDemoEmail(email) {
   updatePreview();
 }
 
-// ===== Email Preview =====
+// ============================================================
+// PREVIEW
+// ============================================================
 function togglePreview() {
-  const preview = document.getElementById('emailPreview');
-  preview.classList.toggle('visible');
-  if (preview.classList.contains('visible')) updatePreview();
+  const p = document.getElementById('emailPreview');
+  p.classList.toggle('visible');
+  if (p.classList.contains('visible')) updatePreview();
 }
-
 function updatePreview() {
   document.getElementById('previewSubject').textContent = document.getElementById('inputSubject').value || '-';
   document.getElementById('previewSender').textContent = document.getElementById('inputSender').value || '-';
   document.getElementById('previewBody').textContent = document.getElementById('inputBody').value || '-';
 }
 
-// ===== Analysis =====
+// ============================================================
+// ANALYSIS
+// ============================================================
 async function startAnalysis() {
   const subject = document.getElementById('inputSubject').value.trim();
   const sender = document.getElementById('inputSender').value.trim();
   const body = document.getElementById('inputBody').value.trim();
 
-  if (!body) {
-    alert('请输入邮件正文内容');
-    return;
-  }
-
+  if (!body) { alert('请输入邮件正文内容'); return; }
   if (isAnalyzing) return;
   isAnalyzing = true;
 
-  // Reset UI
   resetWorkflow();
   document.getElementById('analyzeBtn').disabled = true;
   document.getElementById('analyzeBtn').innerHTML = '<div class="spinner"></div> 分析中...';
 
-  // Show workflow section
-  document.getElementById('workflowSection').classList.add('visible');
-  document.getElementById('workflowSection').classList.add('fade-in');
-
-  // Hide previous report
+  document.getElementById('workflowStream').classList.add('active');
   document.getElementById('reportSection').classList.remove('visible');
 
   try {
     await streamAnalysis({ subject, sender, body });
   } catch (err) {
-    console.error('Analysis error:', err);
-    showError(err.message || '分析过程中发生错误');
+    console.error(err);
+    showError(err.message || '分析错误');
   } finally {
     isAnalyzing = false;
     document.getElementById('analyzeBtn').disabled = false;
-    document.getElementById('analyzeBtn').innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      开始分析
-    `;
+    document.getElementById('analyzeBtn').innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> ANALYZE`;
   }
 }
 
@@ -1315,20 +268,12 @@ async function streamAnalysis(emailData) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      subject: emailData.subject,
-      sender: emailData.sender,
-      recipients: '',
-      body: emailData.body,
-      urls: [],
-      headers: {},
-      has_attachment: false,
-      raw_text: ''
+      subject: emailData.subject, sender: emailData.sender,
+      recipients: '', body: emailData.body, urls: [],
+      headers: {}, has_attachment: false, raw_text: ''
     })
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -1337,469 +282,624 @@ async function streamAnalysis(emailData) {
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-
     buffer += decoder.decode(value, { stream: true });
-
-    // Parse SSE format: "event: <type>\ndata: <json>\n\n"
     const lines = buffer.split('\n');
     buffer = '';
 
     let currentEvent = '';
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-
-      if (line.startsWith('event: ')) {
-        currentEvent = line.slice(7).trim();
-      } else if (line.startsWith('data: ')) {
-        const dataStr = line.slice(6);
+      if (line.startsWith('event: ')) { currentEvent = line.slice(7).trim(); }
+      else if (line.startsWith('data: ')) {
         try {
-          const data = JSON.parse(dataStr);
-          handleSSEEvent(currentEvent, data);
+          handleSSEEvent(currentEvent, JSON.parse(line.slice(6)));
         } catch (e) {
-          // Try parsing as JSON lines format
           try {
-            const parsed = JSON.parse(dataStr);
-            if (parsed.type && parsed.data) {
-              handleSSEEvent(parsed.type, parsed.data);
-            }
-          } catch (e2) {
-            console.warn('Failed to parse SSE data:', dataStr);
-          }
+            const p = JSON.parse(line.slice(6));
+            if (p.type && p.data) handleSSEEvent(p.type, p.data);
+          } catch (_) { console.warn('SSE parse:', line.slice(6).substring(0,60)); }
         }
         currentEvent = '';
-      } else if (line === '' && i === lines.length - 1) {
-        // Last empty line — might be incomplete, put back in buffer
-      } else if (line.trim() === '') {
-        // Empty line separating events, skip
-      } else {
-        // Could be JSON lines format: {"type":"...","data":{...}}
+      } else if (line.trim() !== '') {
         try {
-          const parsed = JSON.parse(line);
-          if (parsed.type && parsed.data) {
-            handleSSEEvent(parsed.type, parsed.data);
-          }
-        } catch (e) {
-          // Incomplete line, add to buffer
-          if (i === lines.length - 1) {
-            buffer = line;
-          }
-        }
+          const p = JSON.parse(line);
+          if (p.type && p.data) handleSSEEvent(p.type, p.data);
+        } catch (_) { if (i === lines.length - 1) buffer = line; }
       }
     }
   }
 }
 
+// ============================================================
+// SSE EVENT DISPATCH
+// ============================================================
 function handleSSEEvent(eventType, data) {
-  switch (eventType) {
-    case 'agent_start':
-      handleAgentStart(data);
-      break;
-    case 'agent_log':
-      handleAgentLog(data);
-      break;
-    case 'thinking':
-      handleThinking(data);
-      break;
-    case 'tool_call':
-      handleToolCall(data);
-      break;
-    case 'agent_done':
-      handleAgentDone(data);
-      break;
-    case 'complete':
-      handleComplete(data);
-      break;
-    case 'error':
-      showError(data.message || '未知错误');
-      break;
+  const handlers = {
+    'agent_start': handleAgentStart,
+    'agent_log': handleAgentLog,
+    'thinking': handleThinking,
+    'llm_chunk': handleLlmChunk,
+    'tool_call': handleToolCall,
+    'agent_done': handleAgentDone,
+    'complete': handleComplete,
+    'error': (d) => showError(d.message || '未知错误')
+  };
+  if (handlers[eventType]) handlers[eventType](data);
+}
+
+function findMeta(name) {
+  // Try exact match first, then index
+  const byName = AGENT_META.find(m => m.name === name);
+  if (byName) return byName;
+  // Try index-based match
+  if (typeof name === 'number' || /^\d+$/.test(name)) {
+    return AGENT_META[parseInt(name)];
   }
+  return null;
 }
 
-function getNodeIndex(nodeName) {
-  const found = AGENT_NODES.find(n => n.node === nodeName);
-  return found ? found.index : -1;
-}
-
+// ============================================================
+// AGENT START: Create a new card
+// ============================================================
 function handleAgentStart(data) {
-  const idx = getNodeIndex(data.node || data.agent);
-  if (idx < 0) return;
+  const agentName = data.agent || data.node || '';
+  const meta = findMeta(agentName) || findMeta(data.index);
+  if (!meta) return;
 
-  activeAgentIndex = idx;
-  setNodeState(idx, 'active');
+  const idx = meta.index;
+  activeCardIdx = idx;
+  cardToolCount[idx] = 0;
 
-  // Show this agent's detail panel
-  showAgentDetail(idx);
-
-  // Mark previous arrows as done
+  // Add connector before card (except first)
   if (idx > 0) {
-    document.getElementById(`arrow${idx - 1}`).classList.add('done');
-  }
-}
-
-function handleAgentLog(data) {
-  const idx = getNodeIndex(data.node || data.agent);
-  if (idx < 0) return;
-
-  const logsEl = document.getElementById(`logs${idx}`);
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.textContent = data.message || data.log || '';
-  logsEl.appendChild(line);
-  logsEl.scrollTop = logsEl.scrollHeight;
-
-  // Also append to thinking text as a form of streamed content
-  appendThinking(idx, (data.message || data.log || '') + '\n');
-}
-
-function handleThinking(data) {
-  const idx = getNodeIndex(data.agent || data.node);
-  if (idx < 0) return;
-  appendThinking(idx, data.chunk || data.text || '');
-}
-
-function appendThinking(idx, text) {
-  const el = document.getElementById(`thinking${idx}`);
-  // Remove cursor, append text, re-add cursor
-  const cursor = el.querySelector('.cursor');
-  if (cursor) cursor.remove();
-  el.insertAdjacentText('beforeend', text);
-  const newCursor = document.createElement('span');
-  newCursor.className = 'cursor';
-  el.appendChild(newCursor);
-  el.scrollTop = el.scrollHeight;
-}
-
-function handleToolCall(data) {
-  const idx = getNodeIndex(data.agent || data.node);
-  if (idx < 0) return;
-
-  const toolsEl = document.getElementById(`tools${idx}`);
-  const detailsEl = document.getElementById(`toolDetails${idx}`);
-  const toolId = `tool_${idx}_${Date.now()}`;
-
-  const badge = document.createElement('div');
-  badge.className = 'tool-badge';
-  badge.innerHTML = `
-    <span class="tool-name">${data.tool || '工具'}</span>
-    <span class="tool-check">✓</span>
-    <span class="tool-duration">${data.duration_ms || 0}ms</span>
-  `;
-  badge.addEventListener('click', () => {
-    const detail = document.getElementById(toolId);
-    detail.classList.toggle('expanded');
-  });
-  toolsEl.appendChild(badge);
-
-  const detail = document.createElement('div');
-  detail.className = 'tool-detail';
-  detail.id = toolId;
-  detail.innerHTML = `
-    ${data.input ? `<div class="tool-detail-label">输入：</div><div class="tool-detail-value">${escapeHtml(data.input)}</div>` : ''}
-    ${data.output ? `<div class="tool-detail-label" style="margin-top:8px;">输出：</div><div class="tool-detail-value">${escapeHtml(data.output)}</div>` : ''}
-  `;
-  detailsEl.appendChild(detail);
-}
-
-function handleAgentDone(data) {
-  const idx = getNodeIndex(data.node || data.agent);
-  if (idx < 0) return;
-
-  // Remove cursor from thinking
-  const thinkingEl = document.getElementById(`thinking${idx}`);
-  const cursor = thinkingEl.querySelector('.cursor');
-  if (cursor) cursor.remove();
-
-  // Set node state based on result
-  const result = data.result || {};
-  const nodeResultClass = determineNodeResultClass(idx, result);
-  setNodeState(idx, nodeResultClass);
-
-  // Show result
-  renderAgentResult(idx, result);
-
-  // Activate next arrow
-  if (idx < 3) {
-    document.getElementById(`arrow${idx}`).classList.add('active');
-  }
-}
-
-function determineNodeResultClass(idx, result) {
-  if (idx === 0) {
-    // Semantic: check intent
-    const semantic = result.semantic || result;
-    const intent = semantic.intent || '';
-    if (intent === 'phishing') return 'done-danger';
-    if (intent === 'legitimate') return 'done-safe';
-    return 'done-warn';
-  }
-  if (idx === 1) {
-    // Detection: check flags
-    const detection = result.detection || result;
-    const flags = detection.content_flags || [];
-    if (flags.length > 2) return 'done-danger';
-    if (flags.length > 0) return 'done-warn';
-    return 'done-safe';
-  }
-  if (idx === 2) {
-    // Risk: check level
-    const risk = result.risk || result;
-    const level = risk.risk_level || '';
-    if (level === 'critical' || level === 'high') return 'done-danger';
-    if (level === 'medium') return 'done-warn';
-    return 'done-safe';
-  }
-  if (idx === 3) {
-    // Response: check action
-    const resp = result.response || result;
-    const action = resp.action || '';
-    if (action === 'isolate' || action === 'quarantine') return 'done-danger';
-    if (action === 'alert') return 'done-warn';
-    return 'done-safe';
-  }
-  return 'done-safe';
-}
-
-function renderAgentResult(idx, result) {
-  const block = document.getElementById(`resultBlock${idx}`);
-  const el = document.getElementById(`result${idx}`);
-  block.style.display = 'block';
-
-  if (idx === 0) {
-    const semantic = result.semantic || result;
-    el.innerHTML = `
-      <div class="result-row"><span class="result-label">意图判定：</span><span class="result-value"><span class="result-tag ${semantic.intent || ''}">${translateIntent(semantic.intent)}</span></span></div>
-      <div class="result-row"><span class="result-label">置信度：</span><span class="result-value">${((semantic.confidence || 0) * 100).toFixed(0)}%</span></div>
-      <div class="result-row"><span class="result-label">话术识别：</span><span class="result-value">${(semantic.persuasion_techniques || []).map(t => `<span class="result-tag suspicious">${t}</span>`).join(' ') || '无'}</span></div>
-      ${semantic.explanation ? `<div class="result-row" style="margin-top:6px"><span class="result-label">分析推理：</span><span class="result-value" style="font-size:12px;color:var(--fg2);">${escapeHtml(semantic.explanation)}</span></div>` : ''}
-    `;
-  } else if (idx === 1) {
-    const det = result.detection || result;
-    el.innerHTML = `
-      <div class="result-row"><span class="result-label">发件人可信度：</span><span class="result-value">${((det.sender_score || 0.5) * 100).toFixed(0)}% — ${escapeHtml(det.sender_analysis || '')}</span></div>
-      <div class="result-row"><span class="result-label">URL安全评分：</span><span class="result-value">${((det.url_score || 0.5) * 100).toFixed(0)}% — ${escapeHtml(det.url_analysis || '')}</span></div>
-      <div class="result-row"><span class="result-label">内容标记：</span><span class="result-value">${(det.content_flags || []).map(f => `<span class="result-tag phishing">${f}</span>`).join(' ') || '无'}</span></div>
-      ${det.explanation ? `<div class="result-row" style="margin-top:6px"><span class="result-label">检测推理：</span><span class="result-value" style="font-size:12px;color:var(--fg2);">${escapeHtml(det.explanation)}</span></div>` : ''}
-    `;
-  } else if (idx === 2) {
-    const risk = result.risk || result;
-    el.innerHTML = `
-      <div class="result-row"><span class="result-label">风险评分：</span><span class="result-value" style="font-weight:700;font-size:16px;">${(risk.risk_score || 0).toFixed(0)}/100</span></div>
-      <div class="result-row"><span class="result-label">风险等级：</span><span class="result-value"><span class="result-tag ${risk.risk_level || ''}">${translateRiskLevel(risk.risk_level)}</span></span></div>
-      <div class="result-row"><span class="result-label">ATT&CK映射：</span><span class="result-value">${(risk.attack_techniques || []).map(t => `<span class="result-tag suspicious">${t}</span>`).join(' ') || '无'}</span></div>
-      ${risk.explanation ? `<div class="result-row" style="margin-top:6px"><span class="result-label">研判推理：</span><span class="result-value" style="font-size:12px;color:var(--fg2);">${escapeHtml(risk.explanation)}</span></div>` : ''}
-    `;
-  } else if (idx === 3) {
-    const resp = result.response || result;
-    el.innerHTML = `
-      <div class="result-row"><span class="result-label">处置动作：</span><span class="result-value"><span class="action-badge ${resp.action || ''}">${translateAction(resp.action)}</span></span></div>
-      ${resp.alert_message ? `<div class="result-row"><span class="result-label">告警消息：</span><span class="result-value">${escapeHtml(resp.alert_message)}</span></div>` : ''}
-      ${resp.recommendation ? `<div class="result-row"><span class="result-label">安全建议：</span><span class="result-value">${escapeHtml(resp.recommendation)}</span></div>` : ''}
-      ${resp.trace_report ? `<div class="result-row" style="margin-top:6px"><span class="result-label">溯源分析：</span><span class="result-value" style="font-size:12px;color:var(--fg2);">${escapeHtml(resp.trace_report)}</span></div>` : ''}
-    `;
-  }
-}
-
-function handleComplete(data) {
-  // Show report
-  renderReport(data);
-  document.getElementById('reportSection').classList.add('visible');
-  document.getElementById('reportSection').classList.add('fade-in');
-
-  // Scroll to report
-  setTimeout(() => {
-    document.getElementById('reportSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 300);
-}
-
-// ===== Report Rendering =====
-function renderReport(data) {
-  const riskScore = data.risk_score || data.risk_result?.risk_score || 0;
-  const riskLevel = data.risk_level || data.risk_result?.risk_level || 'unknown';
-
-  // Animate gauge
-  animateGauge(riskScore, riskLevel);
-
-  // Build report details
-  const details = document.getElementById('reportDetails');
-  details.innerHTML = '';
-
-  // Semantic card
-  const semantic = data.semantic_result || data.semantic || {};
-  if (semantic.intent || semantic.explanation) {
-    details.appendChild(createReportCard('🧠 语义意图分析', `
-      <div class="kv-row"><span class="kv-key">意图判定</span><span class="kv-val"><span class="result-tag ${semantic.intent || ''}">${translateIntent(semantic.intent)}</span></span></div>
-      <div class="kv-row"><span class="kv-key">置信度</span><span class="kv-val">${((semantic.confidence || 0) * 100).toFixed(0)}%</span></div>
-      <div class="kv-row"><span class="kv-key">话术识别</span><span class="kv-val">${(semantic.persuasion_techniques || []).join(', ') || '无'}</span></div>
-      ${semantic.explanation ? `<div class="kv-row"><span class="kv-key">分析推理</span><span class="kv-val" style="font-size:12px;">${escapeHtml(semantic.explanation).substring(0, 300)}</span></div>` : ''}
-    `));
+    addConnector(idx - 1);
   }
 
-  // Detection card
-  const detection = data.detection_result || data.detection || {};
-  if (detection.sender_score !== undefined || detection.explanation) {
-    details.appendChild(createReportCard('🔍 多维关联检测', `
-      <div class="kv-row"><span class="kv-key">发件人可信度</span><span class="kv-val">${((detection.sender_score || 0.5) * 100).toFixed(0)}%</span></div>
-      <div class="kv-row"><span class="kv-key">URL安全评分</span><span class="kv-val">${((detection.url_score || 0.5) * 100).toFixed(0)}%</span></div>
-      <div class="kv-row"><span class="kv-key">内容标记</span><span class="kv-val">${(detection.content_flags || []).join(', ') || '无'}</span></div>
-      ${detection.explanation ? `<div class="kv-row"><span class="kv-key">检测推理</span><span class="kv-val" style="font-size:12px;">${escapeHtml(detection.explanation).substring(0, 300)}</span></div>` : ''}
-    `));
-  }
-
-  // Risk card
-  const risk = data.risk_result || data.risk || {};
-  if (risk.risk_score !== undefined || risk.explanation) {
-    details.appendChild(createReportCard('⚖️ 风险研判', `
-      <div class="kv-row"><span class="kv-key">风险评分</span><span class="kv-val" style="font-weight:700;font-size:16px;">${(risk.risk_score || 0).toFixed(0)}/100</span></div>
-      <div class="kv-row"><span class="kv-key">风险等级</span><span class="kv-val"><span class="result-tag ${risk.risk_level || ''}">${translateRiskLevel(risk.risk_level)}</span></span></div>
-      <div class="kv-row"><span class="kv-key">ATT&CK映射</span><span class="kv-val">${(risk.attack_techniques || []).join(', ') || '无'}</span></div>
-      ${risk.explanation ? `<div class="kv-row"><span class="kv-key">研判推理</span><span class="kv-val" style="font-size:12px;">${escapeHtml(risk.explanation).substring(0, 300)}</span></div>` : ''}
-    `));
-  }
-
-  // Response card
-  const resp = data.response_result || data.response || {};
-  if (resp.action || resp.alert_message) {
-    details.appendChild(createReportCard('🛡️ 响应处置', `
-      <div class="kv-row"><span class="kv-key">处置动作</span><span class="kv-val"><span class="action-badge ${resp.action || ''}">${translateAction(resp.action)}</span></span></div>
-      ${resp.alert_message ? `<div class="kv-row"><span class="kv-key">告警消息</span><span class="kv-val">${escapeHtml(resp.alert_message)}</span></div>` : ''}
-      ${resp.recommendation ? `<div class="kv-row"><span class="kv-key">安全建议</span><span class="kv-val">${escapeHtml(resp.recommendation)}</span></div>` : ''}
-      ${resp.trace_report ? `<div class="kv-row"><span class="kv-key">溯源分析</span><span class="kv-val" style="font-size:12px;">${escapeHtml(resp.trace_report).substring(0, 300)}</span></div>` : ''}
-    `));
-  }
-
-  // Workflow log card
-  const logs = data.workflow_log || [];
-  if (logs.length > 0) {
-    details.appendChild(createReportCard('📋 工作流执行日志', `
-      ${logs.map(l => `<div class="kv-row"><span class="kv-val" style="font-size:12px;">${escapeHtml(l)}</span></div>`).join('')}
-    `));
-  }
-}
-
-function createReportCard(title, bodyHtml) {
+  // Build card HTML
+  const stream = document.getElementById('workflowStream');
   const card = document.createElement('div');
-  card.className = 'report-card fade-in';
+  card.className = 'agent-card running';
+  card.id = `agentCard${idx}`;
   card.innerHTML = `
-    <div class="report-card-title">${title}</div>
-    <div class="report-card-body">${bodyHtml}</div>
+    <div class="card-header">
+      <div class="card-header-icon">${meta.icon}</div>
+      <div class="card-header-info">
+        <div class="card-header-title">${meta.name}</div>
+        <div class="card-header-subtitle">${meta.subtitle}</div>
+      </div>
+      <span class="card-status-badge running" id="cardBadge${idx}">PROCESSING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-progress" id="cardProgress${idx}"></div>
+      <div class="card-llm-stream" id="cardLlmStream${idx}">
+        <div class="stream-label">
+          <span class="stream-dot"></span>LLM THINKING
+        </div>
+        <div class="stream-text" id="cardLlmStreamText${idx}"></div>
+      </div>
+      <div class="card-tools" id="cardTools${idx}"></div>
+      <div class="card-result" id="cardResult${idx}">
+        <div class="card-result-title">📊 ANALYSIS RESULT</div>
+        <div class="card-result-body" id="cardResultBody${idx}"></div>
+      </div>
+    </div>
   `;
-  return card;
+  stream.appendChild(card);
+
+  cardElements[idx] = {
+    card,
+    progress: document.getElementById(`cardProgress${idx}`),
+    llmStream: document.getElementById(`cardLlmStream${idx}`),
+    llmStreamText: document.getElementById(`cardLlmStreamText${idx}`),
+    tools: document.getElementById(`cardTools${idx}`),
+    result: document.getElementById(`cardResult${idx}`),
+    resultBody: document.getElementById(`cardResultBody${idx}`),
+    badge: document.getElementById(`cardBadge${idx}`)
+  };
+
+  // Scroll card into view smoothly
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+
+  // Add initial progress item
+  addProgressItem(idx, '模块已激活');
 }
 
-function animateGauge(score, level) {
-  // Clamp score
-  score = Math.max(0, Math.min(100, score));
-
-  // Gauge arc: total length ~283 (semicircle with r=90)
-  const totalLen = 283;
-  const offset = totalLen - (score / 100) * totalLen;
-  const arc = document.getElementById('gaugeArc');
-  arc.style.strokeDashoffset = offset;
-
-  // Needle rotation: -90 (score=0) to +90 (score=100)
-  const angle = -90 + (score / 100) * 180;
-  const needle = document.getElementById('gaugeNeedle');
-  needle.style.transform = `rotate(${angle}deg)`;
-  needle.setAttribute('transform', `rotate(${angle}, 110, 120)`);
-
-  // Score text
-  const scoreEl = document.getElementById('gaugeScore');
-  scoreEl.textContent = Math.round(score);
-  scoreEl.style.color = getScoreColor(score);
-
-  // Label
-  const label = document.getElementById('gaugeLabel');
-  label.textContent = translateRiskLevel(level);
-  label.className = `gauge-label ${level}`;
+// ============================================================
+// AGENT LOG: Add log line
+// ============================================================
+function handleAgentLog(data) {
+  const meta = findMeta(data.node || data.agent);
+  if (!meta) return;
+  addProgressItem(meta.index, data.message || data.log || '', false);
 }
 
-function getScoreColor(score) {
-  if (score >= 75) return 'var(--danger)';
-  if (score >= 50) return 'var(--warn)';
-  if (score >= 25) return '#FFD60A';
-  return 'var(--success)';
-}
+// ============================================================
+// LLM CHUNK: Real streaming — buffer chars and start typewriter
+// immediately when thinking is done. Don't wait for agent_done.
+// With real streaming, tokens arrive one-by-one from the API,
+// so the typewriter plays them as they come (natural pacing).
+// ============================================================
+let llmRenderQueue = {};    // {idx: [char, char, ...]}
+let llmRenderTimers = {};   // {idx: timerId}
+let llmRenderDone = {};     // {idx: true} when agent_done fires (all chunks received)
+let thinkingQueue = {};     // {idx: [text, text, ...]} buffered thinking lines
+let thinkingTimers = {};    // {idx: timerId} staggered render timers
+let pendingResultHtml = {}; // {idx: html} result card HTML, shown after typewriter ends
 
-// ===== Workflow UI Helpers =====
-function resetWorkflow() {
-  activeAgentIndex = -1;
-  agentStates = [{}, {}, {}, {}];
+function handleLlmChunk(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
 
-  for (let i = 0; i < 4; i++) {
-    setNodeState(i, 'idle');
-    document.getElementById(`thinking${i}`).innerHTML = '<span class="cursor"></span>';
-    document.getElementById(`tools${i}`).innerHTML = '';
-    document.getElementById(`toolDetails${i}`).innerHTML = '';
-    document.getElementById(`logs${i}`).innerHTML = '';
-    document.getElementById(`result${i}`).innerHTML = '';
-    document.getElementById(`resultBlock${i}`).style.display = 'none';
-    document.getElementById(`agentDetail${i}`).classList.remove('visible');
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+
+  const text = data.chunk || '';
+  if (!text) return;
+
+  // Show stream container on first chunk
+  if (!el.llmStream.classList.contains('active')) {
+    el.llmStream.classList.add('active');
   }
 
-  for (let i = 0; i < 3; i++) {
-    const arrow = document.getElementById(`arrow${i}`);
-    arrow.classList.remove('active', 'done');
+  // Buffer characters into queue
+  if (!llmRenderQueue[idx]) llmRenderQueue[idx] = [];
+  for (const c of text) {
+    llmRenderQueue[idx].push(c);
   }
 
-  document.getElementById('reportSection').classList.remove('visible');
+  // Try to start typewriter — will start if thinking is done
+  tryStartLlmTypewriter(idx);
 }
 
-function setNodeState(idx, state) {
-  const node = document.getElementById(`node${idx}`);
-  node.className = `node-box ${state}`;
+function renderLlmCharLoop(idx, el) {
+  const queue = llmRenderQueue[idx];
+  if (!queue || queue.length === 0) {
+    llmRenderTimers[idx] = null;
+    markLlmDoneIfNeeded(idx, el);
+    return;
+  }
+
+  // Pop ~2 chars per frame for natural typing speed
+  let batch = '';
+  const batchSize = 2;
+  for (let i = 0; i < batchSize && queue.length > 0; i++) {
+    batch += queue.shift();
+  }
+
+  el.llmStreamText.textContent += batch;
+  el.llmStream.scrollTop = el.llmStream.scrollHeight;
+
+  // ~25ms between batches
+  llmRenderTimers[idx] = setTimeout(() => renderLlmCharLoop(idx, el), 25);
 }
 
-function showAgentDetail(idx) {
-  // Toggle: if same index is already visible, keep it; otherwise switch
-  for (let i = 0; i < 4; i++) {
-    const detail = document.getElementById(`agentDetail${i}`);
-    if (i === idx) {
-      detail.classList.add('visible');
-    } else {
-      detail.classList.remove('visible');
+function markLlmDoneIfNeeded(idx, el) {
+  if (llmRenderDone[idx] && el.llmStream.classList.contains('active')) {
+    el.llmStream.classList.add('done');
+    const label = el.llmStream.querySelector('.stream-label');
+    if (label) {
+      label.innerHTML = '<span class="stream-dot" style="animation:none;"></span>THINKING COMPLETE';
+    }
+    el.llmStream.scrollTop = 0;
+
+    // Show result card after LLM typewriter finishes
+    if (pendingResultHtml[idx] && el.result) {
+      el.result.querySelector('.card-result-title').textContent = '📊 ANALYSIS RESULT';
+      el.resultBody.innerHTML = pendingResultHtml[idx];
+      el.result.classList.add('visible');
+      pendingResultHtml[idx] = null;
     }
   }
 }
 
+// ============================================================
+// THINKING: Buffer lines and render with staggered delay
+// for a natural "one at a time" reveal effect.
+// ============================================================
+function handleThinking(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
+
+  const text = data.chunk || data.text || '';
+  if (!text.trim()) return;
+
+  const idx = meta.index;
+
+  // Buffer lines into thinking queue
+  if (!thinkingQueue[idx]) thinkingQueue[idx] = [];
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    thinkingQueue[idx].push(trimmed);
+  }
+
+  // Start staggered render loop if not already running
+  if (!thinkingTimers[idx]) {
+    renderThinkingLoop(idx);
+  }
+}
+
+function renderThinkingLoop(idx) {
+  const queue = thinkingQueue[idx];
+  if (!queue || queue.length === 0) {
+    thinkingTimers[idx] = null;
+    // Thinking done — check if we should start LLM typewriter
+    tryStartLlmTypewriter(idx);
+    return;
+  }
+
+  const text = queue.shift();
+  const el = cardElements[idx];
+  if (el) {
+    const item = document.createElement('div');
+    item.className = 'progress-item';
+
+    // Format: highlight key metrics
+    const formatted = text
+      .replace(/(\d+%)/g, '<span class="highlight">$1</span>')
+      .replace(/(\d+\/\d+)/g, '<span class="highlight">$1</span>')
+      .replace(/(\d+ms)/g, '<span class="dim">$1</span>');
+
+    item.innerHTML = `
+      <div class="pi-dot"></div>
+      <div class="pi-text">${formatted}</div>
+    `;
+    el.progress.appendChild(item);
+    el.card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+
+  // ~100ms between each thinking line
+  thinkingTimers[idx] = setTimeout(() => renderThinkingLoop(idx), 100);
+}
+
+function tryStartLlmTypewriter(idx) {
+  // Start typewriter if thinking is done (no pending thinking timer)
+  // and there are buffered chunks. Don't wait for agent_done —
+  // with real streaming, tokens arrive one-by-one and should play immediately.
+  if (!thinkingTimers[idx] && llmRenderQueue[idx] && llmRenderQueue[idx].length > 0) {
+    const el = cardElements[idx];
+    if (el && !llmRenderTimers[idx]) {
+      renderLlmCharLoop(idx, el);
+    }
+  }
+}
+
+function addProgressItem(idx, text, isRunning) {
+  // Legacy direct-add for agent_log events — use buffer for staggered rendering
+  if (!thinkingQueue[idx]) thinkingQueue[idx] = [];
+  if (text && text.trim()) {
+    thinkingQueue[idx].push(text.trim());
+    if (!thinkingTimers[idx]) {
+      renderThinkingLoop(idx);
+    }
+  }
+}
+
+// ============================================================
+// TOOL CALL: Add tool chip
+// ============================================================
+function handleToolCall(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
+
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+
+  const chip = document.createElement('span');
+  chip.className = 'tool-chip';
+  chip.title = (data.input || '') + '\n→ ' + (data.output || '').substring(0, 200);
+  chip.innerHTML = `
+    <span class="tc-dot"></span>
+    <span class="tc-name">${data.tool || '工具'}</span>
+    <span class="tc-time">${data.duration_ms || 0}ms</span>
+  `;
+  el.tools.appendChild(chip);
+}
+
+// ============================================================
+// AGENT DONE: Finalize card
+// ============================================================
+function handleAgentDone(data) {
+  const meta = findMeta(data.node || data.agent);
+  if (!meta) return;
+
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+
+  const result = data.result || {};
+
+  // Update card status
+  const riskClass = determineCardClass(idx, result);
+  el.card.classList.remove('running');
+  el.card.classList.add(riskClass);
+  el.badge.classList.remove('running');
+  if (riskClass === 'done-danger') {
+    el.badge.classList.add('warn');
+    el.badge.textContent = 'SUSPICIOUS';
+    el.badge.title = '检测到风险特征';
+  } else if (riskClass === 'done-warn') {
+    el.badge.classList.add('warn');
+    el.badge.textContent = 'CAUTION';
+  } else {
+    el.badge.classList.add('done');
+    el.badge.textContent = 'COMPLETE';
+  }
+
+  // Mark running progress items as done
+  el.progress.querySelectorAll('.progress-item.running').forEach(p => p.classList.remove('running'));
+
+  // Mark that all LLM chunks have been received (agent_done = stream complete)
+  llmRenderDone[idx] = true;
+  // If typewriter already finished (queue empty, no timer running),
+  // show result card now. Otherwise markLlmDoneIfNeeded will handle it
+  // when the queue drains.
+  if (!llmRenderTimers[idx]) {
+    markLlmDoneIfNeeded(idx, el);
+  }
+
+  // Update stream label
+  if (el.llmStream.classList.contains('active')) {
+    const label = el.llmStream.querySelector('.stream-label');
+    if (label) {
+      label.innerHTML = '<span class="stream-dot" style="animation:none;"></span>ANALYSIS OUTPUT';
+    }
+  }
+
+  // Build result summary HTML
+  let resultHtml = '';
+  switch (idx) {
+    case 0: // Semantic
+      const intent = result.intent || (result.semantic && result.semantic.intent) || '';
+      const conf = result.confidence || (result.semantic && result.semantic.confidence) || 0;
+      const techs = result.techniques || (result.semantic && result.semantic.persuasion_techniques) || [];
+      const expl = result.explanation || (result.semantic && result.semantic.explanation) || '';
+      resultHtml = `
+        <div class="result-kv"><span class="result-k">意图判定</span><span class="result-v"><span class="result-tag ${intent === 'phishing' ? 'danger' : intent === 'legitimate' ? 'success' : 'warn'}">${translateIntent(intent)}</span></span></div>
+        <div class="result-kv"><span class="result-k">置信度</span><span class="result-v"><strong>${Math.round(conf * 100)}%</strong></span></div>
+        ${techs.length ? `<div class="result-kv"><span class="result-k">话术识别</span><span class="result-v">${techs.map(t => `<span class="result-tag info">${t}</span>`).join(' ')}</span></div>` : ''}
+        ${expl ? `<div class="result-kv"><span class="result-k">推理</span><span class="result-v" style="font-size:11px;color:var(--text-dim);">${escHtml(expl.substring(0, 300))}</span></div>` : ''}
+      `;
+      break;
+    case 1: // Detector
+      const det = result.detection || result;
+      const sScore = det.sender_score !== undefined ? det.sender_score : 0.5;
+      const uScore = det.url_score !== undefined ? det.url_score : 0.5;
+      const flags = det.content_flags || [];
+      const detExpl = det.explanation || '';
+      resultHtml = `
+        <div class="result-kv"><span class="result-k">发件人可信度</span><span class="result-v"><strong>${Math.round(sScore * 100)}%</strong> ${det.sender_analysis ? '<span style="font-size:11px;color:var(--text-dim);">— ' + escHtml(det.sender_analysis).substring(0, 80) + '</span>' : ''}</span></div>
+        <div class="result-kv"><span class="result-k">URL 安全性</span><span class="result-v"><strong>${Math.round(uScore * 100)}%</strong> ${det.url_analysis ? '<span style="font-size:11px;color:var(--text-dim);">— ' + escHtml(det.url_analysis).substring(0, 80) + '</span>' : ''}</span></div>
+        ${flags.length ? `<div class="result-kv"><span class="result-k">风险标记</span><span class="result-v">${flags.map(f => `<span class="result-tag danger">${f}</span>`).join(' ')}</span></div>` : ''}
+        ${detExpl ? `<div class="result-kv"><span class="result-k">推理</span><span class="result-v" style="font-size:11px;color:var(--text-dim);">${escHtml(detExpl.substring(0, 300))}</span></div>` : ''}
+      `;
+      break;
+    case 2: // Risk
+      const risk = result.risk || result;
+      const rScore = risk.risk_score || 0;
+      const rLevel = risk.risk_level || '';
+      const att = risk.attack_techniques || [];
+      const rExpl = risk.explanation || '';
+      resultHtml = `
+        <div class="result-kv"><span class="result-k">综合评分</span><span class="result-v" style="font-size:20px;font-weight:700;color:${getScoreColor(rScore)};">${rScore}<span style="font-size:14px;">/100</span></span></div>
+        <div class="result-kv"><span class="result-k">风险等级</span><span class="result-v"><span class="result-tag ${rLevel === 'critical' || rLevel === 'high' ? 'danger' : rLevel === 'medium' ? 'warn' : 'success'}">${translateRiskLevel(rLevel)}</span></span></div>
+        ${att.length ? `<div class="result-kv"><span class="result-k">ATT&CK</span><span class="result-v">${att.map(t => `<span class="result-tag info">${t}</span>`).join(' ')}</span></div>` : ''}
+        ${rExpl ? `<div class="result-kv"><span class="result-k">推理</span><span class="result-v" style="font-size:11px;color:var(--text-dim);">${escHtml(rExpl.substring(0, 300))}</span></div>` : ''}
+      `;
+      break;
+    case 3: // Response
+      const resp = result.response || result;
+      const action = resp.action || '';
+      const alert = resp.alert_message || '';
+      const rec = resp.recommendation || '';
+      resultHtml = `
+        <div class="result-kv"><span class="result-k">处置动作</span><span class="result-v"><span class="action-badge ${action}">${translateAction(action)}</span></span></div>
+        ${alert ? `<div class="result-kv"><span class="result-k">告警</span><span class="result-v">${escHtml(alert.substring(0, 200))}</span></div>` : ''}
+        ${rec ? `<div class="result-kv"><span class="result-k">建议</span><span class="result-v">${escHtml(rec.substring(0, 200))}</span></div>` : ''}
+      `;
+      break;
+  }
+
+  el.resultBody.innerHTML = resultHtml;
+  // If LLM typewriter will run, delay showing result card
+  if (llmRenderQueue[idx] && llmRenderQueue[idx].length > 0) {
+    pendingResultHtml[idx] = resultHtml;
+    // result card stays hidden until markLlmDoneIfNeeded
+  } else {
+    el.result.classList.add('visible');
+    pendingResultHtml[idx] = null;
+  }
+}
+
+function determineCardClass(idx, result) {
+  if (idx === 0) {
+    const intent = result.intent || (result.semantic && result.semantic.intent) || '';
+    return intent === 'phishing' ? 'done-danger' : intent === 'suspicious' ? 'done-warn' : 'done-safe';
+  }
+  if (idx === 1) {
+    const det = result.detection || result;
+    const flags = det.content_flags || [];
+    return flags.length > 2 ? 'done-danger' : flags.length > 0 ? 'done-warn' : 'done-safe';
+  }
+  if (idx === 2) {
+    const risk = result.risk || result;
+    const level = risk.risk_level || '';
+    return (level === 'critical' || level === 'high') ? 'done-danger' : level === 'medium' ? 'done-warn' : 'done-safe';
+  }
+  if (idx === 3) {
+    const resp = result.response || result;
+    const action = resp.action || '';
+    return (action === 'isolate' || action === 'quarantine') ? 'done-danger' : action === 'alert' ? 'done-warn' : 'done-safe';
+  }
+  return 'done-safe';
+}
+
+// ============================================================
+// CONNECTOR between cards
+// ============================================================
+function addConnector(afterIdx) {
+  const stream = document.getElementById('workflowStream');
+  const connector = document.createElement('div');
+  connector.className = 'card-connector';
+  const text = AGENT_CONNECTORS[afterIdx] || '';
+  connector.innerHTML = `<span class="card-connector-text">${text}</span>`;
+  stream.appendChild(connector);
+}
+
+// ============================================================
+// COMPLETE: Render final report
+// ============================================================
+function handleComplete(data) {
+  renderReport(data);
+  const rs = document.getElementById('reportSection');
+  rs.classList.add('visible');
+  setTimeout(() => rs.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+}
+
+function renderReport(data) {
+  const body = document.getElementById('reportBody');
+  const isPhishing = data.is_phishing || false;
+  const riskScore = data.risk_score || (data.risk && data.risk.risk_score) || 0;
+  const riskLevel = data.risk_level || (data.risk && data.risk.risk_level) || 'unknown';
+
+  // Verdict
+  const verdictClass = isPhishing ? 'phishing' : riskScore < 30 ? 'safe' : 'suspicious';
+  const verdictIcon = isPhishing ? '🚨' : riskScore < 30 ? '✅' : '⚠️';
+  const verdictTitle = isPhishing ? 'THREAT DETECTED — 钓鱼邮件威胁' : riskScore < 30 ? 'CLEAR — 邮件安全' : 'SUSPICIOUS — 存在可疑特征';
+  const verdictSub = isPhishing
+    ? '该邮件具有明显的钓鱼攻击特征，建议立即执行隔离处置'
+    : riskScore < 30 ? '未检测到明显的钓鱼攻击特征，可正常处理' : '部分特征需要人工复核确认';
+
+  const scoreColorClass = riskScore >= 60 ? 'danger' : riskScore >= 30 ? 'warn' : 'success';
+
+  let html = `
+    <div class="report-verdict ${verdictClass}">
+      <div class="verdict-icon">${verdictIcon}</div>
+      <div class="verdict-text">
+        <div class="verdict-title">${verdictTitle}</div>
+        <div class="verdict-subtitle">${verdictSub}</div>
+      </div>
+      <div class="verdict-score ${scoreColorClass}">${Math.round(riskScore)}<span style="font-size:14px;">/100</span></div>
+    </div>
+    <div class="report-cards">
+  `;
+
+  // Semantic card
+  const sem = data.semantic || data.semantic_result || {};
+  if (sem.intent) {
+    html += `<div class="report-card">
+      <div class="report-card-title">🧠 语义意图分析 / SEMANTIC INTENT</div>
+      <div class="report-card-body">
+        <div class="kv"><span class="kv-k">意图</span><span class="kv-v"><span class="result-tag ${sem.intent === 'phishing' ? 'danger' : sem.intent === 'legitimate' ? 'success' : 'warn'}">${translateIntent(sem.intent)}</span></span></div>
+        <div class="kv"><span class="kv-k">置信度</span><span class="kv-v">${Math.round((sem.confidence || 0) * 100)}%</span></div>
+        ${(sem.persuasion_techniques || []).length ? `<div class="kv"><span class="kv-k">话术</span><span class="kv-v">${sem.persuasion_techniques.join(', ')}</span></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Detection card
+  const det = data.detection || data.detection_result || {};
+  if (det.sender_score !== undefined) {
+    html += `<div class="report-card">
+      <div class="report-card-title">🔍 多维关联检测 / MULTI-VECTOR</div>
+      <div class="report-card-body">
+        <div class="kv"><span class="kv-k">发件人</span><span class="kv-v">${Math.round((det.sender_score || 0.5) * 100)}% 可信</span></div>
+        <div class="kv"><span class="kv-k">URL</span><span class="kv-v">${Math.round((det.url_score || 0.5) * 100)}% 安全</span></div>
+        ${(det.content_flags || []).length ? `<div class="kv"><span class="kv-k">标记</span><span class="kv-v">${det.content_flags.join(', ')}</span></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Risk card
+  const risk = data.risk || data.risk_result || {};
+  if (risk.risk_score !== undefined) {
+    html += `<div class="report-card">
+      <div class="report-card-title">⚖️ 风险研判 / RISK ASSESSMENT</div>
+      <div class="report-card-body">
+        <div class="kv"><span class="kv-k">评分</span><span class="kv-v"><strong>${risk.risk_score}/100</strong></span></div>
+        <div class="kv"><span class="kv-k">等级</span><span class="kv-v"><span class="result-tag ${risk.risk_level === 'critical' || risk.risk_level === 'high' ? 'danger' : risk.risk_level === 'medium' ? 'warn' : 'success'}">${translateRiskLevel(risk.risk_level)}</span></span></div>
+      </div>
+    </div>`;
+  }
+
+  // Response card
+  const resp = data.response || data.response_result || {};
+  if (resp.action) {
+    html += `<div class="report-card">
+      <div class="report-card-title">🛡️ 响应处置 / RESPONSE PROTOCOL</div>
+      <div class="report-card-body">
+        <div class="kv"><span class="kv-k">动作</span><span class="kv-v"><span class="action-badge ${resp.action}">${translateAction(resp.action)}</span></span></div>
+        ${resp.recommendation ? `<div class="kv"><span class="kv-k">建议</span><span class="kv-v" style="font-size:11px;">${escHtml(resp.recommendation)}</span></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+// ============================================================
+// RESET & HELPERS
+// ============================================================
+function resetWorkflow() {
+  activeCardIdx = -1;
+  cardElements = {};
+  cardToolCount = {};
+  llmRenderQueue = {};
+  llmRenderDone = {};
+  thinkingQueue = {};
+  pendingResultHtml = {};
+  // Clear any pending timers
+  Object.values(llmRenderTimers).forEach(t => clearTimeout(t));
+  Object.values(thinkingTimers).forEach(t => clearTimeout(t));
+  llmRenderTimers = {};
+  thinkingTimers = {};
+  document.getElementById('workflowStream').innerHTML = '';
+  document.getElementById('reportSection').classList.remove('visible');
+}
+
 function showError(message) {
-  // If an agent is active, mark it as error
-  if (activeAgentIndex >= 0) {
-    setNodeState(activeAgentIndex, 'error');
-    appendThinking(activeAgentIndex, `\n\n❌ 错误: ${message}`);
+  if (activeCardIdx >= 0 && cardElements[activeCardIdx]) {
+    const el = cardElements[activeCardIdx];
+    el.card.classList.add('error');
+    el.badge.classList.remove('running');
+    el.badge.classList.add('error');
+    el.badge.textContent = 'ERROR';
+    addProgressItem(activeCardIdx, '✕ 错误: ' + message, false);
   } else {
     alert('分析错误: ' + message);
   }
 }
 
-// ===== Translation Helpers =====
+// ============================================================
+// TRANSLATION
+// ============================================================
 function translateIntent(intent) {
-  const map = { phishing: '钓鱼邮件', legitimate: '正常邮件', suspicious: '可疑邮件' };
-  return map[intent] || intent || '未知';
+  const m = { phishing: '钓鱼邮件', legitimate: '正常邮件', suspicious: '可疑邮件' };
+  return m[intent] || intent || '未知';
 }
-
 function translateRiskLevel(level) {
-  const map = { critical: '极高风险', high: '高风险', medium: '中风险', low: '低风险', safe: '安全', unknown: '未知' };
-  return map[level] || level || '未知';
+  const m = { critical: '极高风险', high: '高风险', medium: '中风险', low: '低风险', safe: '安全' };
+  return m[level] || level || '未知';
 }
-
 function translateAction(action) {
-  const map = {
-    isolate: '🚫 立即隔离',
-    quarantine: '⚠️ 隔离观察',
-    alert: '🔔 告警提示',
-    pass: '✅ 放行通过'
-  };
-  return map[action] || action || '未知';
+  const m = { isolate: '🚫 立即隔离', quarantine: '⚠️ 隔离观察', alert: '🔔 告警提示', pass: '✅ 放行通过' };
+  return m[action] || action || '未知';
 }
-
-// ===== Utility =====
-function escapeHtml(str) {
+function getScoreColor(score) {
+  if (score >= 75) return 'var(--danger)';
+  if (score >= 50) return 'var(--warn)';
+  return 'var(--success)';
+}
+function escHtml(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 </script>
-
 </body>
 </html>

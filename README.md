@@ -1,12 +1,12 @@
 # AI 钓鱼邮件智能检测系统 (PhishingDetector)
 
-基于多 Agent 协作的钓鱼邮件智能检测系统，使用 LangGraph 编排 4 个专业 Agent，结合 Minimax M3 大语言模型和规则引擎，实现从语义分析到自主响应的全自动检测闭环。
+基于多 Agent 协作的钓鱼邮件智能检测系统，通过串行流水线编排 4 个专业 Agent，结合 Minimax M3 大语言模型和规则引擎，实现从语义分析到自主响应的全自动检测闭环。
 
 ## 系统架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    LangGraph 工作流状态机                         │
+│                    串行 Agent 工作流流水线                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
@@ -34,8 +34,8 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                         数据持久化层                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  FastAPI     │  │  SQLite DB   │  │  Gradio UI   │          │
-│  │  REST API    │  │  邮件+报告   │  │  Web 界面    │          │
+│  │  FastAPI     │  │  SQLite DB   │  │  静态 Web UI │          │
+│  │  REST API    │  │  邮件+报告   │  │  (HTML/JS)   │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -49,16 +49,17 @@ Phishing_detector/
 ├── README.md                 # 项目说明文档
 ├── TECH.md                   # 技术设计文档
 ├── requirements.txt          # Python 依赖
-├── main.py                   # 主入口（支持多种启动模式）
+├── main.py                   # 主入口（支持 --test / --port 参数）
 ├── data/                     # 数据集目录（不上传 GitHub）
 │   ├── raw/                  # 原始数据集
 │   └── processed/            # 处理后的数据集
 ├── src/                      # 源代码
 │   ├── __init__.py
 │   ├── config.py             # 全局配置（从 .env 加载）
-│   ├── models.py             # Pydantic 数据模型
+│   ├── models.py             # Pydantic 数据模型（含 WorkflowState）
 │   ├── database.py           # SQLite 数据库操作
-│   ├── llm.py                # Minimax M3 LLM 客户端
+│   ├── llm.py                # Minimax M3 LLM 客户端（同步+流式）
+│   ├── tools.py              # Agent 工具集（装饰器自动注册）
 │   ├── agents/               # 4 个检测 Agent
 │   │   ├── __init__.py
 │   │   ├── base.py           # Agent 抽象基类
@@ -66,16 +67,15 @@ Phishing_detector/
 │   │   ├── detector.py       # Agent #2: 多维关联检测
 │   │   ├── risk.py           # Agent #3: 风险研判
 │   │   └── response.py       # Agent #4: 自主响应
-│   ├── workflow/             # LangGraph 工作流
+│   ├── workflow/             # 工作流编排
 │   │   ├── __init__.py
-│   │   └── graph.py          # 状态机定义和编排
+│   │   └── graph.py          # 串行流水线定义和编排
 │   ├── api/                  # FastAPI 后端
 │   │   ├── __init__.py
 │   │   ├── server.py         # FastAPI 应用实例
 │   │   └── routes.py         # REST API 路由
-│   └── web/                  # Gradio 前端
-│       ├── __init__.py
-│       └── ui.py             # Web UI 界面
+│   └── static/               # 静态 Web UI
+│       └── index.html        # 单页前端（HTML + CSS + JS）
 ├── scripts/                  # 工具脚本
 │   ├── download_datasets.py  # 数据集下载工具
 │   └── run_test.py           # 样例测试脚本
@@ -134,39 +134,31 @@ MINIMAX_MODEL=MiniMax-Text-01
 - `DATABASE_URL`: SQLite 数据库路径（默认 `sqlite:///./phishing_detector.db`）
 - `API_HOST`: API 服务地址（默认 `0.0.0.0`）
 - `API_PORT`: API 服务端口（默认 `8000`）
-- `UI_PORT`: UI 服务端口（默认 `7860`）
 - `LOG_LEVEL`: 日志级别（默认 `INFO`）
 
 ### 5. 运行系统
 
-**全栈模式（推荐）**：同时启动 API + UI
 ```bash
 python main.py
 ```
 
 启动后访问：
-- API: http://localhost:8000
-- UI: http://localhost:7860
+- API + UI: http://localhost:8000
+- 交互式文档: http://localhost:8000/docs
 
-**其他启动模式：**
+**其他参数：**
 
 ```bash
-# 仅启动 API 服务
-python main.py --api
-
-# 仅启动 UI（需要 API 已运行）
-python main.py --ui
+# 指定端口
+python main.py --port 9000
 
 # 运行测试样例
 python main.py --test
-
-# UI 使用 Gradio share 链接（公网访问）
-python main.py --share
 ```
 
 ### 6. 使用系统
 
-1. 打开浏览器访问 http://localhost:7860
+1. 打开浏览器访问 http://localhost:8000
 2. 在输入框中粘贴邮件内容，或填写结构化字段
 3. 点击"开始分析"按钮
 4. 实时查看 4 个 Agent 的执行日志
@@ -251,7 +243,7 @@ Content-Type: application/json
 }
 ```
 
-#### 2. 分析邮件（流式 SSE）
+#### 2. 分析邮件（流式 NDJSON）
 
 ```http
 POST /api/analyze/stream
@@ -263,12 +255,13 @@ Content-Type: application/json
 }
 ```
 
-**响应：** Server-Sent Events 流，逐步返回每个 Agent 的执行过程
+**响应：** NDJSON（Newline Delimited JSON）流，每行一个 JSON 对象，逐步返回每个 Agent 的执行过程
 
 事件类型：
 - `agent_start`: Agent 开始执行
-- `agent_log`: Agent 执行日志
-- `agent_done`: Agent 完成，附带结果
+- `thinking`: Agent 思考过程（LLM 流式输出，逐 chunk 推送）
+- `tool_call`: 工具调用结果
+- `agent_done`: Agent 完成，附带结果摘要
 - `complete`: 全部完成，附带最终报告
 - `error`: 执行出错
 
@@ -396,14 +389,12 @@ git push origin feature/semantic-agent-optimization
 ## 技术栈
 
 ### 核心框架
-- **LangGraph**: Agent 工作流编排
-- **FastAPI**: 高性能 REST API
-- **Gradio**: Web UI 界面
-- **Pydantic**: 数据模型和校验
+- **FastAPI**: 高性能 REST API + 静态文件服务
+- **Pydantic**: 数据模型和校验（含 WorkflowState 状态传递）
 
 ### LLM 和 AI
 - **Minimax M3**: 大语言模型（通过 OpenAI 兼容接口调用）
-- **LangChain Core**: LLM 调用抽象
+- **OpenAI SDK**: LLM 调用客户端（同步 + 真流式）
 
 ### 数据存储
 - **SQLite**: 轻量级嵌入式数据库
@@ -416,7 +407,6 @@ git push origin feature/semantic-agent-optimization
 ### 开发工具
 - **Uvicorn**: ASGI 服务器
 - **python-dotenv**: 环境变量管理
-- **SSE-Starlette**: Server-Sent Events 支持
 
 ## 许可证
 
@@ -446,6 +436,4 @@ SOFTWARE.
 
 - 技术设计文档: [TECH.md](./TECH.md)
 - Minimax API 文档: https://platform.minimaxi.com
-- LangGraph 文档: https://langchain-ai.github.io/langgraph/
 - FastAPI 文档: https://fastapi.tiangolo.com
-- Gradio 文档: https://www.gradio.app

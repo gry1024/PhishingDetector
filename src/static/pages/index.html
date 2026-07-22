@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishingDetector — AI 钓鱼邮件智能检测</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/industrial.css">
+</head>
+<body>
+
+<!-- ===== Background Beams ===== -->
+<div class="beam-layer"></div>
+
+<div class="page-content">
+
+<!-- ===== Top Navigation ===== -->
+<nav class="top-nav" id="topNav">
+  <div class="container top-nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <span class="nav-logo-text">PhishingDetector</span>
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link active">首页</a>
+      <a href="/analyze" class="nav-link">开始检测</a>
+      <a href="/about" class="nav-link">关于</a>
+    </div>
+    <a href="/analyze" class="btn btn-primary anim-item anim-delay-1">开始分析</a>
+  </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<section class="hero-section">
+  <!-- Pill Label -->
+  <div class="hero-pill anim-item anim-delay-1">
+    <span class="hero-pill-dot"></span>
+    AI-Powered Email Security
+  </div>
+
+  <!-- Title -->
+  <h1 class="hero-title anim-item anim-delay-2">
+    识别钓鱼邮件<br>守护每一封邮件
+  </h1>
+
+  <!-- Subtitle -->
+  <p class="hero-desc anim-item anim-delay-3">
+    基于多智能体协作架构，融合语义分析、多维关联检测与风险研判，实时识别钓鱼威胁并给出处置建议。
+  </p>
+
+  <!-- Actions -->
+  <div class="hero-actions anim-item anim-delay-4">
+    <a href="/analyze" class="btn btn-primary btn-lg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      免费检测
+    </a>
+    <a href="#features" class="btn btn-secondary btn-lg">了解原理</a>
+  </div>
+</section>
+
+<!-- ===== Dashboard ===== -->
+<div class="dashboard-wrapper anim-item anim-delay-5">
+  <div class="dashboard" id="dashboard">
+
+    <!-- Top bar decoration -->
+    <div class="db-topbar-dots">
+      <span class="db-topbar-dot r"></span>
+      <span class="db-topbar-dot y"></span>
+      <span class="db-topbar-dot g"></span>
+    </div>
+    <div class="db-topbar-title">PhishingDetector Monitor</div>
+
+    <!-- Left Sidebar -->
+    <div class="db-sidebar">
+      <div class="db-nav-item active">
+        <span class="db-nav-dot"></span> 仪表盘
+      </div>
+      <div class="db-nav-item">
+        <span class="db-nav-dot"></span> 检测记录
+      </div>
+      <div class="db-nav-item">
+        <span class="db-nav-dot"></span> 威胁分析
+      </div>
+      <div class="db-nav-item">
+        <span class="db-nav-dot"></span> 智能体状态
+      </div>
+      <div class="db-nav-item">
+        <span class="db-nav-dot"></span> 系统设置
+      </div>
+    </div>
+
+    <!-- Middle Area: Chart + Log -->
+    <div class="db-main">
+      <div class="db-section-title">本周检测统计</div>
+      <div class="db-chart-area">
+        <div class="db-bar phish" style="height: 85%;"><span class="db-bar-label">周一</span></div>
+        <div class="db-bar safe" style="height: 45%;"><span class="db-bar-label">周二</span></div>
+        <div class="db-bar neutral" style="height: 60%;"><span class="db-bar-label">周三</span></div>
+        <div class="db-bar phish" style="height: 72%;"><span class="db-bar-label">周四</span></div>
+        <div class="db-bar safe" style="height: 38%;"><span class="db-bar-label">周五</span></div>
+        <div class="db-bar safe" style="height: 50%;"><span class="db-bar-label">周六</span></div>
+        <div class="db-bar phish" style="height: 65%;"><span class="db-bar-label">周日</span></div>
+      </div>
+      <div class="db-chart-axis">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+      </div>
+
+      <div class="db-section-title" style="margin-top: 20px;">最近检测日志</div>
+      <div class="db-log-list">
+        <div class="db-log-item">
+          <span class="db-log-dot red"></span> 可疑邮件 #1024 — bankofchina-verify.com
+          <span class="db-log-time">14:32:05</span>
+        </div>
+        <div class="db-log-item">
+          <span class="db-log-dot green"></span> 正常邮件 #1023 — 团队周报
+          <span class="db-log-time">14:28:41</span>
+        </div>
+        <div class="db-log-item">
+          <span class="db-log-dot red"></span> 钓鱼邮件 #1022 — CEO 诈骗
+          <span class="db-log-time">14:15:18</span>
+        </div>
+        <div class="db-log-item">
+          <span class="db-log-dot blue"></span> 分析完成 #1021 — 会议邀请
+          <span class="db-log-time">13:58:22</span>
+        </div>
+        <div class="db-log-item">
+          <span class="db-log-dot green"></span> 正常邮件 #1020 — 项目讨论
+          <span class="db-log-time">13:42:07</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Config Panel -->
+    <div class="db-config">
+      <div class="db-config-group">
+        <div class="db-config-label">检测引擎</div>
+        <div class="db-config-value">Multi-Agent v2.1</div>
+      </div>
+      <div class="db-config-group">
+        <div class="db-config-label">活跃智能体</div>
+        <div class="db-config-value">4 / 4 在线</div>
+      </div>
+      <div class="db-config-group">
+        <div class="db-config-label">今日检测</div>
+        <div class="db-config-value" style="font-size:24px;font-weight:700;color:var(--text);">24</div>
+      </div>
+      <div class="db-toggle">
+        <span class="db-toggle-label">实时监控</span>
+        <span class="db-toggle-switch on"></span>
+      </div>
+      <div class="db-toggle">
+        <span class="db-toggle-label">自动隔离</span>
+        <span class="db-toggle-switch on"></span>
+      </div>
+      <div class="db-toggle">
+        <span class="db-toggle-label">邮件通知</span>
+        <span class="db-toggle-switch"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Features ===== -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-header anim-item anim-delay-1">
+      <div class="section-eyebrow">Core Capabilities</div>
+      <h2 class="section-title">多维度检测，全面覆盖风险</h2>
+      <p class="section-desc">四个专业智能体按流水线协作，从语义、技术特征、风险评分到处置建议，层层递进。</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card anim-item anim-delay-2">
+        <div class="feature-icon">🧠</div>
+        <h3 class="feature-title">语义意图分析</h3>
+        <p class="feature-desc">深度理解邮件话术，识别紧急施压、权威伪装、利益诱导等社会工程学特征。</p>
+      </div>
+      <div class="feature-card anim-item anim-delay-3">
+        <div class="feature-icon">🔍</div>
+        <h3 class="feature-title">多维关联检测</h3>
+        <p class="feature-desc">交叉验证发件人域名、URL 信誉、内容异常标记，构建完整证据链。</p>
+      </div>
+      <div class="feature-card anim-item anim-delay-4">
+        <div class="feature-icon">⚖️</div>
+        <h3 class="feature-title">风险量化研判</h3>
+        <p class="feature-desc">输出 0-100 风险评分与等级，映射 ATT&CK 技战术，辅助安全运营决策。</p>
+      </div>
+      <div class="feature-card anim-item anim-delay-2">
+        <div class="feature-icon">🛡️</div>
+        <h3 class="feature-title">自动响应处置</h3>
+        <p class="feature-desc">根据风险等级推荐隔离、告警或放行，并给出清晰的处置建议。</p>
+      </div>
+      <div class="feature-card anim-item anim-delay-3">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">实时流式输出</h3>
+        <p class="feature-desc">逐字呈现推理过程，分析结论与结构化报告同步抵达，无需等待。</p>
+      </div>
+      <div class="feature-card anim-item anim-delay-4">
+        <div class="feature-icon">🔒</div>
+        <h3 class="feature-title">本地私有化部署</h3>
+        <p class="feature-desc">基于 FastAPI 与开源模型，可完全本地化运行，保护敏感邮件数据。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card anim-item anim-delay-1">
+      <h2 class="cta-title">准备好提升邮件安全了吗？</h2>
+      <p class="cta-desc">立即体验 PhishingDetector，让 AI 帮你识别每一封可疑邮件。</p>
+      <a href="/analyze" class="btn btn-primary btn-lg">免费开始使用</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          PhishingDetector
+        </div>
+        <p class="footer-tagline">AI 驱动的钓鱼邮件检测系统，多智能体协作，实时流式推理。</p>
+      </div>
+      <div>
+        <div class="footer-title">产品</div>
+        <ul class="footer-links">
+          <li><a href="/">首页</a></li>
+          <li><a href="/analyze">开始检测</a></li>
+          <li><a href="/about">关于</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-title">技术</div>
+        <ul class="footer-links">
+          <li><a href="/about#agents">智能体架构</a></li>
+          <li><a href="/about#api">API 文档</a></li>
+          <li><a href="/about#security">数据安全</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-title">支持</div>
+        <ul class="footer-links">
+          <li><a href="/about#faq">常见问题</a></li>
+          <li><a href="/about#contact">联系我们</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 PhishingDetector. All rights reserved.</span>
+      <span>Powered by Multi-Agent AI</span>
+    </div>
+  </div>
+</footer>
+
+</div><!-- page-content -->
+
+<script>
+// ============================================================
+// Nav scroll effect
+// ============================================================
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('topNav');
+  if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
+});
+
+// ============================================================
+// Staggered fade-in animation via IntersectionObserver
+// ============================================================
+const animObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      animObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.anim-item').forEach(el => animObserver.observe(el));
+
+// 3D Tilt removed — animation belongs in the analyze page.
+
+// ============================================================
+// Trigger animations on load (visible items in viewport)
+// ============================================================
+window.addEventListener('load', () => {
+  // Trigger any anim-item already visible
+  document.querySelectorAll('.anim-item').forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight - 40) {
+      el.classList.add('visible');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

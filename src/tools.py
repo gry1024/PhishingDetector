@@ -10,6 +10,56 @@ import time
 import logging
 from urllib.parse import urlparse
 from dataclasses import dataclass, field
+from typing import Iterable
+
+
+# ---------------------------------------------------------------------------
+# Tool registry
+# ---------------------------------------------------------------------------
+#
+# Tools self-register via the @register_tool(name, agents=[...]) decorator.
+# Each Agent then asks for the slice it owns via get_tools_for_agent(name).
+# Adding a new tool no longer requires touching the 4 hard-coded *TOOLS dicts.
+
+_TOOL_REGISTRY: dict[str, dict] = {}
+
+
+def register_tool(name: str, agents: Iterable[str]):
+    """Decorator that registers a callable as a tool available to the given agents.
+
+    Args:
+        name: tool identifier (must be unique across the registry).
+        agents: agent names that may call this tool (e.g. ["semantic", "detector"]).
+
+    Usage::
+
+        @register_tool("scan_phishing_patterns", agents=["semantic", "detector"])
+        def scan_phishing_patterns(text: str) -> ToolResult:
+            ...
+    """
+    agents = tuple(agents)
+
+    def decorator(fn):
+        if name in _TOOL_REGISTRY:
+            raise ValueError(f"tool '{name}' already registered")
+        _TOOL_REGISTRY[name] = {"fn": fn, "agents": agents}
+        return fn
+
+    return decorator
+
+
+def get_tools_for_agent(agent_name: str) -> dict[str, object]:
+    """Return {name: callable} for every tool registered for the given agent."""
+    return {
+        name: meta["fn"]
+        for name, meta in _TOOL_REGISTRY.items()
+        if agent_name in meta["agents"]
+    }
+
+
+def registered_tool_names() -> list[str]:
+    """List all registered tool names (mainly for diagnostics/tests)."""
+    return sorted(_TOOL_REGISTRY.keys())
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +83,7 @@ class ToolCallLog:
 # URL 分析工具
 # ============================================================
 
+@register_tool("analyze_url", agents=["detector"])
 def analyze_url(url: str) -> ToolResult:
     """
     分析 URL 的安全特征
@@ -123,6 +174,7 @@ TRUSTED_DOMAINS = {
 }
 
 
+@register_tool("check_sender_domain", agents=["detector"])
 def check_sender_domain(sender: str) -> ToolResult:
     """
     检测发件人域名的可信度
@@ -200,6 +252,7 @@ PHISHING_PATTERNS = [
 ]
 
 
+@register_tool("scan_phishing_patterns", agents=["semantic", "detector"])
 def scan_phishing_patterns(text: str) -> ToolResult:
     """
     扫描文本中的钓鱼关键词模式
@@ -231,6 +284,7 @@ def scan_phishing_patterns(text: str) -> ToolResult:
 # URL 提取工具
 # ============================================================
 
+@register_tool("extract_urls", agents=["semantic", "detector"])
 def extract_urls(text: str) -> ToolResult:
     """从文本中提取所有 URL"""
     start = time.time()
@@ -267,6 +321,7 @@ ATTACK_TECHNIQUES = {
 }
 
 
+@register_tool("map_attack_techniques", agents=["risk"])
 def map_attack_techniques(flags: list[str]) -> ToolResult:
     """
     将检测到的特征映射到 MITRE ATT&CK 框架
@@ -314,24 +369,6 @@ def map_attack_techniques(flags: list[str]) -> ToolResult:
     )
 
 
-# ============================================================
-# 便捷方法：获取 Agent 可用工具列表
-# ============================================================
-
-SEMANTIC_TOOLS = {
-    "scan_phishing_patterns": scan_phishing_patterns,
-    "extract_urls": extract_urls,
-}
-
-DETECTOR_TOOLS = {
-    "analyze_url": analyze_url,
-    "check_sender_domain": check_sender_domain,
-    "scan_phishing_patterns": scan_phishing_patterns,
-    "extract_urls": extract_urls,
-}
-
-RISK_TOOLS = {
-    "map_attack_techniques": map_attack_techniques,
-}
-
-RESPONSE_TOOLS = {}
+# Tools are now self-registered via @register_tool above; helper:
+#   from src.tools import get_tools_for_agent
+#   semantic_tools = get_tools_for_agent("semantic")

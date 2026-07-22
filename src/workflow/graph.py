@@ -5,9 +5,11 @@
 
 流程：语义分析 → 多维检测 → 风险研判 → 响应处置
 
+使用 WorkflowState 模型在各 Agent 间传递状态，保证类型安全。
+
 每个 Agent 执行期间，通过 callback 推送：
 - agent_start: Agent 开始
-- thinking: 思考过程（含 LLM 原始输出）
+- thinking: 思考过程（含 LLM 流式输出）
 - tool_call: 工具调用结果
 - agent_done: Agent 完成，附带结果摘要
 - complete: 全流程完成
@@ -17,7 +19,7 @@
 import logging
 from typing import Callable, Optional
 
-from src.models import EmailInput
+from src.models import EmailInput, WorkflowState
 from src.agents.semantic import SemanticAgent
 from src.agents.detector import DetectorAgent
 from src.agents.risk import RiskAgent
@@ -50,18 +52,14 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
         if callback:
             callback({"type": event_type, "data": data})
 
+    # ---- 初始化工作流状态 ----
+    state = WorkflowState(email=email)
+
     # ---- 初始化 Agent 实例 ----
     semantic_agent = SemanticAgent()
     detector_agent = DetectorAgent()
     risk_agent = RiskAgent()
     response_agent = ResponseAgent()
-
-    # ---- 存储各 Agent 结果 ----
-    semantic_result = None
-    detection_result = None
-    risk_result = None
-    response_result = None
-    is_phishing = False
 
     try:
         # ============================================================
@@ -70,15 +68,15 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
         emit("agent_start", {"agent": "语义意图分析", "icon": "🧠", "index": 0})
 
         result1 = semantic_agent.analyze(email, callback=callback)
-        semantic_result = result1["semantic"]
+        state.semantic = result1["semantic"]
 
         emit("agent_done", {
             "agent": "语义意图分析",
             "result": {
-                "intent": semantic_result.intent,
-                "confidence": semantic_result.confidence,
-                "techniques": semantic_result.persuasion_techniques,
-                "explanation": semantic_result.explanation[:200],
+                "intent": state.semantic.intent,
+                "confidence": state.semantic.confidence,
+                "techniques": state.semantic.persuasion_techniques,
+                "explanation": state.semantic.explanation[:200],
             }
         })
 
@@ -88,17 +86,17 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
         emit("agent_start", {"agent": "多维关联检测", "icon": "🔍", "index": 1})
 
         result2 = detector_agent.analyze(
-            email, callback=callback, semantic_result=semantic_result
+            email, callback=callback, semantic_result=state.semantic
         )
-        detection_result = result2["detection"]
+        state.detection = result2["detection"]
 
         emit("agent_done", {
             "agent": "多维关联检测",
             "result": {
-                "sender_score": detection_result.sender_score,
-                "url_score": detection_result.url_score,
-                "content_flags": detection_result.content_flags,
-                "explanation": detection_result.explanation[:200],
+                "sender_score": state.detection.sender_score,
+                "url_score": state.detection.url_score,
+                "content_flags": state.detection.content_flags,
+                "explanation": state.detection.explanation[:200],
             }
         })
 
@@ -109,19 +107,19 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
 
         result3 = risk_agent.analyze(
             email, callback=callback,
-            semantic_result=semantic_result,
-            detection_result=detection_result,
+            semantic_result=state.semantic,
+            detection_result=state.detection,
         )
-        risk_result = result3["risk"]
-        is_phishing = result3["is_phishing"]
+        state.risk = result3["risk"]
+        state.is_phishing = result3["is_phishing"]
 
         emit("agent_done", {
             "agent": "风险研判",
             "result": {
-                "risk_score": risk_result.risk_score,
-                "risk_level": risk_result.risk_level,
-                "attack_techniques": risk_result.attack_techniques,
-                "explanation": risk_result.explanation[:200],
+                "risk_score": state.risk.risk_score,
+                "risk_level": state.risk.risk_level,
+                "attack_techniques": state.risk.attack_techniques,
+                "explanation": state.risk.explanation[:200],
             }
         })
 
@@ -132,18 +130,18 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
 
         result4 = response_agent.analyze(
             email, callback=callback,
-            semantic_result=semantic_result,
-            detection_result=detection_result,
-            risk_result=risk_result,
+            semantic_result=state.semantic,
+            detection_result=state.detection,
+            risk_result=state.risk,
         )
-        response_result = result4["response"]
+        state.response = result4["response"]
 
         emit("agent_done", {
             "agent": "响应处置",
             "result": {
-                "action": response_result.action,
-                "alert_message": response_result.alert_message,
-                "recommendation": response_result.recommendation,
+                "action": state.response.action,
+                "alert_message": state.response.alert_message,
+                "recommendation": state.response.recommendation,
             }
         })
 
@@ -153,38 +151,38 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
         return {"error": str(e)}
 
     # ============================================================
-    # 汇总完整报告
+    # 汇总完整报告（从 WorkflowState 提取）
     # ============================================================
     report = {
-        "is_phishing": is_phishing,
-        "risk_score": risk_result.risk_score if risk_result else 0,
-        "risk_level": risk_result.risk_level if risk_result else "unknown",
+        "is_phishing": state.is_phishing,
+        "risk_score": state.risk.risk_score if state.risk else 0,
+        "risk_level": state.risk.risk_level if state.risk else "unknown",
         "semantic": {
-            "intent": semantic_result.intent,
-            "confidence": semantic_result.confidence,
-            "persuasion_techniques": semantic_result.persuasion_techniques,
-            "explanation": semantic_result.explanation,
-        } if semantic_result else {},
+            "intent": state.semantic.intent,
+            "confidence": state.semantic.confidence,
+            "persuasion_techniques": state.semantic.persuasion_techniques,
+            "explanation": state.semantic.explanation,
+        } if state.semantic else {},
         "detection": {
-            "sender_score": detection_result.sender_score,
-            "sender_analysis": detection_result.sender_analysis,
-            "url_score": detection_result.url_score,
-            "url_analysis": detection_result.url_analysis,
-            "content_flags": detection_result.content_flags,
-            "explanation": detection_result.explanation,
-        } if detection_result else {},
+            "sender_score": state.detection.sender_score,
+            "sender_analysis": state.detection.sender_analysis,
+            "url_score": state.detection.url_score,
+            "url_analysis": state.detection.url_analysis,
+            "content_flags": state.detection.content_flags,
+            "explanation": state.detection.explanation,
+        } if state.detection else {},
         "risk": {
-            "risk_score": risk_result.risk_score,
-            "risk_level": risk_result.risk_level,
-            "attack_techniques": risk_result.attack_techniques,
-            "explanation": risk_result.explanation,
-        } if risk_result else {},
+            "risk_score": state.risk.risk_score,
+            "risk_level": state.risk.risk_level,
+            "attack_techniques": state.risk.attack_techniques,
+            "explanation": state.risk.explanation,
+        } if state.risk else {},
         "response": {
-            "action": response_result.action,
-            "alert_message": response_result.alert_message,
-            "trace_report": response_result.trace_report,
-            "recommendation": response_result.recommendation,
-        } if response_result else {},
+            "action": state.response.action,
+            "alert_message": state.response.alert_message,
+            "trace_report": state.response.trace_report,
+            "recommendation": state.response.recommendation,
+        } if state.response else {},
     }
 
     emit("complete", report)
