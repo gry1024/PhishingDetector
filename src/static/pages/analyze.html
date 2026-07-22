@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>检测分析 — PhishingDetector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/industrial.css">
+</head>
+<body class="analyze-body">
+
+<!-- ===== LEFT SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="/" class="sidebar-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>PhishingDetector</span>
+    </a>
+  </div>
+
+  <div class="sidebar-actions">
+    <button class="sidebar-new-btn" onclick="resetWorkflow(); document.getElementById('inputBody').focus();">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      新建检测
+    </button>
+  </div>
+
+  <div class="sidebar-section-label">历史记录</div>
+
+  <div class="sidebar-list" id="historyList">
+    <div class="sidebar-empty" id="historyEmpty">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+      <span>暂无检测记录</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <a href="/" class="sidebar-footer-link">首页</a>
+    <a href="/about" class="sidebar-footer-link">关于</a>
+  </div>
+</aside>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main-content" id="mainContent">
+
+  <!-- Top bar -->
+  <div class="content-header">
+    <div class="content-header-left">
+      <h1 class="content-title">邮件安全检测</h1>
+      <span class="content-breadcrumb">Threat Analysis Dashboard</span>
+    </div>
+    <div class="content-header-right">
+      <div class="demo-dropdown" id="demoDropdown">
+        <button class="demo-btn" onclick="toggleDemoMenu()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+          </svg>
+          演示样例
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="demo-menu" id="demoMenu">
+          <div class="demo-menu-header">钓鱼邮件样本</div>
+          <div id="demoListPhishing"></div>
+          <div class="demo-menu-header" style="border-top:1px solid var(--border); margin-top:4px; padding-top:12px;">正常邮件样本</div>
+          <div id="demoListLegit"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content body: middle area + right panel -->
+  <div class="content-body-dash">
+
+    <!-- === MIDDLE: input + agent stack + report === -->
+    <div class="dash-center">
+
+      <!-- Email Input -->
+      <div class="input-card anim-item anim-delay-1">
+        <div class="input-card-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          <span>邮件内容</span>
+        </div>
+        <div class="input-card-body">
+          <div class="input-row-2col">
+            <div class="form-group">
+              <label>邮件主题</label>
+              <input type="text" id="inputSubject" placeholder="请输入邮件主题...">
+            </div>
+            <div class="form-group">
+              <label>发件人</label>
+              <input type="text" id="inputSender" placeholder="请输入发件人邮箱地址...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>邮件正文</label>
+            <textarea id="inputBody" placeholder="请粘贴或输入完整的邮件正文内容..."></textarea>
+          </div>
+          <div class="input-card-footer">
+            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              开始分析
+            </button>
+            <button class="preview-toggle-btn" onclick="togglePreview()">预览邮件</button>
+          </div>
+          <div class="email-preview" id="emailPreview">
+            <div class="email-preview-header">
+              <div><strong>主题：</strong><span id="previewSubject">-</span></div>
+              <div><strong>发件人：</strong><span id="previewSender">-</span></div>
+            </div>
+            <div class="email-preview-body" id="previewBody">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workflow Stream (card stack) -->
+      <div class="card-stack-container" id="cardStackContainer">
+        <div class="workflow-stream" id="workflowStream"></div>
+      </div>
+
+      <!-- Report Section -->
+      <div class="report-card anim-item" id="reportSection">
+        <div class="report-card-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>综合分析报告</span>
+        </div>
+        <div class="report-card-body" id="reportBody"></div>
+      </div>
+
+    </div>
+
+    <!-- === RIGHT CONFIG PANEL === -->
+    <aside class="dash-config" id="dashConfig">
+      <div class="config-group">
+        <div class="config-label">引擎状态</div>
+        <div class="config-status-row">
+          <div class="config-status-dot active" id="configEngineDot"></div>
+          <span class="config-status-text" id="configEngineText">待命中</span>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <div class="config-label">智能体状态</div>
+        <div class="config-agent-list" id="configAgentList">
+          <div class="config-agent-row">
+            <div class="config-agent-dot idle"></div>
+            <span class="config-agent-name">语义意图分析</span>
+          </div>
+          <div class="config-agent-row">
+            <div class="config-agent-dot idle"></div>
+            <span class="config-agent-name">多维关联检测</span>
+          </div>
+          <div class="config-agent-row">
+            <div class="config-agent-dot idle"></div>
+            <span class="config-agent-name">风险研判</span>
+          </div>
+          <div class="config-agent-row">
+            <div class="config-agent-dot idle"></div>
+            <span class="config-agent-name">响应处置</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <div class="config-label">今日统计</div>
+        <div class="config-stat-row">
+          <span class="config-stat-label">已检测</span>
+          <span class="config-stat-value" id="configStatScanned">0</span>
+        </div>
+        <div class="config-stat-row">
+          <span class="config-stat-label">威胁</span>
+          <span class="config-stat-value danger" id="configStatThreats">0</span>
+        </div>
+        <div class="config-stat-row">
+          <span class="config-stat-label">安全</span>
+          <span class="config-stat-value safe" id="configStatSafe">0</span>
+        </div>
+      </div>
+
+      <div class="config-group">
+        <div class="config-label">选项</div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">自动分析</span>
+          <div class="config-toggle-switch on"></div>
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">实时流式</span>
+          <div class="config-toggle-switch on"></div>
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">保存历史</span>
+          <div class="config-toggle-switch on"></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</main>
+
+<script>
+// ============================================================
+// DEMO EMAILS
+// ============================================================
+const DEMO_EMAILS = [
+  {
+    id: 'phish-bank', icon: '🎣', title: '假冒银行紧急通知', tag: 'phishing', tagText: '钓鱼',
+    subject: '【紧急】您的银行账户存在异常，请立即验证',
+    sender: 'security@bankofchina-verify.com',
+    body: '尊敬的用户：\n\n我们检测到您的账户存在异常登录行为。为保护您的资金安全，请在24小时内点击以下链接完成身份验证：\n\nhttp://192.168.1.100:8080/verify?id=user123\n\n如未在24小时内完成验证，您的账户将被临时冻结。\n\n中国银行安全中心'
+  },
+  {
+    id: 'phish-ceo', icon: '🎣', title: 'AI生成CEO诈骗', tag: 'phishing', tagText: '钓鱼',
+    subject: '关于紧急资金调拨的机密指示',
+    sender: 'ceo.wang@company.com',
+    body: '张总：\n\n我正在参加一个机密的投资方会议，需要立即完成一笔资金调拨。这是我们与红杉资本合作项目的预付款，金额为 48 万欧元。\n\n请将款项转入以下账户（对方财务已确认）：\n开户行：德意志银行法兰克福分行\nIBAN：DE89 3704 0044 0532 0130 00\n户名：Sequoia Capital Partners GmbH\n\n这是高度机密项目，请勿向其他人透露。我会议结束后会详细解释。\n\n王总'
+  },
+  {
+    id: 'phish-cred', icon: '🎣', title: '英文凭证窃取', tag: 'phishing', tagText: '钓鱼',
+    subject: 'Action Required: Verify Your Microsoft 365 Account',
+    sender: 'noreply@mircosoft-security.com',
+    body: 'Dear User,\n\nWe have detected unusual sign-in activity on your Microsoft 365 account from an unrecognized device.\n\nTo secure your account, please verify your identity immediately by clicking the link below:\n\nhttps://login.mircosoft-verify.com/@secure-login/validate\n\nIf you do not verify within 24 hours, your account will be suspended.\n\nMicrosoft Security Team'
+  },
+  {
+    id: 'legit-weekly', icon: '✅', title: '团队周报', tag: 'legit', tagText: '正常',
+    subject: '本周工作总结和下周计划',
+    sender: 'li.ming@company.com',
+    body: 'Hi all,\n\n以下是本周的工作总结和下周计划：\n\n本周完成：\n1. 完成了用户认证模块的重构\n2. 修复了3个线上bug\n3. 参加了客户需求评审会议\n\n下周计划：\n1. 开始新功能的开发\n2. 准备版本发布的测试用例\n\n如有问题请随时沟通。\n\n李明'
+  },
+  {
+    id: 'legit-meeting', icon: '✅', title: '会议邀请', tag: 'legit', tagText: '正常',
+    subject: 'Q3 季度评审会议邀请',
+    sender: 'hr@company.com',
+    body: '各位同事好，\n\nQ3 季度评审会议定于下周三（10月16日）下午2:00在3楼大会议室举行。\n\n议程：\n1. 各部门 Q3 业绩汇报\n2. Q4 目标讨论\n3. 年度评优提名\n\n请各部门负责人提前准备汇报材料。\n\n人力资源部'
+  }
+];
+
+const AGENT_META = [
+  { name: '语义意图分析', icon: '🧠', index: 0, subtitle: 'Semantic Intent Analysis' },
+  { name: '多维关联检测', icon: '🔍', index: 1, subtitle: 'Multi-Vector Detection' },
+  { name: '风险研判', icon: '⚖️', index: 2, subtitle: 'Risk Assessment Engine' },
+  { name: '响应处置', icon: '🛡️', index: 3, subtitle: 'Auto Response Protocol' }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let isAnalyzing = false;
+let activeCardIdx = -1;
+let cardElements = {};
+let cardToolCount = {};
+let currentAnalysisId = null;
+
+// ============================================================
+// SIDEBAR HISTORY
+// ============================================================
+const HISTORY_KEY = 'phishingdetector_history';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(entry) {
+  const history = loadHistory();
+  const idx = history.findIndex(h => h.id === entry.id);
+  if (idx >= 0) history.splice(idx, 1);
+  history.unshift(entry);
+  if (history.length > 50) history.length = 50;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+  const history = loadHistory();
+  list.querySelectorAll('.history-item').forEach(el => el.remove());
+  if (history.length === 0) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  history.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    if (h.id === currentAnalysisId) item.classList.add('active');
+    item.innerHTML = `
+      <div class="history-item-icon">${h.riskIcon || '📧'}</div>
+      <div class="history-item-content">
+        <div class="history-item-title">${escHtml(h.subject || '未命名检测')}</div>
+        <div class="history-item-meta">
+          <span class="history-item-tag ${h.riskClass || ''}">${h.riskLabel || '未知'}</span>
+          <span class="history-item-time">${h.time || ''}</span>
+        </div>
+      </div>
+      <button class="history-item-del" onclick="event.stopPropagation(); deleteHistory('${h.id}')" title="删除">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    item.addEventListener('click', () => loadHistoryEntry(h));
+    list.appendChild(item);
+  });
+}
+
+function deleteHistory(id) {
+  let history = loadHistory();
+  history = history.filter(h => h.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function loadHistoryEntry(entry) {
+  document.getElementById('inputSubject').value = entry.subject || '';
+  document.getElementById('inputSender').value = entry.sender || '';
+  document.getElementById('inputBody').value = entry.body || '';
+  updatePreview();
+}
+
+function addToHistory(data) {
+  const isPhishing = data.is_phishing || false;
+  const riskScore = data.risk_score || (data.risk && data.risk.risk_score) || 0;
+  const riskIcon = isPhishing ? '🚨' : riskScore < 30 ? '✅' : '⚠️';
+  const riskLabel = isPhishing ? '钓鱼邮件' : riskScore < 30 ? '安全' : '可疑';
+  const riskClass = isPhishing ? 'danger' : riskScore < 30 ? 'safe' : 'warn';
+  const now = new Date();
+  const time = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  currentAnalysisId = 'a_' + Date.now();
+  saveHistory({ id: currentAnalysisId, subject: document.getElementById('inputSubject').value || '未命名检测', sender: document.getElementById('inputSender').value || '', body: document.getElementById('inputBody').value || '', riskIcon, riskLabel, riskClass, time });
+
+  // Update right panel stats
+  updateConfigStats(isPhishing);
+}
+
+function updateConfigStats(isPhishing) {
+  const scanned = document.getElementById('configStatScanned');
+  const threats = document.getElementById('configStatThreats');
+  const safe = document.getElementById('configStatSafe');
+  scanned.textContent = parseInt(scanned.textContent) + 1;
+  if (isPhishing) threats.textContent = parseInt(threats.textContent) + 1;
+  else safe.textContent = parseInt(safe.textContent) + 1;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderDemoMenu();
+  renderHistory();
+  triggerPageEntrance();
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('demoDropdown');
+    if (!dd.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
+function triggerPageEntrance() {
+  document.querySelectorAll('.dash-center .anim-item').forEach((el, i) => {
+    setTimeout(() => el.classList.add('visible'), 100 + i * 120);
+  });
+}
+
+// ============================================================
+// DEMO MENU
+// ============================================================
+function renderDemoMenu() {
+  const phish = document.getElementById('demoListPhishing');
+  const legit = document.getElementById('demoListLegit');
+  DEMO_EMAILS.filter(e => e.tag === 'phishing').forEach(e => phish.appendChild(createDemoItem(e)));
+  DEMO_EMAILS.filter(e => e.tag === 'legit').forEach(e => legit.appendChild(createDemoItem(e)));
+}
+function createDemoItem(email) {
+  const btn = document.createElement('button');
+  btn.className = 'demo-item';
+  btn.innerHTML = `<span class="demo-item-icon">${email.icon}</span><div class="demo-item-info"><div class="demo-item-title">${email.title}</div><span class="demo-item-tag ${email.tag}">${email.tagText}</span></div>`;
+  btn.addEventListener('click', () => { fillDemoEmail(email); document.getElementById('demoDropdown').classList.remove('open'); });
+  return btn;
+}
+function toggleDemoMenu() { document.getElementById('demoDropdown').classList.toggle('open'); }
+function fillDemoEmail(email) {
+  document.getElementById('inputSubject').value = email.subject;
+  document.getElementById('inputSender').value = email.sender;
+  document.getElementById('inputBody').value = email.body;
+  updatePreview();
+}
+
+// ============================================================
+// PREVIEW
+// ============================================================
+function togglePreview() {
+  const p = document.getElementById('emailPreview');
+  p.classList.toggle('visible');
+  if (p.classList.contains('visible')) updatePreview();
+}
+function updatePreview() {
+  document.getElementById('previewSubject').textContent = document.getElementById('inputSubject').value || '-';
+  document.getElementById('previewSender').textContent = document.getElementById('inputSender').value || '-';
+  document.getElementById('previewBody').textContent = document.getElementById('inputBody').value || '-';
+}
+
+// ============================================================
+// ANALYSIS
+// ============================================================
+async function startAnalysis() {
+  const subject = document.getElementById('inputSubject').value.trim();
+  const sender = document.getElementById('inputSender').value.trim();
+  const body = document.getElementById('inputBody').value.trim();
+  if (!body) { alert('请输入邮件正文内容'); return; }
+  if (isAnalyzing) return;
+  isAnalyzing = true;
+
+  resetWorkflow();
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('analyzeBtn').innerHTML = '<div class="spinner"></div> 分析中...';
+  document.getElementById('workflowStream').classList.add('active');
+  document.getElementById('reportSection').classList.remove('visible');
+  document.getElementById('configEngineDot').classList.add('active');
+  document.getElementById('configEngineText').textContent = '运行中';
+
+  try { await streamAnalysis({ subject, sender, body }); }
+  catch (err) { console.error(err); showError(err.message || '分析错误'); }
+  finally {
+    isAnalyzing = false;
+    document.getElementById('analyzeBtn').disabled = false;
+    document.getElementById('analyzeBtn').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 开始分析`;
+    document.getElementById('configEngineDot').classList.remove('active');
+    document.getElementById('configEngineText').textContent = '待命中';
+  }
+}
+
+async function streamAnalysis(emailData) {
+  const response = await fetch('/api/analyze/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject: emailData.subject, sender: emailData.sender, recipients: '', body: emailData.body, urls: [], headers: {}, has_attachment: false, raw_text: '' })
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = '';
+    let currentEvent = '';
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('event: ')) { currentEvent = line.slice(7).trim(); }
+      else if (line.startsWith('data: ')) {
+        try { handleSSEEvent(currentEvent, JSON.parse(line.slice(6))); } catch (_) {}
+        currentEvent = '';
+      }
+    }
+  }
+}
+
+// ============================================================
+// SSE DISPATCH
+// ============================================================
+function handleSSEEvent(eventType, data) {
+  const handlers = {
+    'agent_start': handleAgentStart, 'agent_log': handleAgentLog,
+    'llm_chunk': handleLlmChunk, 'tool_call': handleToolCall,
+    'agent_done': handleAgentDone, 'complete': handleComplete,
+    'error': (d) => showError(d.message || '未知错误')
+  };
+  if (handlers[eventType]) handlers[eventType](data);
+}
+
+function findMeta(name) {
+  const byName = AGENT_META.find(m => m.name === name);
+  if (byName) return byName;
+  if (typeof name === 'number' || /^\d+$/.test(name)) return AGENT_META[parseInt(name)];
+  return null;
+}
+
+// ============================================================
+// AGENT START — create card in stack
+// ============================================================
+let agentCount = 0;
+const STICKY_BASE = 60; // content-header height
+const STICKY_STEP = 56; // collapsed card header height
+
+function handleAgentStart(data) {
+  const agentName = data.agent || data.node || '';
+  const meta = findMeta(agentName) || findMeta(data.index);
+  if (!meta) return;
+
+  const idx = meta.index;
+  activeCardIdx = idx;
+  cardToolCount[idx] = 0;
+  agentCount++;
+
+  const stream = document.getElementById('workflowStream');
+  const card = document.createElement('div');
+  card.className = 'agent-card running anim-stack';
+  card.id = `agentCard${idx}`;
+  card.style.setProperty('--stack-index', agentCount - 1);
+  card.style.setProperty('--sticky-top', (STICKY_BASE + (agentCount - 1) * STICKY_STEP) + 'px');
+  card.style.zIndex = 100 + agentCount;
+
+  card.innerHTML = `
+    <div class="card-status-bar">
+      <div class="card-status-dot running"></div>
+      <span class="card-status-text" id="cardBadge${idx}">运行中</span>
+    </div>
+    <div class="card-main">
+      <div class="card-icon">${meta.icon}</div>
+      <div class="card-info">
+        <div class="card-title">${meta.name}</div>
+        <div class="card-subtitle">${meta.subtitle}</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-progress" id="cardProgress${idx}"></div>
+      <div class="card-llm-stream" id="cardLlmStream${idx}">
+        <div class="stream-label"><span class="stream-dot"></span>LLM 推理输出</div>
+        <div class="stream-text" id="cardLlmStreamText${idx}"></div>
+      </div>
+      <div class="card-tools" id="cardTools${idx}"></div>
+      <div class="card-result" id="cardResult${idx}">
+        <div class="card-result-title">分析结论</div>
+        <div class="card-result-body" id="cardResultBody${idx}"></div>
+      </div>
+    </div>
+  `;
+  stream.appendChild(card);
+
+  // Animate: slide up from below
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => card.classList.add('stack-enter'));
+  });
+
+  cardElements[idx] = {
+    card,
+    progress: document.getElementById(`cardProgress${idx}`),
+    llmStream: document.getElementById(`cardLlmStream${idx}`),
+    llmStreamText: document.getElementById(`cardLlmStreamText${idx}`),
+    tools: document.getElementById(`cardTools${idx}`),
+    result: document.getElementById(`cardResult${idx}`),
+    resultBody: document.getElementById(`cardResultBody${idx}`),
+    badge: document.getElementById(`cardBadge${idx}`)
+  };
+
+  // Update right panel agent dot
+  updateAgentDot(idx, 'running');
+  addProgressItem(idx, '模块已激活，准备分析...');
+}
+
+function updateAgentDot(idx, status) {
+  const rows = document.querySelectorAll('#configAgentList .config-agent-row');
+  if (rows[idx]) {
+    const dot = rows[idx].querySelector('.config-agent-dot');
+    dot.className = 'config-agent-dot ' + status;
+  }
+}
+
+// ============================================================
+// AGENT LOG
+// ============================================================
+function handleAgentLog(data) {
+  const meta = findMeta(data.node || data.agent);
+  if (!meta) return;
+  addProgressItem(meta.index, data.message || data.log || '');
+}
+
+// ============================================================
+// LLM CHUNK — streaming typewriter
+// ============================================================
+let llmRenderQueue = {};
+let llmRenderTimers = {};
+let llmRenderDone = {};
+let thinkingQueue = {};
+let thinkingTimers = {};
+let pendingResultHtml = {};
+
+function handleLlmChunk(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+  const text = data.chunk || '';
+  if (!text) return;
+  if (!el.llmStream.classList.contains('active')) el.llmStream.classList.add('active');
+  if (!llmRenderQueue[idx]) llmRenderQueue[idx] = [];
+  for (const c of text) llmRenderQueue[idx].push(c);
+  tryStartLlmTypewriter(idx);
+}
+
+function renderLlmCharLoop(idx, el) {
+  const queue = llmRenderQueue[idx];
+  if (!queue || queue.length === 0) { llmRenderTimers[idx] = null; markLlmDoneIfNeeded(idx, el); return; }
+  let batch = '';
+  for (let i = 0; i < 2 && queue.length > 0; i++) batch += queue.shift();
+  el.llmStreamText.textContent += batch;
+  el.llmStream.scrollTop = el.llmStream.scrollHeight;
+  llmRenderTimers[idx] = setTimeout(() => renderLlmCharLoop(idx, el), 25);
+}
+
+function markLlmDoneIfNeeded(idx, el) {
+  if (llmRenderDone[idx] && el.llmStream.classList.contains('active')) {
+    el.llmStream.classList.add('done');
+    const label = el.llmStream.querySelector('.stream-label');
+    if (label) label.innerHTML = '<span class="stream-dot" style="animation:none;"></span>推理完成';
+    el.llmStream.scrollTop = 0;
+    if (pendingResultHtml[idx] && el.result) {
+      el.resultBody.innerHTML = pendingResultHtml[idx];
+      el.result.classList.add('visible');
+      pendingResultHtml[idx] = null;
+    }
+  }
+}
+
+function handleThinking(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
+  const text = data.chunk || data.text || '';
+  if (!text.trim()) return;
+  const idx = meta.index;
+  if (!thinkingQueue[idx]) thinkingQueue[idx] = [];
+  text.split('\n').forEach(line => { const t = line.trim(); if (t) thinkingQueue[idx].push(t); });
+  if (!thinkingTimers[idx]) renderThinkingLoop(idx);
+}
+
+function renderThinkingLoop(idx) {
+  const queue = thinkingQueue[idx];
+  if (!queue || queue.length === 0) { thinkingTimers[idx] = null; tryStartLlmTypewriter(idx); return; }
+  const text = queue.shift();
+  const el = cardElements[idx];
+  if (el) {
+    const item = document.createElement('div');
+    item.className = 'progress-item';
+    const formatted = text.replace(/(\d+%)/g, '<span class="highlight">$1</span>').replace(/(\d+\/\d+)/g, '<span class="highlight">$1</span>');
+    item.innerHTML = `<div class="pi-dot"></div><div class="pi-text">${formatted}</div>`;
+    el.progress.appendChild(item);
+  }
+  thinkingTimers[idx] = setTimeout(() => renderThinkingLoop(idx), 100);
+}
+
+function tryStartLlmTypewriter(idx) {
+  if (!thinkingTimers[idx] && llmRenderQueue[idx] && llmRenderQueue[idx].length > 0) {
+    const el = cardElements[idx];
+    if (el && !llmRenderTimers[idx]) renderLlmCharLoop(idx, el);
+  }
+}
+
+function addProgressItem(idx, text) {
+  if (!thinkingQueue[idx]) thinkingQueue[idx] = [];
+  if (text && text.trim()) { thinkingQueue[idx].push(text.trim()); if (!thinkingTimers[idx]) renderThinkingLoop(idx); }
+}
+
+// ============================================================
+// TOOL CALL
+// ============================================================
+function handleToolCall(data) {
+  const meta = findMeta(data.agent || data.node);
+  if (!meta) return;
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+  const chip = document.createElement('span');
+  chip.className = 'tool-chip';
+  chip.title = (data.input || '') + '\n→ ' + (data.output || '').substring(0, 200);
+  chip.innerHTML = `<span class="tc-dot"></span><span class="tc-name">${data.tool || '工具'}</span><span class="tc-time">${data.duration_ms || 0}ms</span>`;
+  el.tools.appendChild(chip);
+}
+
+// ============================================================
+// AGENT DONE
+// ============================================================
+function handleAgentDone(data) {
+  const meta = findMeta(data.node || data.agent);
+  if (!meta) return;
+  const idx = meta.index;
+  const el = cardElements[idx];
+  if (!el) return;
+
+  const result = data.result || {};
+  const riskClass = determineCardClass(idx, result);
+
+  el.card.classList.remove('running');
+  el.card.classList.add(riskClass);
+  el.card.querySelector('.card-status-dot').classList.remove('running');
+
+  if (riskClass === 'done-danger') {
+    el.card.querySelector('.card-status-dot').classList.add('danger');
+    el.badge.textContent = '发现风险';
+    updateAgentDot(idx, 'danger');
+  } else if (riskClass === 'done-warn') {
+    el.card.querySelector('.card-status-dot').classList.add('warn');
+    el.badge.textContent = '注意';
+    updateAgentDot(idx, 'warn');
+  } else {
+    el.card.querySelector('.card-status-dot').classList.add('safe');
+    el.badge.textContent = '完成';
+    updateAgentDot(idx, 'safe');
+  }
+
+  llmRenderDone[idx] = true;
+  if (!llmRenderTimers[idx]) markLlmDoneIfNeeded(idx, el);
+
+  let resultHtml = buildResultHtml(idx, result);
+  if (llmRenderQueue[idx] && llmRenderQueue[idx].length > 0) {
+    pendingResultHtml[idx] = resultHtml;
+  } else {
+    el.resultBody.innerHTML = resultHtml;
+    el.result.classList.add('visible');
+  }
+}
+
+function buildResultHtml(idx, result) {
+  let html = '';
+  switch (idx) {
+    case 0:
+      const intent = result.intent || (result.semantic && result.semantic.intent) || '';
+      const conf = result.confidence || (result.semantic && result.semantic.confidence) || 0;
+      const techs = result.techniques || (result.semantic && result.semantic.persuasion_techniques) || [];
+      html = `<div class="result-kv"><span class="result-k">意图判定</span><span class="result-v"><span class="result-tag ${intent === 'phishing' ? 'danger' : intent === 'legitimate' ? 'safe' : 'warn'}">${translateIntent(intent)}</span></span></div>
+        <div class="result-kv"><span class="result-k">置信度</span><span class="result-v"><strong>${Math.round(conf * 100)}%</strong></span></div>
+        ${techs.length ? `<div class="result-kv"><span class="result-k">话术识别</span><span class="result-v">${techs.map(t => `<span class="result-tag info">${t}</span>`).join(' ')}</span></div>` : ''}`;
+      break;
+    case 1:
+      const det = result.detection || result;
+      const sScore = det.sender_score !== undefined ? det.sender_score : 0.5;
+      const uScore = det.url_score !== undefined ? det.url_score : 0.5;
+      const flags = det.content_flags || [];
+      html = `<div class="result-kv"><span class="result-k">发件人可信度</span><span class="result-v"><strong>${Math.round(sScore * 100)}%</strong></span></div>
+        <div class="result-kv"><span class="result-k">URL 安全性</span><span class="result-v"><strong>${Math.round(uScore * 100)}%</strong></span></div>
+        ${flags.length ? `<div class="result-kv"><span class="result-k">风险标记</span><span class="result-v">${flags.map(f => `<span class="result-tag danger">${f}</span>`).join(' ')}</span></div>` : ''}`;
+      break;
+    case 2:
+      const risk = result.risk || result;
+      const rScore = risk.risk_score || 0;
+      const rLevel = risk.risk_level || '';
+      const att = risk.attack_techniques || [];
+      html = `<div class="result-kv"><span class="result-k">综合评分</span><span class="result-v" style="font-size:18px;font-weight:700;color:${getScoreColor(rScore)};">${rScore}<span style="font-size:13px;">/100</span></span></div>
+        <div class="result-kv"><span class="result-k">风险等级</span><span class="result-v"><span class="result-tag ${rLevel === 'critical' || rLevel === 'high' ? 'danger' : rLevel === 'medium' ? 'warn' : 'safe'}">${translateRiskLevel(rLevel)}</span></span></div>
+        ${att.length ? `<div class="result-kv"><span class="result-k">ATT&CK</span><span class="result-v">${att.map(t => `<span class="result-tag info">${t}</span>`).join(' ')}</span></div>` : ''}`;
+      break;
+    case 3:
+      const resp = result.response || result;
+      const action = resp.action || '';
+      const alert = resp.alert_message || '';
+      const rec = resp.recommendation || '';
+      html = `<div class="result-kv"><span class="result-k">处置动作</span><span class="result-v"><span class="action-badge ${action}">${translateAction(action)}</span></span></div>
+        ${alert ? `<div class="result-kv"><span class="result-k">告警</span><span class="result-v">${escHtml(alert.substring(0, 200))}</span></div>` : ''}
+        ${rec ? `<div class="result-kv"><span class="result-k">建议</span><span class="result-v">${escHtml(rec.substring(0, 200))}</span></div>` : ''}`;
+      break;
+  }
+  return html;
+}
+
+function determineCardClass(idx, result) {
+  if (idx === 0) { const intent = result.intent || (result.semantic && result.semantic.intent) || ''; return intent === 'phishing' ? 'done-danger' : intent === 'suspicious' ? 'done-warn' : 'done-safe'; }
+  if (idx === 1) { const det = result.detection || result; const flags = det.content_flags || []; return flags.length > 2 ? 'done-danger' : flags.length > 0 ? 'done-warn' : 'done-safe'; }
+  if (idx === 2) { const risk = result.risk || result; const level = risk.risk_level || ''; return (level === 'critical' || level === 'high') ? 'done-danger' : level === 'medium' ? 'done-warn' : 'done-safe'; }
+  if (idx === 3) { const resp = result.response || result; const action = resp.action || ''; return (action === 'isolate' || action === 'quarantine') ? 'done-danger' : action === 'alert' ? 'done-warn' : 'done-safe'; }
+  return 'done-safe';
+}
+
+// ============================================================
+// COMPLETE
+// ============================================================
+function handleComplete(data) {
+  addToHistory(data);
+  renderReport(data);
+  const rs = document.getElementById('reportSection');
+  rs.style.display = 'block';
+  rs.offsetHeight;
+  rs.classList.add('visible');
+  setTimeout(() => rs.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
+}
+
+function renderReport(data) {
+  const body = document.getElementById('reportBody');
+  const isPhishing = data.is_phishing || false;
+  const riskScore = data.risk_score || (data.risk && data.risk.risk_score) || 0;
+  const verdictClass = isPhishing ? 'danger' : riskScore < 30 ? 'safe' : 'warn';
+  const verdictIcon = isPhishing ? '🚨' : riskScore < 30 ? '✅' : '⚠️';
+  const verdictTitle = isPhishing ? '检测到钓鱼威胁' : riskScore < 30 ? '邮件安全' : '存在可疑特征';
+  const verdictSub = isPhishing ? '该邮件具有明显的钓鱼攻击特征，建议立即执行隔离处置' : riskScore < 30 ? '未检测到明显的钓鱼攻击特征，可正常处理' : '部分特征需要人工复核确认';
+  const scoreColorClass = riskScore >= 60 ? 'danger' : riskScore >= 30 ? 'warn' : 'safe';
+
+  let html = `
+    <div class="report-verdict ${verdictClass}">
+      <div class="verdict-icon">${verdictIcon}</div>
+      <div class="verdict-text">
+        <div class="verdict-title">${verdictTitle}</div>
+        <div class="verdict-subtitle">${verdictSub}</div>
+      </div>
+      <div class="verdict-score ${scoreColorClass}">${Math.round(riskScore)}<span>/100</span></div>
+    </div>
+    <div class="report-grid">
+  `;
+  const sem = data.semantic || data.semantic_result || {};
+  if (sem.intent) { html += buildReportItem('🧠 语义意图分析', [['意图', `<span class="result-tag ${sem.intent==='phishing'?'danger':sem.intent==='legitimate'?'safe':'warn'}">${translateIntent(sem.intent)}</span>`], ['置信度', Math.round((sem.confidence||0)*100)+'%'], ...(sem.persuasion_techniques||[]).length?[['话术', sem.persuasion_techniques.join(', ')]]:[]]); }
+  const det = data.detection || data.detection_result || {};
+  if (det.sender_score !== undefined) { html += buildReportItem('🔍 多维关联检测', [['发件人', Math.round((det.sender_score||0.5)*100)+'% 可信'], ['URL', Math.round((det.url_score||0.5)*100)+'% 安全'], ...(det.content_flags||[]).length?[['标记', det.content_flags.join(', ')]]:[]]); }
+  const risk = data.risk || data.risk_result || {};
+  if (risk.risk_score !== undefined) { html += buildReportItem('⚖️ 风险研判', [['评分', `<strong>${risk.risk_score}/100</strong>`], ['等级', `<span class="result-tag ${risk.risk_level==='critical'||risk.risk_level==='high'?'danger':risk.risk_level==='medium'?'warn':'safe'}">${translateRiskLevel(risk.risk_level)}</span>`]]); }
+  const resp = data.response || data.response_result || {};
+  if (resp.action) { html += buildReportItem('🛡️ 响应处置', [['动作', `<span class="action-badge ${resp.action}">${translateAction(resp.action)}</span>`], ...(resp.recommendation?[['建议', escHtml(resp.recommendation)]]:[])]); }
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function buildReportItem(title, kvs) {
+  return `<div class="report-item"><div class="report-item-title">${title}</div><div class="report-item-body">${kvs.map(([k,v]) => `<div class="kv"><span class="kv-k">${k}</span><span class="kv-v">${v}</span></div>`).join('')}</div></div>`;
+}
+
+// ============================================================
+// RESET
+// ============================================================
+function resetWorkflow() {
+  activeCardIdx = -1;
+  cardElements = {};
+  cardToolCount = {};
+  llmRenderQueue = {};
+  llmRenderDone = {};
+  thinkingQueue = {};
+  pendingResultHtml = {};
+  agentCount = 0;
+  Object.values(llmRenderTimers).forEach(t => clearTimeout(t));
+  Object.values(thinkingTimers).forEach(t => clearTimeout(t));
+  llmRenderTimers = {};
+  thinkingTimers = {};
+  document.getElementById('workflowStream').innerHTML = '';
+  document.getElementById('workflowStream').classList.remove('active');
+  document.getElementById('reportSection').classList.remove('visible');
+  // Reset agent dots
+  document.querySelectorAll('#configAgentList .config-agent-dot').forEach(d => { d.className = 'config-agent-dot idle'; });
+  renderHistory();
+}
+
+function showError(message) {
+  if (activeCardIdx >= 0 && cardElements[activeCardIdx]) {
+    const el = cardElements[activeCardIdx];
+    el.card.classList.add('error');
+    el.card.querySelector('.card-status-dot').classList.add('error');
+    el.badge.textContent = '错误';
+    addProgressItem(activeCardIdx, '✕ ' + message);
+  } else { alert('分析错误: ' + message); }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function translateIntent(i) { const m={phishing:'钓鱼邮件',legitimate:'正常邮件',suspicious:'可疑邮件'}; return m[i]||i||'未知'; }
+function translateRiskLevel(l) { const m={critical:'极高风险',high:'高风险',medium:'中风险',low:'低风险',safe:'安全'}; return m[l]||l||'未知'; }
+function translateAction(a) { const m={isolate:'立即隔离',quarantine:'隔离观察',alert:'告警提示',pass:'放行通过'}; return m[a]||a||'未知'; }
+function getScoreColor(s) { if (s>=75) return 'var(--danger)'; if (s>=50) return 'var(--warn)'; return 'var(--success)'; }
+function escHtml(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+</script>
+
+</body>
+</html>

@@ -1,7 +1,8 @@
 """
 LLM 客户端模块
 ==============
-封装 Minimax M3 API 调用，提供统一的 LLM 接口。
+统一的 LLM 调用接口，通过 LLM_PROVIDER 环境变量
+在 Minimax / Qwen（通义千问）之间切换。
 使用 OpenAI SDK 兼容模式，支持同步和流式调用。
 """
 
@@ -16,12 +17,16 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 
+class LLMUnavailableError(RuntimeError):
+    """LLM 服务不可用时的兜底异常类型。"""
+
+
 class LLMClient:
     """
-    Minimax M3 LLM 客户端
-    
-    使用 OpenAI 兼容接口调用 Minimax API，
-    封装同步调用和流式调用两种模式。
+    LLM 客户端（支持 Minimax / 通义千问）
+
+    通过 .env 中 LLM_PROVIDER 切换后端，
+    使用 OpenAI 兼容接口统一调用。
     """
 
     def __init__(self):
@@ -29,7 +34,7 @@ class LLMClient:
         cfg = settings.llm
         if not cfg.api_key:
             raise ValueError(
-                "MINIMAX_API_KEY 未设置，请在 .env 文件中配置。"
+                f"LLM ({cfg.provider}) API Key 未设置，请在 .env 文件中配置。"
                 "参考 .env.example"
             )
         self.client = OpenAI(
@@ -71,7 +76,7 @@ class LLMClient:
             "max_tokens": self.max_tokens,
         }
 
-        # Minimax 不支持 response_format，通过 prompt 要求 JSON 输出
+        # Qwen 支持原生 JSON 模式；Minimax 不支持，通过 prompt 要求 JSON
 
         try:
             response = self.client.chat.completions.create(**kwargs)
@@ -80,7 +85,7 @@ class LLMClient:
             return content
         except Exception as e:
             logger.error(f"LLM 调用失败: {e}")
-            raise
+            raise LLMUnavailableError(str(e)) from e
 
     def chat_json(
         self,

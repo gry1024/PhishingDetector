@@ -15,6 +15,7 @@ from src.api.routes import router
 
 # 静态文件目录
 STATIC_DIR = Path(__file__).parent.parent / "static"
+PAGES_DIR = STATIC_DIR / "pages"
 
 app = FastAPI(
     title="PhishingDetector API",
@@ -41,8 +42,17 @@ if STATIC_DIR.exists():
 
 @app.get("/")
 async def root():
-    """首页：返回 UI 页面"""
-    index_path = STATIC_DIR / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path))
-    return {"service": "PhishingDetector API", "version": "1.0.0", "status": "running"}
+    """首页：返回 Landing Page"""
+    return FileResponse(str(PAGES_DIR / "index.html"))
+
+
+@app.get("/analyze")
+async def analyze_page():
+    """分析页：返回邮件检测工具"""
+    return FileResponse(str(PAGES_DIR / "analyze.html"))
+
+
+@app.get("/about")
+async def about_page():
+    """关于页：返回产品介绍"""
+    return FileResponse(str(PAGES_DIR / "about.html"))

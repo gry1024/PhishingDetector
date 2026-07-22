@@ -12,13 +12,14 @@
 3. 调用 ATT&CK 映射工具
 4. LLM 综合研判
 5. 融合规则分和 LLM 分，输出最终风险等级
+6. LLM 不可用时自动启用规则化风险研判兜底
 """
 
 from src.agents.base import BaseAgent, EventCallback
 from src.models import (
     EmailInput, SemanticResult, DetectionResult, RiskResult,
 )
-from src.tools import RISK_TOOLS
+from src.tools import get_tools_for_agent
 
 
 SYSTEM_PROMPT = """你是网络安全风险研判专家。综合语义分析和多维检测结果，做出最终风险判定。
@@ -35,7 +36,8 @@ T1566.003: 服务钓鱼 | T1598: 信息钓鱼 | T1657: 金融盗窃
 - BEC 商务邮件欺诈
 - 凭证窃取
 
-以严格JSON返回：
+请先用自然语言详细研判风险等级、攻击手法和关键证据（200-400字），
+然后在新的一行输出 <<<JSON>>> 标记，最后输出严格 JSON：
 {
     "risk_score": 0到100的整数,
     "risk_level": "critical/high/medium/low/safe",
@@ -49,7 +51,7 @@ class RiskAgent(BaseAgent):
 
     name = "风险研判"
     icon = "⚖️"
-    tools = RISK_TOOLS
+    tools = get_tools_for_agent("risk")
 
     def analyze(
         self,
@@ -63,6 +65,7 @@ class RiskAgent(BaseAgent):
         执行风险研判
 
         流程：规则预评分 → ATT&CK映射 → LLM综合研判 → 分数融合
+        LLM 不可用时自动降级为规则化研判兜底。
         """
         semantic = semantic_result or SemanticResult(
             intent="suspicious", explanation="", persuasion_techniques=[]
@@ -72,19 +75,30 @@ class RiskAgent(BaseAgent):
         )
 
         # ---- Step 1: 规则引擎预评分 ----
+        self.emit_thinking("📏 规则引擎预评分中...\n", callback)
         rule_score = self._rule_risk_score(semantic, detection)
-        self.emit_thinking(f"规则引擎预评分: {rule_score}/100", callback)
+        self.emit_thinking(f"   规则预评分结果：{rule_score}/100\n", callback)
 
         # ---- Step 2: ATT&CK 映射 ----
+        self.emit_thinking("🗺️ 映射 MITRE ATT&CK 攻击技术...\n", callback)
         all_flags = (
             semantic.persuasion_techniques +
             detection.content_flags
         )
         attack_result = self.call_tool("map_attack_techniques", all_flags, callback=callback)
 
-        # ---- Step 3: LLM 综合研判 ----
+        # ---- Step 3: LLM 综合研判（带规则兜底） ----
+        self.emit_thinking(
+            "⚖️ 综合前两步结果，正在由 LLM 进行最终风险研判...\n"
+            "   研判维度：语义意图 × 检测特征 × ATT&CK 映射 × 规则评分\n",
+            callback,
+        )
         user_prompt = self._build_prompt(email, semantic, detection, rule_score)
-        llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        try:
+            llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        except Exception:
+            self.emit_thinking("⚠️ LLM不可用，启用规则化风险研判...\n", callback)
+            llm_result = self._fallback_llm_result(rule_score, semantic, detection)
 
         # ---- Step 4: 分数融合 ----
         llm_score = int(llm_result.get("risk_score", 50))
@@ -110,6 +124,17 @@ class RiskAgent(BaseAgent):
         return {
             "risk": risk,
             "is_phishing": final_score >= 60,
+        }
+
+    def _fallback_llm_result(self, rule_score: int, semantic: SemanticResult, detection: DetectionResult) -> dict:
+        """LLM 不可用时的规则化最终判定。"""
+        score = max(rule_score, 0)
+        risk_level = self._score_to_level(score)
+        return {
+            "risk_score": score,
+            "risk_level": risk_level,
+            "attack_techniques": ["T1566", "T1598"],
+            "explanation": "LLM不可用时采用规则引擎兜底进行风险研判，聚焦语义意图、URL可信度以及邮件头校验异常。",
         }
 
     def _rule_risk_score(self, semantic: SemanticResult, detection: DetectionResult) -> int:

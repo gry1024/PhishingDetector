@@ -69,6 +69,9 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_reports_email ON reports(email_id);
             CREATE INDEX IF NOT EXISTS idx_reports_timestamp ON reports(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_reports_is_phishing ON reports(is_phishing);
+            CREATE INDEX IF NOT EXISTS idx_reports_risk_level ON reports(risk_level);
+            CREATE INDEX IF NOT EXISTS idx_emails_created_at ON emails(created_at);
         """)
         conn.commit()
         logger.info(f"数据库初始化完成: {DB_PATH}")

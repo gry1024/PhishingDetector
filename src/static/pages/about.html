@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关于 — PhishingDetector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/industrial.css">
+</head>
+<body>
+
+<div class="page-wrapper">
+
+<!-- ===== Top Navigation ===== -->
+<nav class="top-nav">
+  <div class="container top-nav-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <span class="nav-logo-text">PhishingDetector</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="/" class="nav-link">首页</a>
+      <a href="/analyze" class="nav-link">开始检测</a>
+      <a href="/about" class="nav-link active">关于</a>
+    </div>
+
+    <a href="/analyze" class="btn btn-primary">开始分析</a>
+  </div>
+</nav>
+
+<!-- ===== Page Header ===== -->
+<header class="page-header-simple">
+  <div class="container">
+    <div class="section-eyebrow">About</div>
+    <h1 class="section-title">关于 PhishingDetector</h1>
+    <p class="section-desc">了解系统架构、智能体分工与数据安全策略。</p>
+  </div>
+</header>
+
+<!-- ===== Content ===== -->
+<section class="features-section" style="padding-top:0;">
+  <div class="container">
+
+    <div class="feature-card" id="agents" style="margin-bottom:24px;">
+      <div class="feature-icon">🧩</div>
+      <h3 class="feature-title">多智能体架构</h3>
+      <p class="feature-desc" style="margin-bottom:16px;">
+        PhishingDetector 由四个专业智能体组成流水线：语义意图分析、多维关联检测、风险研判、响应处置。每个智能体专注于特定任务，通过事件流向后端实时推送分析状态与结果。
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:16px;">
+        <div style="padding:16px;background:var(--bg);border-radius:var(--r);box-shadow:var(--shadow-inset-sm);">
+          <strong style="display:block;margin-bottom:6px;color:var(--text);">语义意图分析</strong>
+          <span style="font-size:13px;color:var(--text-muted);">识别邮件意图、话术技巧与情感操控。</span>
+        </div>
+        <div style="padding:16px;background:var(--bg);border-radius:var(--r);box-shadow:var(--shadow-inset-sm);">
+          <strong style="display:block;margin-bottom:6px;color:var(--text);">多维关联检测</strong>
+          <span style="font-size:13px;color:var(--text-muted);">评估发件人与 URL 的可信度，标记内容异常。</span>
+        </div>
+        <div style="padding:16px;background:var(--bg);border-radius:var(--r);box-shadow:var(--shadow-inset-sm);">
+          <strong style="display:block;margin-bottom:6px;color:var(--text);">风险研判</strong>
+          <span style="font-size:13px;color:var(--text-muted);">综合评分并映射 ATT&CK 攻击技战术。</span>
+        </div>
+        <div style="padding:16px;background:var(--bg);border-radius:var(--r);box-shadow:var(--shadow-inset-sm);">
+          <strong style="display:block;margin-bottom:6px;color:var(--text);">响应处置</strong>
+          <span style="font-size:13px;color:var(--text-muted);">生成隔离、告警或放行等处置建议。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="features-grid" style="margin-bottom:24px;">
+      <div class="feature-card" id="api">
+        <div class="feature-icon">🔌</div>
+        <h3 class="feature-title">API 接入</h3>
+        <p class="feature-desc">提供 /api/analyze/stream 流式接口，支持 SSE 实时返回分析事件，便于集成到现有安全运营平台。</p>
+      </div>
+      <div class="feature-card" id="security">
+        <div class="feature-icon">🔐</div>
+        <h3 class="feature-title">数据安全</h3>
+        <p class="feature-desc">支持完全本地化部署，邮件内容仅在分析过程中使用，不会持久化存储或外传。</p>
+      </div>
+    </div>
+
+    <div class="feature-card" id="faq" style="margin-bottom:24px;">
+      <div class="feature-icon">❓</div>
+      <h3 class="feature-title">常见问题</h3>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:16px;">
+        <details style="background:var(--bg);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-inset-sm);">
+          <summary style="font-family:var(--font-heading);font-weight:700;color:var(--text);cursor:pointer;">支持哪些邮件格式？</summary>
+          <p style="margin-top:12px;font-size:14px;color:var(--text-muted);line-height:1.7;">目前支持手动输入邮件主题、发件人和正文。未来将支持 .eml / .msg 文件上传与自动解析。</p>
+        </details>
+        <details style="background:var(--bg);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-inset-sm);">
+          <summary style="font-family:var(--font-heading);font-weight:700;color:var(--text);cursor:pointer;">分析结果是否准确？</summary>
+          <p style="margin-top:12px;font-size:14px;color:var(--text-muted);line-height:1.7;">系统基于大语言模型与规则引擎结合，提供置信度与风险评分。建议对高风险邮件进行人工复核。</p>
+        </details>
+        <details style="background:var(--bg);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-inset-sm);">
+          <summary style="font-family:var(--font-heading);font-weight:700;color:var(--text);cursor:pointer;">可以私有化部署吗？</summary>
+          <p style="margin-top:12px;font-size:14px;color:var(--text-muted);line-height:1.7;">可以。项目基于 Python FastAPI 构建，可替换为本地或私有 LLM，无需依赖外部服务。</p>
+        </details>
+      </div>
+    </div>
+
+    <div class="feature-card" id="contact">
+      <div class="feature-icon">📧</div>
+      <h3 class="feature-title">联系我们</h3>
+      <p class="feature-desc" style="margin-bottom:16px;">如有问题或合作意向，欢迎通过以下方式联系。</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <a href="mailto:security@example.com" class="btn btn-secondary">security@example.com</a>
+        <a href="/analyze" class="btn btn-primary">立即体验</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          PhishingDetector
+        </div>
+        <p class="footer-tagline">AI 驱动的钓鱼邮件检测系统，多智能体协作，实时流式推理。</p>
+      </div>
+      <div>
+        <div class="footer-title">产品</div>
+        <ul class="footer-links">
+          <li><a href="/">首页</a></li>
+          <li><a href="/analyze">开始检测</a></li>
+          <li><a href="/about">关于</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-title">技术</div>
+        <ul class="footer-links">
+          <li><a href="/about#agents">智能体架构</a></li>
+          <li><a href="/about#api">API 文档</a></li>
+          <li><a href="/about#security">数据安全</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-title">支持</div>
+        <ul class="footer-links">
+          <li><a href="/about#faq">常见问题</a></li>
+          <li><a href="/about#contact">联系我们</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 PhishingDetector. All rights reserved.</span>
+      <span>Powered by Multi-Agent AI</span>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+</body>
+</html>
