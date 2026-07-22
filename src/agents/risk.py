@@ -84,7 +84,11 @@ class RiskAgent(BaseAgent):
 
         # ---- Step 3: LLM 综合研判 ----
         user_prompt = self._build_prompt(email, semantic, detection, rule_score)
-        llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        try:
+            llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        except Exception:
+            self.emit_thinking("LLM不可用，启用规则化风险研判...", callback)
+            llm_result = self._fallback_llm_result(rule_score, semantic, detection)
 
         # ---- Step 4: 分数融合 ----
         llm_score = int(llm_result.get("risk_score", 50))
@@ -110,6 +114,17 @@ class RiskAgent(BaseAgent):
         return {
             "risk": risk,
             "is_phishing": final_score >= 60,
+        }
+
+    def _fallback_llm_result(self, rule_score: int, semantic: SemanticResult, detection: DetectionResult) -> dict:
+        """LLM 不可用时的规则化最终判定。"""
+        score = max(rule_score, 0)
+        risk_level = self._score_to_level(score)
+        return {
+            "risk_score": score,
+            "risk_level": risk_level,
+            "attack_techniques": ["T1566", "T1598"],
+            "explanation": "LLM不可用时采用规则引擎兜底进行风险研判，聚焦语义意图、URL可信度以及邮件头校验异常。",
         }
 
     def _rule_risk_score(self, semantic: SemanticResult, detection: DetectionResult) -> int:

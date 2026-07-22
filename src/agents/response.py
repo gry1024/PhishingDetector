@@ -81,7 +81,11 @@ class ResponseAgent(BaseAgent):
             detection_result or DetectionResult(sender_analysis="", url_analysis="", explanation=""),
             risk,
         )
-        llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        try:
+            llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        except Exception:
+            self.emit_thinking("LLM不可用，启用规则化响应兜底...", callback)
+            llm_result = self._fallback_response_result(risk)
 
         # 强制执行策略映射（安全底线）
         action = llm_result.get("action", "alert")
@@ -97,6 +101,17 @@ class ResponseAgent(BaseAgent):
         self.emit_thinking(f"处置动作: {response.action}", callback)
 
         return {"response": response}
+
+    def _fallback_response_result(self, risk: RiskResult) -> dict:
+        """LLM 不可用时的规则化响应兜底结果。"""
+        policy = {"critical": "isolate", "high": "isolate", "medium": "quarantine", "low": "alert", "safe": "pass"}
+        action = policy.get(risk.risk_level, "alert")
+        return {
+            "action": action,
+            "alert_message": f"风险等级为 {risk.risk_level}，已按规则策略执行自动处置。",
+            "trace_report": "规则模式识别出高风险社工特征，建议即时隔离并进行人工复核。",
+            "recommendation": "请勿点击邮件中的任何链接，优先人工确认并同步安全团队。",
+        }
 
     def _enforce_policy(self, action: str, risk_level: str) -> str:
         """强制执行处置策略（防止 LLM 错误放行高风险邮件）"""

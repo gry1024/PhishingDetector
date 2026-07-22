@@ -85,7 +85,17 @@ class DetectorAgent(BaseAgent):
 
         # ---- Step 4: LLM 深度分析 ----
         user_prompt = self._build_prompt(email, all_urls, semantic_result)
-        llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        try:
+            llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+        except Exception:
+            self.emit_thinking("LLM不可用，启用规则化技术兜底分析...", callback)
+            llm_result = self._fallback_detection_result(
+                email=email,
+                sender_result=sender_result,
+                url_tool_results=url_tool_results,
+                pattern_result=pattern_result,
+                semantic_result=semantic_result,
+            )
 
         # ---- Step 5: 分数融合（工具 + LLM） ----
         # 发件人分数：从工具结果解析
@@ -101,18 +111,88 @@ class DetectorAgent(BaseAgent):
         llm_url = float(llm_result.get("url_score", 0.5))
         url_score = (1 - url_risk / 100) * 0.4 + llm_url * 0.6
 
+        header_risk = self._header_risk_score(email.headers)
+        sender_score = max(0, min(1, (sender_score * 0.8) + (1 - header_risk / 100) * 0.2))
+        url_score = max(0, min(1, (url_score * 0.85) + (1 - url_risk / 100) * 0.15))
+
+        content_flags = list(set(llm_result.get("content_flags", [])))
+        content_flags.extend(self._build_content_flags(email, all_urls, url_risk, header_risk))
+        content_flags = list(dict.fromkeys(content_flags))
+
         detection = DetectionResult(
             sender_score=max(0, min(1, sender_score)),
             sender_analysis=llm_result.get("sender_analysis", sender_result.output),
             url_score=max(0, min(1, url_score)),
             url_analysis=llm_result.get("url_analysis", ""),
-            content_flags=list(set(
-                llm_result.get("content_flags", [])
-            )),
+            content_flags=content_flags,
             explanation=llm_result.get("explanation", ""),
         )
 
         return {"detection": detection}
+
+    def _fallback_detection_result(self, email, sender_result, url_tool_results, pattern_result, semantic_result) -> dict:
+        """LLM 不可用时的规则化技术兜底结果。"""
+        sender_trust = self._parse_score(sender_result.output, "可信度")
+        url_risk = max(
+            (self._parse_score(r.output, "风险分") for r in url_tool_results),
+            default=0,
+        )
+        header_risk = self._header_risk_score(email.headers)
+        content_flags = self._build_content_flags(email, email.urls, url_risk, header_risk)
+
+        if "免费邮箱" in sender_result.output or header_risk >= 40:
+            sender_analysis = "发件人可信度下降：存在免费邮箱或邮件头校验异常。"
+        else:
+            sender_analysis = "发件人域名未发现明显仿冒，但仍建议进一步校验。"
+
+        url_analysis = (
+            f"URL 校验结果显示风险分 {url_risk}/100，"
+            f"规则配置已将该邮件标记为需要进一步人工复核。"
+        )
+
+        return {
+            "sender_score": max(0, min(1, sender_trust / 100)),
+            "sender_analysis": sender_analysis,
+            "url_score": max(0, min(1, 1 - url_risk / 100)),
+            "url_analysis": url_analysis,
+            "content_flags": content_flags,
+            "explanation": "LLM不可用时使用规则引擎进行安全兜底判定，重点关注发件人可信度、URL异常、邮件头校验和附件风险。",
+        }
+
+    def _header_risk_score(self, headers: dict) -> float:
+        """解析 SPF / DKIM / DMARC 头部校验状态。"""
+        headers = headers or {}
+        score = 0.0
+        spf = str(headers.get("spf", "")).lower()
+        dkim = str(headers.get("dkim", "")).lower()
+        dmarc = str(headers.get("dmarc", "")).lower()
+
+        if spf in {"none", "neutral"}:
+            score += 20
+        if spf == "fail":
+            score += 40
+        if dkim in {"none", "neutral"}:
+            score += 20
+        if dkim == "fail":
+            score += 40
+        if dmarc in {"none", "neutral"}:
+            score += 20
+        if dmarc == "fail":
+            score += 40
+        return min(score, 100)
+
+    def _build_content_flags(self, email, urls, url_risk, header_risk) -> list[str]:
+        """构建增强的内容标记列表。"""
+        flags = []
+        if url_risk >= 60:
+            flags.append("suspicious_link")
+        if email.has_attachment:
+            flags.append("possible_attachment_scam")
+        if header_risk >= 40:
+            flags.append("email_header_validation_failed")
+        if any("verify" in u.lower() or "secure" in u.lower() for u in urls):
+            flags.append("credential_request")
+        return flags
 
     def _parse_score(self, text: str, prefix: str) -> float:
         """从工具输出文本中解析分数（如 '风险分: 45/100' → 45.0）"""

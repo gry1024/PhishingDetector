@@ -16,6 +16,10 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 
+class LLMUnavailableError(RuntimeError):
+    """LLM 服务不可用时的兜底异常类型。"""
+
+
 class LLMClient:
     """
     Minimax M3 LLM 客户端
@@ -80,7 +84,7 @@ class LLMClient:
             return content
         except Exception as e:
             logger.error(f"LLM 调用失败: {e}")
-            raise
+            raise LLMUnavailableError(str(e)) from e
 
     def chat_json(
         self,
