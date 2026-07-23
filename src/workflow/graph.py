@@ -19,7 +19,7 @@
 import logging
 from typing import Callable, Optional
 
-from src.models import EmailInput, WorkflowState
+from src.models import EmailInput, WorkflowState, EvidenceItem
 from src.agents.semantic import SemanticAgent
 from src.agents.detector import DetectorAgent
 from src.agents.risk import RiskAgent
@@ -51,6 +51,112 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
         """推送事件到前端"""
         if callback:
             callback({"type": event_type, "data": data})
+
+    def build_evidence_items(email: EmailInput, semantic, detection, risk) -> list[dict]:
+        """基于各 Agent 输出构建规范化的结构化证据列表。"""
+        evidence_items = []
+
+        if semantic:
+            evidence_items.append({
+                "type": "semantic",
+                "source": "semantic_agent",
+                "weight": 25,
+                "confidence": max(0.0, min(1.0, float(semantic.confidence))),
+                "reason": semantic.explanation[:200] or semantic.intent,
+            })
+
+        if detection:
+            evidence_items.append({
+                "type": "detection",
+                "source": "detector_agent",
+                "weight": 30,
+                "confidence": max(0.0, min(1.0, float((detection.sender_score + detection.url_score) / 2))),
+                "reason": detection.explanation[:200] or ",".join(detection.content_flags),
+            })
+
+            if getattr(detection, "url_reputation_score", None) is not None and getattr(detection, "url_reputation_summary", None):
+                reputation_confidence = max(0.0, min(1.0, float(detection.url_reputation_score)))
+                evidence_items.append({
+                    "type": "url_reputation",
+                    "source": "detector_agent",
+                    "weight": 15,
+                    "confidence": reputation_confidence,
+                    "reason": detection.url_reputation_summary[:200],
+                })
+
+            if getattr(detection, "attachment_score", 0) >= 0.4 and getattr(detection, "attachment_summary", None):
+                evidence_items.append({
+                    "type": "attachment",
+                    "source": "detector_agent",
+                    "weight": 12,
+                    "confidence": max(0.0, min(1.0, float(detection.attachment_score))),
+                    "reason": detection.attachment_summary[:200],
+                })
+
+            if getattr(detection, "behavior_score", 0) >= 0.4 and getattr(detection, "behavior_summary", None):
+                evidence_items.append({
+                    "type": "behavior_anomaly",
+                    "source": "detector_agent",
+                    "weight": 12,
+                    "confidence": max(0.0, min(1.0, float(detection.behavior_score))),
+                    "reason": detection.behavior_summary[:200],
+                })
+
+        header_risk = 0.0
+        if isinstance(email.headers, dict):
+            headers = email.headers or {}
+            for status in (headers.get("spf", ""), headers.get("dkim", ""), headers.get("dmarc", "")):
+                value = str(status).lower()
+                if value in {"none", "neutral"}:
+                    header_risk += 20
+                elif value == "fail":
+                    header_risk += 40
+        header_risk = min(header_risk, 100)
+
+        if header_risk >= 40:
+            evidence_items.append({
+                "type": "header_validation",
+                "source": "mail_headers",
+                "weight": 15,
+                "confidence": 0.9,
+                "reason": "SPF/DKIM/DMARC 头部校验存在异常，说明邮件身份真实性下降。",
+            })
+
+        if email.has_attachment:
+            evidence_items.append({
+                "type": "attachment",
+                "source": "attachment_check",
+                "weight": 10,
+                "confidence": 0.75,
+                "reason": "邮件包含附件，附件诱导钓鱼风险需要进一步审查。",
+            })
+
+        if risk:
+            evidence_items.append({
+                "type": "risk",
+                "source": "risk_agent",
+                "weight": 20,
+                "confidence": max(0.0, min(1.0, float(risk.risk_score / 100))),
+                "reason": risk.explanation[:200] or risk.risk_level,
+            })
+
+        total = sum(item["weight"] for item in evidence_items)
+        if total <= 0:
+            total = 1
+
+        normalized = []
+        for item in evidence_items:
+            normalized.append({
+                **item,
+                "weight": int(round(item["weight"] / total * 100)),
+            })
+
+        # 由于四舍五入可能导致总和不等于 100，使用差额补齐最后一条
+        diff = 100 - sum(item["weight"] for item in normalized)
+        if normalized:
+            normalized[-1]["weight"] += diff
+
+        return normalized
 
     # ---- 初始化工作流状态 ----
     state = WorkflowState(email=email)
@@ -153,6 +259,16 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
     # ============================================================
     # 汇总完整报告（从 WorkflowState 提取）
     # ============================================================
+    state.evidence_items = [
+        EvidenceItem(**item)
+        for item in build_evidence_items(
+            email=email,
+            semantic=state.semantic,
+            detection=state.detection,
+            risk=state.risk,
+        )
+    ]
+
     report = {
         "is_phishing": state.is_phishing,
         "risk_score": state.risk.risk_score if state.risk else 0,
@@ -168,6 +284,12 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
             "sender_analysis": state.detection.sender_analysis,
             "url_score": state.detection.url_score,
             "url_analysis": state.detection.url_analysis,
+            "url_reputation_score": state.detection.url_reputation_score,
+            "url_reputation_summary": state.detection.url_reputation_summary,
+            "attachment_score": state.detection.attachment_score,
+            "attachment_summary": state.detection.attachment_summary,
+            "behavior_score": state.detection.behavior_score,
+            "behavior_summary": state.detection.behavior_summary,
             "content_flags": state.detection.content_flags,
             "explanation": state.detection.explanation,
         } if state.detection else {},
@@ -183,6 +305,9 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
             "trace_report": state.response.trace_report,
             "recommendation": state.response.recommendation,
         } if state.response else {},
+        "evidence_items": [
+            item.model_dump(mode="json") for item in state.evidence_items
+        ],
     }
 
     emit("complete", report)

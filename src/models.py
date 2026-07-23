@@ -43,6 +43,12 @@ class DetectionResult(BaseModel):
     sender_analysis: str = Field(default="", description="发件人分析说明")
     url_score: float = Field(default=0.5, description="URL安全性评分 0-1，越低越危险")
     url_analysis: str = Field(default="", description="URL分析说明")
+    url_reputation_score: float = Field(default=0.5, description="URL信誉评分 0-1，越低越危险")
+    url_reputation_summary: str = Field(default="", description="URL信誉分析说明")
+    attachment_score: float = Field(default=0.0, description="附件风险评分 0-1，越高越危险")
+    attachment_summary: str = Field(default="", description="附件风险分析说明")
+    behavior_score: float = Field(default=0.0, description="身份行为异常评分 0-1，越高越异常")
+    behavior_summary: str = Field(default="", description="身份行为异常分析说明")
     content_flags: list[str] = Field(
         default_factory=list,
         description="内容标记列表，如 suspicious_link, brand_impersonation 等"
@@ -69,6 +75,15 @@ class ResponseResult(BaseModel):
     recommendation: str = Field(default="", description="对用户的安全建议")
 
 
+class EvidenceItem(BaseModel):
+    """用于结构化汇总的证据对象。"""
+    type: str = Field(description="证据类型，如 semantic / detection / header_validation / attachment / risk")
+    source: str = Field(description="证据来源，例如 semantic_agent / detector_agent / header / attachment")
+    weight: int = Field(default=0, description="归一化后的权重，范围 0-100")
+    confidence: float = Field(default=0.0, description="该证据的置信度 0-1")
+    reason: str = Field(default="", description="该证据导致风险升高的简要理由")
+
+
 class AnalysisReport(BaseModel):
     """
     完整分析报告
@@ -81,6 +96,7 @@ class AnalysisReport(BaseModel):
     detection: Optional[DetectionResult] = None
     risk: Optional[RiskResult] = None
     response: Optional[ResponseResult] = None
+    evidence_items: list[EvidenceItem] = Field(default_factory=list)
     # 工作流执行日志（用于流式输出展示）
     workflow_log: list[str] = Field(default_factory=list)
 
@@ -97,6 +113,7 @@ class WorkflowState(BaseModel):
     detection: Optional[DetectionResult] = None
     risk: Optional[RiskResult] = None
     response: Optional[ResponseResult] = None
+    evidence_items: list[EvidenceItem] = Field(default_factory=list)
     workflow_log: list[str] = Field(default_factory=list)
     is_phishing: bool = False  # 最终判定结果
 

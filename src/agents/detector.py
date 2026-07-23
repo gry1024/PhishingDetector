@@ -78,13 +78,25 @@ class DetectorAgent(BaseAgent):
 
         # 逐个分析 URL
         url_tool_results = []
+        url_reputation_results = []
         if all_urls:
             self.emit_thinking(f"🔍 发现 {len(all_urls[:5])} 个 URL，逐一安全分析...\n", callback)
         for url in all_urls[:5]:  # 最多分析 5 个
             r = self.call_tool("analyze_url", url, callback=callback)
             url_tool_results.append(r)
+            reputation = self.call_tool("check_url_reputation", url, callback=callback)
+            url_reputation_results.append(reputation)
 
-        # ---- Step 2: 发件人域名检测 ----
+        # ---- Step 2: 附件与行为异常分析 ----
+        self.emit_thinking("📎 分析附件风险与行为异常模式...\n", callback)
+        attachment_result = self.call_tool("analyze_attachment_risk", combined_text, callback=callback) if email.has_attachment else None
+        behavior_result = self.call_tool(
+            "analyze_behavior_anomalies",
+            f"{email.sender}\n{email.subject}\n{email.body}",
+            callback=callback,
+        )
+
+        # ---- Step 3: 发件人域名检测 ----
         self.emit_thinking("📧 检测发件人域名可信度...\n", callback)
         sender_result = self.call_tool("check_sender_domain", email.sender, callback=callback)
 
@@ -122,6 +134,12 @@ class DetectorAgent(BaseAgent):
             (self._parse_score(r.output, "风险分") for r in url_tool_results),
             default=0,
         )
+        reputation_score = max(
+            (self._parse_score(r.output, "信誉分") for r in url_reputation_results),
+            default=0,
+        )
+        attachment_risk = self._parse_score(attachment_result.output, "附件风险分") if attachment_result else 0
+        behavior_risk = self._parse_score(behavior_result.output, "行为异常分") if behavior_result else 0
         llm_url = float(llm_result.get("url_score", 0.5))
         url_score = (1 - url_risk / 100) * 0.4 + llm_url * 0.6
 
@@ -133,6 +151,12 @@ class DetectorAgent(BaseAgent):
         # 增强内容标记
         content_flags = list(set(llm_result.get("content_flags", [])))
         content_flags.extend(self._build_content_flags(email, all_urls, url_risk, header_risk))
+        if reputation_score <= 50:
+            content_flags.append("url_reputation_suspicious")
+        if attachment_risk >= 40:
+            content_flags.append("suspicious_attachment_name")
+        if behavior_risk >= 40:
+            content_flags.append("identity_behavior_anomaly")
         content_flags = list(dict.fromkeys(content_flags))
 
         detection = DetectionResult(
@@ -140,6 +164,12 @@ class DetectorAgent(BaseAgent):
             sender_analysis=llm_result.get("sender_analysis", sender_result.output),
             url_score=max(0, min(1, url_score)),
             url_analysis=llm_result.get("url_analysis", ""),
+            url_reputation_score=max(0, min(1, reputation_score / 100)),
+            url_reputation_summary=next((r.output for r in url_reputation_results if r.output), ""),
+            attachment_score=max(0, min(1, attachment_risk / 100)),
+            attachment_summary=attachment_result.output if attachment_result else "",
+            behavior_score=max(0, min(1, behavior_risk / 100)),
+            behavior_summary=behavior_result.output if behavior_result else "",
             content_flags=content_flags,
             explanation=llm_result.get("explanation", ""),
         )

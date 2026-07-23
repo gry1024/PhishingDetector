@@ -306,6 +306,143 @@ def extract_urls(text: str) -> ToolResult:
     )
 
 
+@register_tool("analyze_attachment_risk", agents=["detector"])
+def analyze_attachment_risk(text: str) -> ToolResult:
+    """分析邮件附件风险特征。"""
+    start = time.time()
+    suspicious_terms = [
+        ("exe", "可执行文件"),
+        ("dll", "动态链接库"),
+        ("js", "脚本文件"),
+        ("hta", "脚本宿主"),
+        ("zip", "压缩包"),
+        ("rar", "压缩包"),
+        ("docm", "宏文档"),
+        ("xlsm", "宏表格"),
+        ("pptm", "宏演示"),
+        ("invoice", "付款单据"),
+        ("payment", "付款单据"),
+        ("statement", "对账单"),
+        ("receipt", "收据"),
+    ]
+    hits = []
+    risk_score = 0
+    lower = text.lower()
+
+    for token, label in suspicious_terms:
+        if token in lower:
+            hits.append(label)
+            risk_score += 10
+
+    if "attachment" in lower or "附件" in lower:
+        hits.append("附件诱导")
+        risk_score += 10
+
+    if "立即" in lower or "urgent" in lower or "紧急" in lower:
+        hits.append("诱导性语气")
+        risk_score += 10
+
+    if not hits:
+        hits.append("未见明显附件恶意特征")
+
+    score = max(0, min(100, risk_score))
+    output = f"附件风险分: {score}/100 | " + "; ".join(hits)
+
+    duration = int((time.time() - start) * 1000)
+    return ToolResult(
+        tool_name="附件风险检查",
+        input_summary=text[:80],
+        output=output,
+        duration_ms=duration,
+    )
+
+
+@register_tool("analyze_behavior_anomalies", agents=["detector"])
+def analyze_behavior_anomalies(payload: str) -> ToolResult:
+    """分析身份/行为异常模式。"""
+    start = time.time()
+    lower = payload.lower()
+    signals = []
+    score = 0
+
+    if any(word in lower for word in ("立即", "urgent", "紧急", "马上", "尽快")):
+        signals.append("高压语气")
+        score += 25
+    if any(word in lower for word in ("verify", "verify", "验证", "更新账户", "登录", "密码", "验证码")):
+        signals.append("账号验证诱导")
+        score += 25
+    if any(word in lower for word in ("收款", "付款", "invoice", "payment", "financial", "转账")):
+        signals.append("商务款项诱导")
+        score += 20
+    if any(word in lower for word in ("禁止告知", "请勿告知", "保密", "仅限")):
+        signals.append("保密/绕过流程")
+        score += 20
+    if any(domain in lower for domain in ("verify", "secure-click", "quick-verify", "account-verify")):
+        signals.append("仿冒域名行为")
+        score += 20
+
+    if not signals:
+        signals.append("未见明显行为异常")
+        score = 10
+
+    score = max(0, min(100, score))
+    output = f"行为异常分: {score}/100 | " + "; ".join(signals)
+
+    duration = int((time.time() - start) * 1000)
+    return ToolResult(
+        tool_name="行为异常扫描",
+        input_summary=payload[:80],
+        output=output,
+        duration_ms=duration,
+    )
+
+
+@register_tool("check_url_reputation", agents=["detector"])
+def check_url_reputation(url: str) -> ToolResult:
+    """对 URL 做信誉级别评分，增强 URL 信任度判定。"""
+    start = time.time()
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+
+    findings = []
+    risk_score = 0
+
+    if re.match(r"\d+\.\d+\.\d+\.\d+", hostname):
+        findings.append("IP 直接作为域名")
+        risk_score += 40
+
+    suspicious_tlds = {".xyz", ".top", ".click", ".link", ".work", ".gq", ".tk", ".ml", ".cf"}
+    if any(hostname.endswith(tld) for tld in suspicious_tlds):
+        findings.append("可疑 TLD")
+        risk_score += 20
+
+    if any(keyword in hostname for keyword in ("verify", "secure", "account", "login", "bank", "update")):
+        findings.append("域名包含敏感词")
+        risk_score += 15
+
+    if parsed.port and parsed.port not in (80, 443):
+        findings.append("异常端口")
+        risk_score += 15
+
+    if hostname.count(".") > 3:
+        findings.append("过多子域名")
+        risk_score += 10
+
+    if not findings:
+        findings.append("未发现明显恶意信誉特征")
+
+    reputation_score = max(0, 100 - min(risk_score, 100))
+    output = f"信誉分: {reputation_score}/100 | " + "; ".join(findings)
+
+    duration = int((time.time() - start) * 1000)
+    return ToolResult(
+        tool_name="URL信誉检查",
+        input_summary=url[:80],
+        output=output,
+        duration_ms=duration,
+    )
+
+
 # ============================================================
 # ATT&CK 映射工具
 # ============================================================

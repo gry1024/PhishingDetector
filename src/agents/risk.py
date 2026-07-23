@@ -147,6 +147,8 @@ class RiskAgent(BaseAgent):
         score += min(len(semantic.persuasion_techniques) * 5, 20)
         score += int((1 - detection.sender_score) * 20)
         score += int((1 - detection.url_score) * 15)
+        score += int(detection.attachment_score * 15)
+        score += int(detection.behavior_score * 15)
         score += min(len(detection.content_flags) * 3, 15)
         return min(score, 100)
 
