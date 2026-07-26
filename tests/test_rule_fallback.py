@@ -23,6 +23,9 @@ class RuleFallbackTest(unittest.TestCase):
         self.assertNotIn("error", report)
         self.assertIn("risk_score", report)
         self.assertIn("risk_level", report)
+        self.assertIn("rule_score", report["risk"])
+        self.assertIn("llm_score", report["risk"])
+        self.assertIn("score_gap", report["risk"])
 
     def test_detection_should_surface_header_and_attachment_evidence(self):
         settings.llm.api_key = ""

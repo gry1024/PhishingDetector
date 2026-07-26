@@ -8,6 +8,7 @@
 import sqlite3
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -18,6 +19,42 @@ logger = logging.getLogger(__name__)
 
 # 数据库文件路径
 DB_PATH = Path(settings.data_dir).parent / "phishing_detector.db"
+
+
+KB_SEED_ENTRIES = [
+    {
+        "title": "IP直连与非常用端口组合",
+        "category": "threat_intel",
+        "severity": "high",
+        "keywords": ["http://", "https://", "8080", "verify", "ip"],
+        "content": "URL 使用纯IP地址且包含 8080/8443 等非常用端口时，常见于临时钓鱼站点或伪造登录页。",
+        "recommendation": "优先人工复核链接归属，禁止直接点击并提交沙箱分析。",
+    },
+    {
+        "title": "紧急施压与冻结威胁话术",
+        "category": "case_pattern",
+        "severity": "medium",
+        "keywords": ["紧急", "立即", "冻结", "否则", "验证"],
+        "content": "邮件同时出现紧急时限、账户冻结威胁、立即验证等措辞，属于高频社工钓鱼特征。",
+        "recommendation": "对该类邮件提高风险权重，并结合发件人与URL进行交叉验证。",
+    },
+    {
+        "title": "凭证收集诱导页面",
+        "category": "attack_ttp",
+        "severity": "high",
+        "keywords": ["login", "signin", "password", "verify", "account"],
+        "content": "出现账号验证、密码更新、重新登录等行为引导，通常对应凭证窃取场景（T1598）。",
+        "recommendation": "若伴随可疑域名或异常端口，应直接升级为高风险处置策略。",
+    },
+    {
+        "title": "业务白名单样例",
+        "category": "allowlist",
+        "severity": "low",
+        "keywords": ["intranet", "corp", "internal"],
+        "content": "企业内部系统通知常使用固定域名与标准端口，文本不会要求外链验证账号密码。",
+        "recommendation": "如命中白名单仍出现紧急转账/凭证索取，应触发冲突告警并人工复核。",
+    },
+]
 
 
 def get_connection() -> sqlite3.Connection:
@@ -72,11 +109,54 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_reports_is_phishing ON reports(is_phishing);
             CREATE INDEX IF NOT EXISTS idx_reports_risk_level ON reports(risk_level);
             CREATE INDEX IF NOT EXISTS idx_emails_created_at ON emails(created_at);
+
+            CREATE TABLE IF NOT EXISTS kb_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                category TEXT NOT NULL,
+                severity TEXT NOT NULL DEFAULT 'medium',
+                keywords TEXT NOT NULL DEFAULT '[]',
+                content TEXT NOT NULL DEFAULT '',
+                recommendation TEXT NOT NULL DEFAULT '',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_kb_category ON kb_entries(category);
+            CREATE INDEX IF NOT EXISTS idx_kb_severity ON kb_entries(severity);
+            CREATE INDEX IF NOT EXISTS idx_kb_enabled ON kb_entries(enabled);
         """)
+        _seed_kb_entries(conn)
         conn.commit()
         logger.info(f"数据库初始化完成: {DB_PATH}")
     finally:
         conn.close()
+
+
+def _seed_kb_entries(conn: sqlite3.Connection):
+    """初始化默认知识库条目（仅在空表时执行）。"""
+    existing = conn.execute("SELECT COUNT(*) FROM kb_entries").fetchone()[0]
+    if existing:
+        return
+
+    now = datetime.now().isoformat()
+    for item in KB_SEED_ENTRIES:
+        conn.execute(
+            """INSERT INTO kb_entries
+               (title, category, severity, keywords, content, recommendation, enabled, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (
+                item["title"],
+                item["category"],
+                item["severity"],
+                json.dumps(item["keywords"], ensure_ascii=False),
+                item["content"],
+                item["recommendation"],
+                now,
+                now,
+            ),
+        )
 
 
 def save_email(email_data: dict) -> int:
@@ -225,5 +305,89 @@ def get_stats() -> dict:
             "safe_emails": total_reports - phishing_count,
             "avg_risk_score": round(avg_risk, 1),
         }
+    finally:
+        conn.close()
+
+
+def list_kb_entries(limit: int = 100) -> list[dict]:
+    """获取知识库条目列表。"""
+    conn = get_connection()
+    try:
+        try:
+            rows = conn.execute(
+                """SELECT id, title, category, severity, keywords, content, recommendation, enabled, updated_at
+                   FROM kb_entries
+                   ORDER BY updated_at DESC
+                   LIMIT ?""",
+                (limit,),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return []
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["keywords"] = json.loads(item.get("keywords") or "[]")
+            item["enabled"] = bool(item.get("enabled", 1))
+            result.append(item)
+        return result
+    finally:
+        conn.close()
+
+
+def search_kb(text: str, limit: int = 5) -> list[dict]:
+    """基于关键词的轻量知识库检索（MVP）。"""
+    query_text = (text or "").lower().strip()
+    if not query_text:
+        return []
+
+    conn = get_connection()
+    try:
+        try:
+            rows = conn.execute(
+                """SELECT id, title, category, severity, keywords, content, recommendation
+                   FROM kb_entries
+                   WHERE enabled = 1"""
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return []
+
+        severity_bonus = {"critical": 15, "high": 10, "medium": 6, "low": 3}
+        tokens = [t for t in re.split(r"[^a-zA-Z0-9\u4e00-\u9fff]+", query_text) if len(t) >= 2]
+
+        hits = []
+        for row in rows:
+            item = dict(row)
+            keywords = [k.lower() for k in json.loads(item.get("keywords") or "[]")]
+            matched = []
+
+            for kw in keywords:
+                if kw and kw in query_text:
+                    matched.append(kw)
+
+            # 兜底：token 命中 title/content 也计分
+            title = (item.get("title") or "").lower()
+            content = (item.get("content") or "").lower()
+            token_hits = [tok for tok in tokens if tok in title or tok in content]
+
+            if not matched and not token_hits:
+                continue
+
+            score = min(len(matched) * 18 + len(token_hits) * 6, 80)
+            score += severity_bonus.get((item.get("severity") or "medium").lower(), 0)
+            score = min(score, 100)
+
+            hits.append({
+                "id": item["id"],
+                "title": item["title"],
+                "category": item["category"],
+                "severity": item["severity"],
+                "score": score,
+                "matched_keywords": sorted(set(matched + token_hits))[:8],
+                "content": item["content"],
+                "recommendation": item["recommendation"],
+            })
+
+        hits.sort(key=lambda x: x["score"], reverse=True)
+        return hits[:limit]
     finally:
         conn.close()

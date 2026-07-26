@@ -41,6 +41,22 @@ class AttachmentBehaviorAnalysisTest(unittest.TestCase):
         self.assertTrue(matches, "expected behavior anomaly evidence item to exist")
         self.assertGreaterEqual(matches[0]["weight"], 5)
 
+    def test_attachment_invoice_sample_should_not_fall_back_to_safe(self):
+        email = EmailInput(
+            subject="付款单据请查收",
+            sender="finance@support-verify.xyz",
+            body="请在附件查看付款单据，双击后请勿打开外部链接。",
+            urls=[],
+            headers={"spf": "none", "dkim": "fail", "dmarc": "none"},
+            has_attachment=True,
+        )
+
+        report = run_analysis(email)
+
+        self.assertNotEqual(report["risk_level"], "safe")
+        self.assertGreaterEqual(report["risk_score"], 21)
+        self.assertIn("attachment", {item["type"] for item in report["evidence_items"]})
+
 
 if __name__ == "__main__":
     unittest.main()

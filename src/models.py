@@ -53,6 +53,8 @@ class DetectionResult(BaseModel):
         default_factory=list,
         description="内容标记列表，如 suspicious_link, brand_impersonation 等"
     )
+    kb_hits: list[dict] = Field(default_factory=list, description="命中的知识库证据条目")
+    kb_summary: str = Field(default="", description="知识库命中摘要")
     explanation: str = Field(default="", description="检测推理过程")
 
 
@@ -64,6 +66,10 @@ class RiskResult(BaseModel):
         default_factory=list,
         description="MITRE ATT&CK 技战术映射"
     )
+    rule_score: int = Field(default=0, description="规则引擎评分 0-100")
+    llm_score: int = Field(default=0, description="LLM 原始评分 0-100")
+    score_gap: int = Field(default=0, description="规则评分与LLM评分差值")
+    consistency_warning: str = Field(default="", description="规则与LLM分差过大时的风险提示")
     explanation: str = Field(description="研判推理过程")
 
 

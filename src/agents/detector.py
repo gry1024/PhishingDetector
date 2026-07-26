@@ -21,6 +21,7 @@
 from src.agents.base import BaseAgent, EventCallback
 from src.models import EmailInput, DetectionResult, SemanticResult
 from src.tools import get_tools_for_agent, extract_urls
+from src import database as db
 
 
 SYSTEM_PROMPT = """你是一个邮件安全技术检测专家。基于工具预扫描结果，进行深度技术分析。
@@ -96,6 +97,20 @@ class DetectorAgent(BaseAgent):
             callback=callback,
         )
 
+        # ---- Step 2.5: 知识库检索（RAG-MVP） ----
+        kb_query_text = "\n".join([
+            email.subject or "",
+            email.sender or "",
+            email.body or "",
+            " ".join(all_urls),
+        ])
+        kb_hits = db.search_kb(kb_query_text, limit=5)
+        if kb_hits:
+            top_titles = "；".join(hit["title"] for hit in kb_hits[:3])
+            self.emit_thinking(f"📚 命中知识库 {len(kb_hits)} 条：{top_titles}\n", callback)
+        else:
+            self.emit_thinking("📚 未命中知识库条目（继续按规则与LLM分析）\n", callback)
+
         # ---- Step 3: 发件人域名检测 ----
         self.emit_thinking("📧 检测发件人域名可信度...\n", callback)
         sender_result = self.call_tool("check_sender_domain", email.sender, callback=callback)
@@ -113,8 +128,9 @@ class DetectorAgent(BaseAgent):
         user_prompt = self._build_prompt(email, all_urls, semantic_result)
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
-        except Exception:
-            self.emit_thinking("⚠️ LLM 不可用，启用规则化技术兜底分析...\n", callback)
+        except Exception as e:
+            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
+            self.emit_thinking("⚠️ 启用规则化技术兜底分析...\n", callback)
             llm_result = self._fallback_detection_result(
                 email=email,
                 sender_result=sender_result,
@@ -157,7 +173,16 @@ class DetectorAgent(BaseAgent):
             content_flags.append("suspicious_attachment_name")
         if behavior_risk >= 40:
             content_flags.append("identity_behavior_anomaly")
+        if any(hit.get("severity") in {"high", "critical"} for hit in kb_hits):
+            content_flags.append("kb_high_risk_hit")
         content_flags = list(dict.fromkeys(content_flags))
+
+        kb_summary = ""
+        if kb_hits:
+            kb_summary = " | ".join(
+                f"{hit['title']}({hit['severity']},score={hit['score']})"
+                for hit in kb_hits[:3]
+            )
 
         detection = DetectionResult(
             sender_score=max(0, min(1, sender_score)),
@@ -171,6 +196,8 @@ class DetectorAgent(BaseAgent):
             behavior_score=max(0, min(1, behavior_risk / 100)),
             behavior_summary=behavior_result.output if behavior_result else "",
             content_flags=content_flags,
+            kb_hits=kb_hits,
+            kb_summary=kb_summary,
             explanation=llm_result.get("explanation", ""),
         )
 

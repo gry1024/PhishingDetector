@@ -17,6 +17,7 @@
 """
 
 import logging
+from threading import Lock, Thread
 from typing import Callable, Optional
 
 from src.models import EmailInput, WorkflowState, EvidenceItem
@@ -29,14 +30,27 @@ logger = logging.getLogger(__name__)
 
 # Agent 元数据（名称、图标、顺序）
 AGENT_PIPELINE = [
-    {"name": "语义意图分析", "icon": "🧠"},
-    {"name": "多维关联检测", "icon": "🔍"},
-    {"name": "风险研判", "icon": "⚖️"},
-    {"name": "响应处置", "icon": "🛡️"},
+    {"id": "semantic", "name": "语义意图分析", "icon": "🧠", "index": 0},
+    {"id": "detector", "name": "多维关联检测", "icon": "🔍", "index": 1},
+    {"id": "risk", "name": "风险研判", "icon": "⚖️", "index": 2},
+    {"id": "response", "name": "响应处置", "icon": "🛡️", "index": 3},
 ]
 
+AGENT_PIPELINE_BY_ID = {item["id"]: item for item in AGENT_PIPELINE}
+AGENT_LAYER_BY_ID = {
+    "semantic": 1,
+    "detector": 1,
+    "risk": 2,
+    "response": 2,
+}
 
-def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
+
+def run_analysis(
+    email: EmailInput,
+    callback: Callable[[dict], None] = None,
+    selected_steps: Optional[list[str]] = None,
+    execution_mode: str = "serial",
+):
     """
     执行完整的邮件检测工作流
 
@@ -161,95 +175,167 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
     # ---- 初始化工作流状态 ----
     state = WorkflowState(email=email)
 
+    # ---- 规范化执行步骤 ----
+    # 响应处置依赖风险研判：如果选择了 response 但未选择 risk，自动补齐 risk。
+    ordered_step_ids = [item["id"] for item in AGENT_PIPELINE]
+    if selected_steps:
+        selected = []
+        for step in selected_steps:
+            if step in AGENT_PIPELINE_BY_ID and step not in selected:
+                selected.append(step)
+
+        if "response" in selected and "risk" not in selected:
+            response_idx = selected.index("response")
+            selected.insert(response_idx, "risk")
+            emit("thinking", {
+                "agent": "系统",
+                "chunk": "⚙️ 检测到已选择响应处置但缺少风险研判，已自动补齐 risk 步骤以保证处置一致性。",
+            })
+
+        # 分层执行：先分析层，再决策层；同层内保持工作流定义顺序。
+        selected = sorted(
+            selected,
+            key=lambda step_id: (AGENT_LAYER_BY_ID.get(step_id, 99), AGENT_PIPELINE_BY_ID[step_id]["index"]),
+        )
+
+        steps_to_run = selected or ordered_step_ids
+    else:
+        steps_to_run = ordered_step_ids
+
     # ---- 初始化 Agent 实例 ----
     semantic_agent = SemanticAgent()
     detector_agent = DetectorAgent()
     risk_agent = RiskAgent()
     response_agent = ResponseAgent()
 
+    def run_single_step(step_id: str):
+        """运行单个步骤，包含开始/结束事件。"""
+        nonlocal state
+
+        meta = AGENT_PIPELINE_BY_ID[step_id]
+        emit("agent_start", {
+            "agent": meta["name"],
+            "icon": meta["icon"],
+            "index": meta["index"],
+            "step_id": step_id,
+        })
+
+        if step_id == "semantic":
+            result = semantic_agent.analyze(email, callback=callback)
+            state.semantic = result["semantic"]
+            emit("agent_done", {
+                "agent": meta["name"],
+                "step_id": step_id,
+                "result": {
+                    "intent": state.semantic.intent,
+                    "confidence": state.semantic.confidence,
+                    "techniques": state.semantic.persuasion_techniques,
+                    "explanation": state.semantic.explanation[:200],
+                },
+            })
+            return
+
+        if step_id == "detector":
+            result = detector_agent.analyze(
+                email,
+                callback=callback,
+                semantic_result=state.semantic,
+            )
+            state.detection = result["detection"]
+            emit("agent_done", {
+                "agent": meta["name"],
+                "step_id": step_id,
+                "result": {
+                    "sender_score": state.detection.sender_score,
+                    "url_score": state.detection.url_score,
+                    "content_flags": state.detection.content_flags,
+                    "kb_hits": state.detection.kb_hits,
+                    "explanation": state.detection.explanation[:200],
+                },
+            })
+            return
+
+        if step_id == "risk":
+            result = risk_agent.analyze(
+                email,
+                callback=callback,
+                semantic_result=state.semantic,
+                detection_result=state.detection,
+            )
+            state.risk = result["risk"]
+            state.is_phishing = result["is_phishing"]
+            emit("agent_done", {
+                "agent": meta["name"],
+                "step_id": step_id,
+                "result": {
+                    "risk_score": state.risk.risk_score,
+                    "risk_level": state.risk.risk_level,
+                    "rule_score": state.risk.rule_score,
+                    "llm_score": state.risk.llm_score,
+                    "score_gap": state.risk.score_gap,
+                    "consistency_warning": state.risk.consistency_warning,
+                    "attack_techniques": state.risk.attack_techniques,
+                    "explanation": state.risk.explanation[:200],
+                },
+            })
+            return
+
+        if step_id == "response":
+            result = response_agent.analyze(
+                email,
+                callback=callback,
+                semantic_result=state.semantic,
+                detection_result=state.detection,
+                risk_result=state.risk,
+            )
+            state.response = result["response"]
+            emit("agent_done", {
+                "agent": meta["name"],
+                "step_id": step_id,
+                "result": {
+                    "action": state.response.action,
+                    "alert_message": state.response.alert_message,
+                    "recommendation": state.response.recommendation,
+                },
+            })
+            return
+
     try:
-        # ============================================================
-        # Agent #1: 语义意图分析
-        # ============================================================
-        emit("agent_start", {"agent": "语义意图分析", "icon": "🧠", "index": 0})
+        cluster_enabled = execution_mode == "cluster"
+        can_parallel = cluster_enabled and "semantic" in steps_to_run and "detector" in steps_to_run
 
-        result1 = semantic_agent.analyze(email, callback=callback)
-        state.semantic = result1["semantic"]
+        if can_parallel:
+            emit("thinking", {
+                "agent": "系统",
+                "chunk": "🚀 并行集群模式：语义意图分析 + 多维关联检测并行执行，后续步骤进行融合判定。",
+            })
 
-        emit("agent_done", {
-            "agent": "语义意图分析",
-            "result": {
-                "intent": state.semantic.intent,
-                "confidence": state.semantic.confidence,
-                "techniques": state.semantic.persuasion_techniques,
-                "explanation": state.semantic.explanation[:200],
-            }
-        })
+            errors = []
+            err_lock = Lock()
 
-        # ============================================================
-        # Agent #2: 多维关联检测
-        # ============================================================
-        emit("agent_start", {"agent": "多维关联检测", "icon": "🔍", "index": 1})
+            def _run_parallel(step_id: str):
+                try:
+                    run_single_step(step_id)
+                except Exception as e:
+                    with err_lock:
+                        errors.append(e)
 
-        result2 = detector_agent.analyze(
-            email, callback=callback, semantic_result=state.semantic
-        )
-        state.detection = result2["detection"]
+            t_semantic = Thread(target=_run_parallel, args=("semantic",), daemon=True)
+            t_detector = Thread(target=_run_parallel, args=("detector",), daemon=True)
+            t_semantic.start()
+            t_detector.start()
+            t_semantic.join()
+            t_detector.join()
 
-        emit("agent_done", {
-            "agent": "多维关联检测",
-            "result": {
-                "sender_score": state.detection.sender_score,
-                "url_score": state.detection.url_score,
-                "content_flags": state.detection.content_flags,
-                "explanation": state.detection.explanation[:200],
-            }
-        })
+            if errors:
+                raise errors[0]
 
-        # ============================================================
-        # Agent #3: 风险研判
-        # ============================================================
-        emit("agent_start", {"agent": "风险研判", "icon": "⚖️", "index": 2})
-
-        result3 = risk_agent.analyze(
-            email, callback=callback,
-            semantic_result=state.semantic,
-            detection_result=state.detection,
-        )
-        state.risk = result3["risk"]
-        state.is_phishing = result3["is_phishing"]
-
-        emit("agent_done", {
-            "agent": "风险研判",
-            "result": {
-                "risk_score": state.risk.risk_score,
-                "risk_level": state.risk.risk_level,
-                "attack_techniques": state.risk.attack_techniques,
-                "explanation": state.risk.explanation[:200],
-            }
-        })
-
-        # ============================================================
-        # Agent #4: 响应处置
-        # ============================================================
-        emit("agent_start", {"agent": "响应处置", "icon": "🛡️", "index": 3})
-
-        result4 = response_agent.analyze(
-            email, callback=callback,
-            semantic_result=state.semantic,
-            detection_result=state.detection,
-            risk_result=state.risk,
-        )
-        state.response = result4["response"]
-
-        emit("agent_done", {
-            "agent": "响应处置",
-            "result": {
-                "action": state.response.action,
-                "alert_message": state.response.alert_message,
-                "recommendation": state.response.recommendation,
-            }
-        })
+            remaining = [s for s in steps_to_run if s not in {"semantic", "detector"}]
+            for step_id in remaining:
+                run_single_step(step_id)
+        else:
+            for step_id in steps_to_run:
+                run_single_step(step_id)
 
     except Exception as e:
         logger.error(f"工作流执行失败: {e}", exc_info=True)
@@ -291,11 +377,17 @@ def run_analysis(email: EmailInput, callback: Callable[[dict], None] = None):
             "behavior_score": state.detection.behavior_score,
             "behavior_summary": state.detection.behavior_summary,
             "content_flags": state.detection.content_flags,
+            "kb_hits": state.detection.kb_hits,
+            "kb_summary": state.detection.kb_summary,
             "explanation": state.detection.explanation,
         } if state.detection else {},
         "risk": {
             "risk_score": state.risk.risk_score,
             "risk_level": state.risk.risk_level,
+            "rule_score": state.risk.rule_score,
+            "llm_score": state.risk.llm_score,
+            "score_gap": state.risk.score_gap,
+            "consistency_warning": state.risk.consistency_warning,
             "attack_techniques": state.risk.attack_techniques,
             "explanation": state.risk.explanation,
         } if state.risk else {},
