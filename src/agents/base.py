@@ -162,6 +162,18 @@ class BaseAgent(ABC):
                     json_buffer = pending
 
         except Exception as e:
+            err_text = str(e).lower()
+            is_auth_error = (
+                "401" in err_text
+                or "authorized_error" in err_text
+                or "invalid api key" in err_text
+            )
+
+            if is_auth_error:
+                # 鉴权失败时不要再次回退到同步调用，避免重复无效请求。
+                self.logger.warning(f"LLM 鉴权失败，跳过同步重试: {e}")
+                raise
+
             # 流式失败 — 回退到同步模式
             self.logger.warning(f"LLM 流式调用失败: {e}，回退到同步模式")
             self.emit_thinking("⚠️ 流式不可用，切换同步模式...\n", callback)
@@ -175,10 +187,11 @@ class BaseAgent(ABC):
             else:
                 json_buffer = raw
 
-        self.emit_thinking("✅ LLM 分析完成\n", callback)
+        self.emit_thinking("📦 LLM 输出接收完成，正在解析结构化结果...\n", callback)
 
         # 解析 JSON
         json_str = json_buffer.strip()
+
         # 去除可能的 markdown 代码围栏
         if json_str.startswith("```"):
             lines = json_str.split("\n")
@@ -188,19 +201,45 @@ class BaseAgent(ABC):
                 lines = lines[:-1]
             json_str = "\n".join(lines).strip()
 
+        def _try_parse(raw: str) -> dict:
+            return json.loads(raw)
+
         try:
-            return json.loads(json_str)
+            parsed = _try_parse(json_str)
+            self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
+            return parsed
         except json.JSONDecodeError:
-            # 尝试从 markdown 代码块提取
+            pass
+
+        # 尝试从 markdown 代码块提取
+        try:
             if "```json" in json_str:
                 start = json_str.index("```json") + 7
                 end = json_str.index("```", start)
-                return json.loads(json_str[start:end].strip())
-            elif "```" in json_str:
+                parsed = _try_parse(json_str[start:end].strip())
+                self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
+                return parsed
+            if "```" in json_str:
                 start = json_str.index("```") + 3
                 end = json_str.index("```", start)
-                return json.loads(json_str[start:end].strip())
-            raise ValueError(f"LLM JSON 解析失败: {json_str[:300]}")
+                parsed = _try_parse(json_str[start:end].strip())
+                self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
+                return parsed
+        except Exception:
+            pass
+
+        # 尝试从首个 { 到最后一个 } 提取 JSON（处理前缀说明文本）
+        try:
+            l_idx = json_str.find("{")
+            r_idx = json_str.rfind("}")
+            if l_idx >= 0 and r_idx > l_idx:
+                parsed = _try_parse(json_str[l_idx:r_idx + 1].strip())
+                self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
+                return parsed
+        except Exception:
+            pass
+
+        raise ValueError(f"LLM JSON 解析失败: {json_str[:300]}")
 
     def _extract_analysis_text(self, result: dict) -> str:
         """从 LLM 返回的 JSON 中提取可读的分析说明文本，去除结构化代码。"""

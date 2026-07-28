@@ -18,27 +18,24 @@ load_dotenv(ROOT_DIR / ".env")
 class LLMConfig(BaseModel):
     """LLM API 配置 — 通过 LLM_PROVIDER 切换 minimax / qwen"""
     provider: str = os.getenv("LLM_PROVIDER", "minimax")
-
-    @property
-    def api_key(self) -> str:
-        if self.provider == "qwen":
-            return os.getenv("QWEN_API_KEY", "")
-        return os.getenv("MINIMAX_API_KEY", "")
-
-    @property
-    def base_url(self) -> str:
-        if self.provider == "qwen":
-            return os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-        return os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
-
-    @property
-    def model(self) -> str:
-        if self.provider == "qwen":
-            return os.getenv("QWEN_MODEL", "qwen-plus")
-        return os.getenv("MINIMAX_MODEL", "MiniMax-Text-01")
-
+    api_key: str = ""
+    base_url: str = "https://api.minimax.chat/v1"
+    model: str = "MiniMax-Text-01"
     temperature: float = 0.1  # 检测任务需要低温度保证一致性
     max_tokens: int = 2048
+
+    def model_post_init(self, __context):
+        if self.provider == "qwen":
+            self.api_key = os.getenv("QWEN_API_KEY", "")
+            self.base_url = os.getenv(
+                "QWEN_BASE_URL",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            )
+            self.model = os.getenv("QWEN_MODEL", "qwen-plus")
+        else:
+            self.api_key = os.getenv("MINIMAX_API_KEY", "")
+            self.base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
+            self.model = os.getenv("MINIMAX_MODEL", "MiniMax-Text-01")
 
 
 class APIConfig(BaseModel):

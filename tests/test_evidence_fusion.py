@@ -6,10 +6,12 @@ from src.models import EmailInput
 from src.workflow.graph import run_analysis
 
 
-class RuleFallbackTest(unittest.TestCase):
-    def test_run_analysis_should_fallback_when_llm_unavailable(self):
+class EvidenceFusionTest(unittest.TestCase):
+    def setUp(self):
         settings.llm.api_key = ""
         llm_module.llm_client = None
+
+    def test_run_analysis_should_return_structured_evidence_items(self):
         email = EmailInput(
             subject="紧急验证您的账户",
             sender="security@bank-alert.com",
@@ -20,16 +22,23 @@ class RuleFallbackTest(unittest.TestCase):
         )
 
         report = run_analysis(email)
-        self.assertNotIn("error", report)
-        self.assertIn("risk_score", report)
-        self.assertIn("risk_level", report)
-        self.assertIn("rule_score", report["risk"])
-        self.assertIn("llm_score", report["risk"])
-        self.assertIn("score_gap", report["risk"])
 
-    def test_detection_should_surface_header_and_attachment_evidence(self):
-        settings.llm.api_key = ""
-        llm_module.llm_client = None
+        self.assertNotIn("error", report)
+        self.assertIn("evidence_items", report)
+        self.assertGreaterEqual(len(report["evidence_items"]), 3)
+
+        evidence_types = {item["type"] for item in report["evidence_items"]}
+        self.assertIn("semantic", evidence_types)
+        self.assertIn("detection", evidence_types)
+
+        for item in report["evidence_items"]:
+            self.assertIn("type", item)
+            self.assertIn("source", item)
+            self.assertIn("weight", item)
+            self.assertIn("confidence", item)
+            self.assertIn("reason", item)
+
+    def test_evidence_items_should_be_weighted_and_cumulative(self):
         email = EmailInput(
             subject="付款审批确认",
             sender="finance@unknown-domain.xyz",
@@ -40,9 +49,14 @@ class RuleFallbackTest(unittest.TestCase):
         )
 
         report = run_analysis(email)
-        flags = report["detection"]["content_flags"]
-        self.assertIn("email_header_validation_failed", flags)
-        self.assertIn("possible_attachment_scam", flags)
+        evidence_items = report["evidence_items"]
+
+        weights = [item["weight"] for item in evidence_items]
+        self.assertEqual(sum(weights), 100)
+
+        types = {item["type"] for item in evidence_items}
+        self.assertIn("header_validation", types)
+        self.assertIn("attachment", types)
 
 
 if __name__ == "__main__":

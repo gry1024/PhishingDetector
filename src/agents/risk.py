@@ -96,8 +96,9 @@ class RiskAgent(BaseAgent):
         user_prompt = self._build_prompt(email, semantic, detection, rule_score)
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
-        except Exception:
-            self.emit_thinking("⚠️ LLM不可用，启用规则化风险研判...\n", callback)
+        except Exception as e:
+            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
+            self.emit_thinking("⚠️ 启用规则化风险研判...\n", callback)
             llm_result = self._fallback_llm_result(rule_score, semantic, detection)
 
         # ---- Step 4: 分数融合 ----
@@ -105,6 +106,11 @@ class RiskAgent(BaseAgent):
         final_score = round(llm_score * 0.6 + rule_score * 0.4)
         final_score = max(0, min(100, final_score))
         risk_level = self._score_to_level(final_score)
+        score_gap = abs(llm_score - rule_score)
+        consistency_warning = ""
+        if score_gap >= 25:
+            consistency_warning = "规则评分与LLM评分差异较大，建议人工复核关键证据。"
+            self.emit_thinking(f"⚠️ 规则/LLM 分差 {score_gap}，建议人工复核。\n", callback)
 
         # 合并 ATT&CK 技术（LLM + 工具）
         llm_techniques = llm_result.get("attack_techniques", [])
@@ -118,6 +124,10 @@ class RiskAgent(BaseAgent):
             risk_score=final_score,
             risk_level=risk_level,
             attack_techniques=all_techniques,
+            rule_score=rule_score,
+            llm_score=llm_score,
+            score_gap=score_gap,
+            consistency_warning=consistency_warning,
             explanation=llm_result.get("explanation", ""),
         )
 
@@ -147,6 +157,8 @@ class RiskAgent(BaseAgent):
         score += min(len(semantic.persuasion_techniques) * 5, 20)
         score += int((1 - detection.sender_score) * 20)
         score += int((1 - detection.url_score) * 15)
+        score += int(detection.attachment_score * 15)
+        score += int(detection.behavior_score * 15)
         score += min(len(detection.content_flags) * 3, 15)
         return min(score, 100)
 

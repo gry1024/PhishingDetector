@@ -88,8 +88,9 @@ class ResponseAgent(BaseAgent):
         )
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
-        except Exception:
-            self.emit_thinking("LLM不可用，启用规则化响应兜底...", callback)
+        except Exception as e:
+            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}", callback)
+            self.emit_thinking("⚠️ 启用规则化响应兜底...", callback)
             llm_result = self._fallback_response_result(risk)
 
         # 强制执行策略映射（安全底线）

@@ -77,9 +77,10 @@ class SemanticAgent(BaseAgent):
         # ---- Step 3: LLM 语义分析（带规则兜底） ----
         try:
             result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
-        except Exception:
-            self.emit_thinking("⚠️ LLM不可用，启用规则兜底语义分析...\n", callback)
-            result = self._fallback_semantic_result(pattern_result, url_result)
+        except Exception as e:
+            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
+            self.emit_thinking("⚠️ 启用规则兜底语义分析...\n", callback)
+            result = self._fallback_semantic_result(email, pattern_result, url_result)
 
         semantic = SemanticResult(
             intent=result.get("intent", "suspicious"),
@@ -90,10 +91,11 @@ class SemanticAgent(BaseAgent):
 
         return {"semantic": semantic}
 
-    def _fallback_semantic_result(self, pattern_result, url_result) -> dict:
+    def _fallback_semantic_result(self, email: EmailInput, pattern_result, url_result) -> dict:
         """LLM 不可用时的规则化语义兜底结果。"""
         pattern_text = pattern_result.output.lower()
         url_text = url_result.output.lower()
+        combined_text = f"{email.subject} {email.body}".lower()
         techniques = []
 
         if "紧急" in pattern_text or "urgent" in pattern_text:
@@ -105,6 +107,13 @@ class SemanticAgent(BaseAgent):
         if "冒充" in pattern_text or "authority" in pattern_text:
             techniques.append("authority")
 
+        attachment_bec_signals = any(keyword in combined_text for keyword in (
+            "附件", "付款", "invoice", "payment", "单据", "收据", "对账"
+        ))
+
+        if attachment_bec_signals:
+            techniques.append("financial_request")
+
         if not techniques:
             techniques = ["generic_social_engineering"]
 
@@ -112,6 +121,10 @@ class SemanticAgent(BaseAgent):
             intent = "phishing"
             confidence = 0.82
             explanation = "规则模式检测到钓鱼诱导信号，且 URL 结构存在可疑特征，已启用安全兜底判定。"
+        elif email.has_attachment and attachment_bec_signals:
+            intent = "suspicious"
+            confidence = 0.76
+            explanation = "规则兜底识别到附件诱导与付款类业务话术，即使没有显式链接，也需要按可疑邮件处理。"
         elif "未发现URL" in url_result.output:
             intent = "legitimate"
             confidence = 0.64

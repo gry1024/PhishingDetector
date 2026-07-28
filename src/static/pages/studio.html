@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi-Style AI Studio Demo - PhishingDetector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3efe6;
+  --paper: #fffdf9;
+  --line: #ded5c1;
+  --ink: #1f2a44;
+  --muted: #67748f;
+  --brand: #2f80ff;
+  --ok: #1e9e55;
+  --warn: #cf7f1a;
+  --bad: #cb3a3a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Noto Sans SC", "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 82% 0%, #e8f0ff 0%, transparent 40%),
+    radial-gradient(circle at 15% 0%, #fff5de 0%, transparent 45%),
+    var(--bg);
+}
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 253, 249, 0.86);
+  backdrop-filter: blur(8px);
+}
+.brand { font-weight: 700; letter-spacing: 0.2px; }
+.header-meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }
+.layout {
+  display: grid;
+  grid-template-columns: 270px 1fr 360px;
+  gap: 14px;
+  padding: 14px;
+}
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(18, 25, 43, 0.08);
+}
+.left, .right { padding: 14px; }
+.title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.node {
+  background: #fff9ef;
+  border: 1px dashed #d6c8a8;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: grab;
+  font-size: 13px;
+}
+.node small { display: block; margin-top: 4px; color: var(--muted); }
+.canvas-wrap { padding: 10px; display: grid; grid-template-rows: auto 1fr auto; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+.toolbar select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+}
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-run { background: linear-gradient(135deg, #2f80ff, #7caeff); color: #fff; }
+.btn-mid { background: #ece4d4; color: #4f432c; }
+.canvas {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffdfa, #faf4e8);
+  min-height: 340px;
+  padding: 12px;
+  overflow: auto;
+}
+.drop-hint { text-align: center; margin-top: 120px; color: #85765c; font-size: 13px; }
+.flow-step {
+  border-radius: 10px;
+  border: 1px solid #d8d0bf;
+  border-left: 6px solid #cab992;
+  background: #fff;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.flow-step.running { border-left-color: var(--warn); background: #fff5e8; }
+.flow-step.done { border-left-color: var(--ok); background: #f2fbf5; }
+.flow-step.failed { border-left-color: var(--bad); background: #fff0f0; }
+.input-box { margin-top: 10px; display: grid; gap: 8px; }
+input, textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  background: #fff;
+}
+textarea { min-height: 95px; resize: vertical; }
+.progress-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+.progress-text { font-size: 13px; color: var(--muted); }
+.outline {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+.outline-item {
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #50607e;
+}
+.outline-item.running { background: #fff3e5; color: #7c4804; }
+.outline-item.done { background: #eef9f1; color: #115d33; }
+.outline-item.failed { background: #ffeaea; color: #802020; }
+.timeline {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #1c1f29;
+  color: #eff3ff;
+  padding: 8px;
+  min-height: 180px;
+  max-height: 260px;
+  overflow: auto;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.db-card {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+.db-item {
+  border-bottom: 1px dashed #e7dfcf;
+  padding: 6px 0;
+  font-size: 12px;
+  color: #46506a;
+}
+.db-item:last-child { border-bottom: none; }
+.health-card,
+.result-card,
+.replay-card {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+.tiny-title {
+  font-size: 12px;
+  color: #60708d;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.health-row {
+  font-size: 12px;
+  color: #475675;
+  margin-bottom: 4px;
+}
+.health-row:last-child { margin-bottom: 0; }
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 2px 8px;
+  font-weight: 700;
+}
+.badge-ok { background: #e8f7ee; color: #0f6b35; }
+.badge-warn { background: #fff4e8; color: #8d4f04; }
+.badge-bad { background: #ffe9e9; color: #912727; }
+.score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.score-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px;
+  background: #fcfbf8;
+  font-size: 12px;
+  color: #3d4a66;
+}
+.score-gap-warn {
+  margin-top: 6px;
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff3de;
+  color: #8d4f04;
+  border: 1px solid #f0cd93;
+}
+.evidence-item {
+  border: 1px solid #e7dfcf;
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #3f4e6d;
+}
+.evidence-item:last-child { margin-bottom: 0; }
+.bar-wrap {
+  margin-top: 4px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ece6d8;
+  overflow: hidden;
+}
+.bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2f80ff, #4db7ff);
+}
+.kb-item {
+  border: 1px dashed #d9ceba;
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #3c4a67;
+}
+.kb-item:last-child { margin-bottom: 0; }
+.replay-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-sm {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.honest {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+  font-size: 12px;
+  color: #4d5a74;
+}
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand">PhishingDetector · Kimi-Style Thinking Demo</div>
+  <div class="header-meta">
+    <span class="dot"></span>
+    <span id="globalProgress">当前进度 0/0</span>
+    <span>|</span>
+    <span>实时思考大纲</span>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel left">
+    <h3 class="title">可执行模块</h3>
+    <div class="note">拖拽到中间画布后，只会运行你放入的模块，不会强制全量执行。</div>
+    <div class="node" draggable="true" data-step="semantic" data-title="语义意图分析">语义意图分析<small>识别话术、意图和可疑语义</small></div>
+    <div class="node" draggable="true" data-step="detector" data-title="多维关联检测">多维关联检测<small>URL/附件/行为/发件人检测</small></div>
+    <div class="node" draggable="true" data-step="risk" data-title="风险研判">风险研判<small>证据融合与分数研判</small></div>
+    <div class="node" draggable="true" data-step="response" data-title="响应处置">响应处置<small>输出建议与处置动作</small></div>
+  </aside>
+
+  <main class="panel canvas-wrap">
+    <div class="toolbar">
+      <button class="btn-run" id="runBtn">运行</button>
+      <select id="execMode" title="执行模式">
+        <option value="serial">串行模式</option>
+        <option value="cluster">并行集群模式</option>
+      </select>
+      <button class="btn-mid" id="presetBtn">装载默认流程</button>
+      <button class="btn-mid" id="replayBtn">回放上次运行</button>
+      <button class="btn-mid" id="clearBtn">清空</button>
+    </div>
+    <section class="canvas" id="canvas">
+      <div class="drop-hint" id="dropHint">拖拽模块到此处，形成你的执行链路</div>
+    </section>
+    <div class="input-box">
+      <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题（可选）">
+      <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人（可选）">
+      <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+    </div>
+  </main>
+
+  <aside class="panel right">
+    <h3 class="title">AI 思考过程</h3>
+    <div class="progress-card">
+      <div class="progress-text" id="runState">状态：待命</div>
+      <div class="progress-text" id="llmState">LLM：未触发</div>
+    </div>
+
+    <div class="outline" id="outline"></div>
+    <div class="timeline" id="timeline"></div>
+
+    <div class="health-card">
+      <div class="tiny-title">环境健康与版本签名</div>
+      <div id="healthPanel">
+        <div class="health-row">加载中...</div>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="tiny-title">风险双轨评分（规则 vs LLM）</div>
+      <div class="score-grid">
+        <div class="score-box" id="ruleScoreBox">规则评分：-</div>
+        <div class="score-box" id="llmScoreBox">LLM评分：-</div>
+      </div>
+      <div id="scoreGapBox" style="margin-top:6px;font-size:12px;color:#50607e;">分差：-</div>
+      <div id="scoreWarningBox" style="display:none;"></div>
+    </div>
+
+    <div class="result-card">
+      <div class="tiny-title">结构化证据权重</div>
+      <div id="evidenceList"><div class="health-row">暂无证据</div></div>
+    </div>
+
+    <div class="result-card">
+      <div class="tiny-title">知识库命中（RAG-MVP）</div>
+      <div id="kbHitList"><div class="health-row">暂无命中</div></div>
+    </div>
+
+    <div class="replay-card">
+      <div class="tiny-title">运行回放</div>
+      <div class="replay-actions">
+        <button class="btn-mid btn-sm" id="replaySlowBtn">慢速回放</button>
+        <button class="btn-mid btn-sm" id="replayFastBtn">快速回放</button>
+      </div>
+    </div>
+
+    <div class="db-card">
+      <div style="font-size:12px;color:#60708d;font-weight:700;margin-bottom:5px;">数据库最近报告（/api/reports）</div>
+      <div id="dbList"></div>
+    </div>
+
+    <div class="honest">
+      <div><strong>诚实声明（当前版本）</strong></div>
+      <div>已实现：按拖拽顺序执行、前置并行模式、知识库命中展示、风险双轨评分、证据权重条、运行回放、健康签名面板。</div>
+      <div>未实现：节点连线条件分支、暂停恢复、多人协同编辑、向量检索知识库。</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const dropHint = document.getElementById("dropHint");
+const runBtn = document.getElementById("runBtn");
+const presetBtn = document.getElementById("presetBtn");
+const replayBtn = document.getElementById("replayBtn");
+const replaySlowBtn = document.getElementById("replaySlowBtn");
+const replayFastBtn = document.getElementById("replayFastBtn");
+const clearBtn = document.getElementById("clearBtn");
+const execMode = document.getElementById("execMode");
+const outlineEl = document.getElementById("outline");
+const timeline = document.getElementById("timeline");
+const runState = document.getElementById("runState");
+const llmState = document.getElementById("llmState");
+const globalProgress = document.getElementById("globalProgress");
+const dbList = document.getElementById("dbList");
+const healthPanel = document.getElementById("healthPanel");
+const ruleScoreBox = document.getElementById("ruleScoreBox");
+const llmScoreBox = document.getElementById("llmScoreBox");
+const scoreGapBox = document.getElementById("scoreGapBox");
+const scoreWarningBox = document.getElementById("scoreWarningBox");
+const evidenceList = document.getElementById("evidenceList");
+const kbHitList = document.getElementById("kbHitList");
+
+const stepOrder = [];
+const stepMap = new Map();
+let running = false;
+let doneCount = 0;
+let lastRunEvents = [];
+let lastRunResult = null;
+let replayRenderer = null;
+
+function appendLine(text) {
+  timeline.textContent += text + "\n";
+  timeline.scrollTop = timeline.scrollHeight;
+}
+
+function updateProgress() {
+  globalProgress.textContent = `当前进度 ${doneCount}/${stepOrder.length}`;
+}
+
+function renderOutline() {
+  outlineEl.innerHTML = "";
+  if (stepOrder.length === 0) {
+    outlineEl.innerHTML = '<div class="outline-item">尚未添加执行步骤</div>';
+    return;
+  }
+  for (const stepId of stepOrder) {
+    const block = stepMap.get(stepId);
+    const title = block.querySelector("strong").textContent;
+    const status = block.dataset.status || "idle";
+    const item = document.createElement("div");
+    item.className = `outline-item ${status === "running" ? "running" : status === "done" ? "done" : status === "failed" ? "failed" : ""}`;
+    item.textContent = `${title} · ${status === "idle" ? "等待" : status === "running" ? "执行中" : status === "done" ? "完成" : "失败"}`;
+    outlineEl.appendChild(item);
+  }
+}
+
+function severityBadgeClass(status) {
+  if (status === "ok") return "badge badge-ok";
+  if (status === "degraded") return "badge badge-warn";
+  return "badge badge-bad";
+}
+
+async function loadHealthPanel() {
+  try {
+    const resp = await fetch("/api/health/llm?probe=true");
+    if (!resp.ok) throw new Error("health api failed");
+    const data = await resp.json();
+    const signature = data.service && data.service.signature ? data.service.signature : {};
+    const probe = data.llm && data.llm.probe ? data.llm.probe : {};
+    const badgeClass = severityBadgeClass(data.status);
+
+    healthPanel.innerHTML = `
+      <div class="health-row"><span class="${badgeClass}">${data.status || "unknown"}</span></div>
+      <div class="health-row">build: ${(data.service && data.service.build) || "-"}</div>
+      <div class="health-row">signature: studio=${!!signature.has_studio_page}, v2=${!!signature.has_v2_stream}, legacy_removed=${!!signature.legacy_analyze_removed}</div>
+      <div class="health-row">model: ${(data.llm && data.llm.model) || "-"}</div>
+      <div class="health-row">probe: ${probe.success ? "success" : "fail"} / latency=${probe.latency_ms ?? "-"}ms</div>
+    `;
+  } catch (err) {
+    healthPanel.innerHTML = '<div class="health-row">健康检查失败</div>';
+  }
+}
+
+function renderRiskScores(result) {
+  const risk = result && result.risk ? result.risk : {};
+  const rule = risk.rule_score;
+  const llm = risk.llm_score;
+  const gap = risk.score_gap;
+  ruleScoreBox.textContent = `规则评分：${Number.isFinite(rule) ? rule : "-"}`;
+  llmScoreBox.textContent = `LLM评分：${Number.isFinite(llm) ? llm : "-"}`;
+  scoreGapBox.textContent = `分差：${Number.isFinite(gap) ? gap : "-"}`;
+
+  const warning = risk.consistency_warning || "";
+  if (warning) {
+    scoreWarningBox.style.display = "block";
+    scoreWarningBox.className = "score-gap-warn";
+    scoreWarningBox.textContent = warning;
+  } else {
+    scoreWarningBox.style.display = "none";
+    scoreWarningBox.textContent = "";
+  }
+}
+
+function renderEvidence(result) {
+  const items = result && Array.isArray(result.evidence_items) ? result.evidence_items : [];
+  if (items.length === 0) {
+    evidenceList.innerHTML = '<div class="health-row">暂无证据</div>';
+    return;
+  }
+
+  evidenceList.innerHTML = "";
+  items.forEach((item) => {
+    const weight = Math.max(0, Math.min(100, item.weight || 0));
+    const confidence = Math.round((item.confidence || 0) * 100);
+    const div = document.createElement("div");
+    div.className = "evidence-item";
+    div.innerHTML = `
+      <div><strong>${item.type}</strong> · weight=${weight}% · confidence=${confidence}%</div>
+      <div style="margin-top:3px;color:#5a6782;">${item.reason || "-"}</div>
+      <div class="bar-wrap"><div class="bar" style="width:${weight}%;"></div></div>
+    `;
+    evidenceList.appendChild(div);
+  });
+}
+
+function renderKbHits(result) {
+  const hits = result && result.detection && Array.isArray(result.detection.kb_hits)
+    ? result.detection.kb_hits
+    : [];
+  if (hits.length === 0) {
+    kbHitList.innerHTML = '<div class="health-row">暂无命中</div>';
+    return;
+  }
+
+  kbHitList.innerHTML = "";
+  hits.forEach((hit) => {
+    const item = document.createElement("div");
+    item.className = "kb-item";
+    item.innerHTML = `
+      <div><strong>${hit.title}</strong> <span style="color:#6f7d97;">(${hit.severity}, score=${hit.score})</span></div>
+      <div style="margin-top:3px;">${hit.content || ""}</div>
+    `;
+    kbHitList.appendChild(item);
+  });
+}
+
+function resetResultPanels() {
+  lastRunResult = null;
+  ruleScoreBox.textContent = "规则评分：-";
+  llmScoreBox.textContent = "LLM评分：-";
+  scoreGapBox.textContent = "分差：-";
+  scoreWarningBox.style.display = "none";
+  scoreWarningBox.textContent = "";
+  evidenceList.innerHTML = '<div class="health-row">暂无证据</div>';
+  kbHitList.innerHTML = '<div class="health-row">暂无命中</div>';
+}
+
+async function replayLastRun(delayMs) {
+  if (running) return;
+  if (!lastRunEvents.length) {
+    appendLine("[replay] 暂无可回放运行");
+    return;
+  }
+
+  timeline.textContent = "";
+  doneCount = 0;
+  updateProgress();
+  for (const stepId of stepOrder) {
+    setStepStatus(stepId, "idle", "等待执行");
+  }
+
+  runState.textContent = "状态：回放中";
+  llmState.textContent = "LLM：回放";
+  for (const event of lastRunEvents) {
+    if (replayRenderer) {
+      replayRenderer(event.type, event.data, true);
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  runState.textContent = "状态：回放完成";
+  if (lastRunResult) {
+    renderRiskScores(lastRunResult);
+    renderEvidence(lastRunResult);
+    renderKbHits(lastRunResult);
+  }
+}
+
+function setStepStatus(stepId, status, text) {
+  const el = stepMap.get(stepId);
+  if (!el) return;
+  el.classList.remove("running", "done", "failed");
+  if (status !== "idle") {
+    el.classList.add(status);
+  }
+  el.dataset.status = status;
+  el.querySelector("div").textContent = `状态：${text}`;
+  renderOutline();
+}
+
+document.querySelectorAll(".node").forEach((node) => {
+  node.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("step", node.dataset.step);
+    e.dataTransfer.setData("title", node.dataset.title);
+  });
+});
+
+function addStep(stepId, title) {
+  if (!stepId || stepMap.has(stepId)) return;
+  dropHint.style.display = "none";
+  const block = document.createElement("div");
+  block.className = "flow-step";
+  block.dataset.status = "idle";
+  block.id = `step-${stepId}`;
+  block.innerHTML = `<strong>${title}</strong><div style="font-size:12px;color:#6f6553;">状态：等待执行</div>`;
+  canvas.appendChild(block);
+  stepMap.set(stepId, block);
+  stepOrder.push(stepId);
+  renderOutline();
+  updateProgress();
+}
+
+function loadDefaultFlow() {
+  if (stepOrder.length > 0) return;
+  addStep("semantic", "语义意图分析");
+  addStep("detector", "多维关联检测");
+  addStep("risk", "风险研判");
+  addStep("response", "响应处置");
+}
+
+canvas.addEventListener("dragover", (e) => e.preventDefault());
+canvas.addEventListener("drop", (e) => {
+  e.preventDefault();
+  addStep(e.dataTransfer.getData("step"), e.dataTransfer.getData("title"));
+});
+
+clearBtn.addEventListener("click", () => {
+  stepOrder.length = 0;
+  stepMap.clear();
+  doneCount = 0;
+  lastRunEvents = [];
+  canvas.innerHTML = "";
+  canvas.appendChild(dropHint);
+  dropHint.style.display = "block";
+  runState.textContent = "状态：待命";
+  llmState.textContent = "LLM：未触发";
+  timeline.textContent = "";
+  resetResultPanels();
+  renderOutline();
+  updateProgress();
+});
+
+async function loadDbReports() {
+  try {
+    const r = await fetch("/api/reports?limit=5");
+    if (!r.ok) throw new Error("load reports failed");
+    const reports = await r.json();
+    dbList.innerHTML = "";
+    if (!reports || reports.length === 0) {
+      dbList.innerHTML = '<div class="db-item">暂无历史报告</div>';
+      return;
+    }
+    reports.forEach((item) => {
+      const div = document.createElement("div");
+      const level = item.risk_level || "unknown";
+      const score = item.risk_score ?? "-";
+      div.className = "db-item";
+      div.textContent = `#${item.id || "?"}  风险:${level}  分数:${score}`;
+      dbList.appendChild(div);
+    });
+  } catch (err) {
+    dbList.innerHTML = '<div class="db-item">读取数据库报告失败</div>';
+  }
+}
+
+async function runFlow() {
+  if (running) return;
+  if (stepOrder.length === 0) {
+    alert("请先拖拽步骤或点击装载默认流程");
+    return;
+  }
+
+  running = true;
+  doneCount = 0;
+  updateProgress();
+  runBtn.disabled = true;
+  runBtn.textContent = "运行中...";
+  runState.textContent = "状态：执行中";
+  llmState.textContent = "LLM：运行中（严格模式）";
+  timeline.textContent = "";
+  lastRunEvents = [];
+  resetResultPanels();
+
+  for (const stepId of stepOrder) {
+    setStepStatus(stepId, "idle", "等待执行");
+  }
+
+  const payload = {
+    subject: document.getElementById("subject").value,
+    sender: document.getElementById("sender").value,
+    body: document.getElementById("body").value,
+    selected_steps: stepOrder,
+    strict_llm: true,
+    execution_mode: execMode.value,
+  };
+
+  let resp;
+  try {
+    resp = await fetch("/api/v2/runs/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    appendLine("[error] 无法连接后端接口");
+    runState.textContent = "状态：失败";
+    llmState.textContent = "LLM：连接失败";
+    running = false;
+    runBtn.disabled = false;
+    runBtn.textContent = "运行";
+    return;
+  }
+
+  if (!resp.ok || !resp.body) {
+    appendLine(`[error] 接口不可用 status=${resp.status}`);
+    runState.textContent = "状态：失败";
+    llmState.textContent = "LLM：接口失败";
+    running = false;
+    runBtn.disabled = false;
+    runBtn.textContent = "运行";
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let currentEvent = "message";
+
+  const finishRun = () => {
+    running = false;
+    runBtn.disabled = false;
+    runBtn.textContent = "运行";
+    loadDbReports();
+    loadHealthPanel();
+  };
+
+  const renderEvent = (eventType, data, isReplay = false) => {
+    if (eventType === "run_started") {
+      appendLine(`[run] ${data.run_id} started steps=${(data.payload && data.payload.selected_steps || []).join(',')}`);
+      return;
+    }
+    if (eventType === "step_started") {
+      setStepStatus(data.step_id, "running", "执行中");
+      appendLine(`[step] ${data.step_name} started`);
+      return;
+    }
+    if (eventType === "step_progress") {
+      const msg = data.payload && data.payload.message ? data.payload.message.trim() : "";
+      if (msg) appendLine(`[thinking][${data.step_name}] ${msg}`);
+      return;
+    }
+    if (eventType === "tool_finished") {
+      const tool = data.payload ? data.payload.tool : "tool";
+      appendLine(`[tool][${data.step_name}] ${tool}`);
+      return;
+    }
+    if (eventType === "step_finished") {
+      setStepStatus(data.step_id, "done", "已完成");
+      doneCount += 1;
+      updateProgress();
+      appendLine(`[step] ${data.step_name} finished`);
+      return;
+    }
+    if (eventType === "llm_failed") {
+      llmState.textContent = `LLM：失败 - ${data.payload ? data.payload.message : 'unknown'}`;
+      appendLine(`[llm_failed] ${data.payload ? data.payload.message : 'unknown'}`);
+      return;
+    }
+    if (eventType === "run_failed") {
+      runState.textContent = "状态：失败";
+      llmState.textContent = "LLM：失败（已中止）";
+      appendLine(`[run_failed] ${data.payload ? data.payload.message : 'unknown'}`);
+      if (data.step_id) {
+        setStepStatus(data.step_id, "failed", "失败");
+      }
+      if (!isReplay) finishRun();
+      return;
+    }
+    if (eventType === "run_finished") {
+      const result = data.payload ? data.payload.result : null;
+      lastRunResult = result;
+      runState.textContent = `状态：完成 风险=${result ? result.risk_level : 'unknown'} 分数=${result ? result.risk_score : 'unknown'}`;
+      llmState.textContent = "LLM：成功";
+      appendLine(`[run_finished] level=${result ? result.risk_level : 'unknown'} score=${result ? result.risk_score : 'unknown'}`);
+      renderRiskScores(result);
+      renderEvidence(result);
+      renderKbHits(result);
+      if (!isReplay) finishRun();
+    }
+  };
+  replayRenderer = renderEvent;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let idx;
+    while ((idx = buffer.indexOf("\n\n")) >= 0) {
+      const chunk = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      const lines = chunk.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("event:")) {
+          currentEvent = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          const raw = line.slice(5).trim();
+          try {
+            const payload = JSON.parse(raw);
+            lastRunEvents.push({ type: currentEvent, data: payload });
+            renderEvent(currentEvent, payload);
+          } catch (e) {
+            appendLine(`[warn] 无法解析事件: ${raw.slice(0, 60)}`);
+          }
+        }
+      }
+    }
+  }
+}
+
+runBtn.addEventListener("click", runFlow);
+presetBtn.addEventListener("click", loadDefaultFlow);
+replayBtn.addEventListener("click", () => replayLastRun(180));
+replaySlowBtn.addEventListener("click", () => replayLastRun(300));
+replayFastBtn.addEventListener("click", () => replayLastRun(80));
+renderOutline();
+updateProgress();
+loadDbReports();
+loadHealthPanel();
+</script>
+</body>
+</html>

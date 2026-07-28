@@ -42,17 +42,11 @@ if STATIC_DIR.exists():
 
 @app.get("/")
 async def root():
-    """首页：返回 Landing Page"""
-    return FileResponse(str(PAGES_DIR / "index.html"))
+    """首页：直接进入 Studio 页面。"""
+    return FileResponse(str(PAGES_DIR / "studio.html"))
 
 
-@app.get("/analyze")
-async def analyze_page():
-    """分析页：返回邮件检测工具"""
-    return FileResponse(str(PAGES_DIR / "analyze.html"))
-
-
-@app.get("/about")
-async def about_page():
-    """关于页：返回产品介绍"""
-    return FileResponse(str(PAGES_DIR / "about.html"))
+@app.get("/studio")
+async def studio_page():
+    """Studio 页：可视化编排与运行状态演示页"""
+    return FileResponse(str(PAGES_DIR / "studio.html"))
