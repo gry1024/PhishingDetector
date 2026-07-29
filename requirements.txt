@@ -1,0 +1,15 @@
+# 核心框架
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# LLM
+openai>=1.50.0
+
+# 数据处理
+pandas>=2.0.0
+datasets>=3.0.0
+requests>=2.31.0
+
+# 工具库
+python-dotenv>=1.0.0
+pydantic>=2.0.0
