@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
@@ -45,8 +45,14 @@ NOCACHE = {"Cache-Control": "no-cache, no-store, must-revalidate, max-age=0", "P
 
 @app.get("/")
 async def root():
-    """直接跳转 Studio 页面"""
-    return RedirectResponse(url="/studio", status_code=302)
+    """首页：品牌封面页。"""
+    return FileResponse(str(PAGES_DIR / "landing.html"), headers=NOCACHE)
+
+
+@app.get("/landing")
+async def landing_page():
+    """Landing 页：封面与能力展示。"""
+    return FileResponse(str(PAGES_DIR / "landing.html"), headers=NOCACHE)
 
 
 @app.get("/studio")

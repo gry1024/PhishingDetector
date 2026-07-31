@@ -3,1310 +3,518 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Phishing Detector</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PhishingDetector | 封面页</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Fustat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #0a0a0f;
-      --text-black: #000000;
-      --text-gray: #505050;
-      --text-light-gray: #f8f8f8;
-      --green-upgrade: rgba(90,225,76,0.89);
-      --dark-badge: #0e1311;
-      --white: #ffffff;
-      --overlay-dark: rgba(0,0,0,0.24);
+      --bg: #000;
+      --text: #fff;
+      --text-soft: rgba(255,255,255,0.86);
+      --text-muted: rgba(255,255,255,0.64);
+      --radius-full: 9999px;
+      --radius-card: 24px;
     }
 
-    * {
+    * { box-sizing: border-box; }
+
+    html, body {
       margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Schibsted Grotesk', 'Noto Sans SC', sans-serif;
-      background: var(--bg-dark);
-      color: var(--white);
-      min-height: 100vh;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
       overflow-x: hidden;
+      font-family: "Barlow", "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
-    /* ===== 视频背景 ===== */
-    #video-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 115%;
-      height: 115%;
-      object-fit: cover;
-      object-position: center top;
-      z-index: -2;
+    a { color: inherit; text-decoration: none; }
+
+    .liquid-glass {
+      background: rgba(255,255,255,0.01);
+      background-blend-mode: luminosity;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: none;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .liquid-glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.45) 0%,
+        rgba(255,255,255,0.15) 20%,
+        rgba(255,255,255,0) 40%,
+        rgba(255,255,255,0) 60%,
+        rgba(255,255,255,0.15) 80%,
+        rgba(255,255,255,0.45) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .liquid-glass-strong {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(50px);
+      -webkit-backdrop-filter: blur(50px);
+      border: none;
+      box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .liquid-glass-strong::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.5) 0%,
+        rgba(255,255,255,0.2) 20%,
+        rgba(255,255,255,0) 40%,
+        rgba(255,255,255,0) 60%,
+        rgba(255,255,255,0.2) 80%,
+        rgba(255,255,255,0.5) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .section {
+      position: relative;
+      min-height: 100vh;
+      background: #000;
+      isolation: isolate;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section video {
+      position: absolute;
+      z-index: 0;
+      pointer-events: none;
       opacity: 0;
     }
 
-    /* 暗色叠加层 */
-    .video-overlay {
-      position: fixed;
+    .hero-video {
+      left: 50%;
       top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, rgba(10,10,15,0.85) 0%, rgba(10,10,15,0.7) 100%);
-      z-index: -1;
+      width: 120%;
+      height: 120%;
+      transform: translateX(-50%);
+      object-fit: cover;
+      object-position: center top;
     }
 
-    /* ===== 导航栏 ===== */
+    .section-inner {
+      position: relative;
+      z-index: 10;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
     .navbar {
+      position: fixed;
+      top: 16px;
+      left: 0;
+      right: 0;
+      z-index: 50;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 120px;
-      position: relative;
-      z-index: 100;
+      padding: 0 32px;
     }
 
     .nav-logo {
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 600;
-      font-size: 24px;
-      letter-spacing: -1.44px;
-      color: var(--white);
-    }
-
-    .nav-menu {
-      display: flex;
-      gap: 34px;
-    }
-
-    .nav-menu-item {
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 16px;
-      letter-spacing: -0.2px;
-      color: var(--white);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .nav-menu-item:hover {
-      opacity: 0.8;
-    }
-
-    .nav-right {
-      display: flex;
-      gap: 12px;
-    }
-
-    .btn-signup {
-      width: 82px;
-      padding: 10px 0;
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 8px;
-      color: var(--white);
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-signup:hover {
-      background: rgba(255,255,255,0.1);
-    }
-
-    .btn-login {
-      width: 101px;
-      padding: 10px 0;
-      background: #000;
-      border: none;
-      border-radius: 8px;
-      color: var(--white);
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-login:hover {
-      background: #222;
-    }
-
-    /* ===== Hero 区域 ===== */
-    .hero {
-      padding: 60px 120px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: -50px;
-    }
-
-    /* 徽章 */
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--dark-badge);
-      padding: 8px 16px;
-      border-radius: 20px;
-      margin-bottom: 34px;
-    }
-
-    .hero-badge svg {
-      width: 14px;
-      height: 14px;
-      fill: var(--white);
-    }
-
-    .hero-badge span {
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      color: var(--white);
-    }
-
-    /* 主标题 */
-    .hero-title {
-      font-family: 'Fustat', sans-serif;
-      font-weight: 700;
-      font-size: 80px;
-      letter-spacing: -4.8px;
-      color: var(--white);
-      text-align: center;
-      margin-bottom: 34px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-family: "Instrument Serif", "Noto Serif SC", serif;
+      font-style: italic;
+      font-size: 30px;
       line-height: 1;
     }
 
-    /* 副标题 */
-    .hero-subtitle {
-      font-family: 'Fustat', sans-serif;
-      font-weight: 500;
-      font-size: 20px;
-      letter-spacing: -0.4px;
-      color: rgba(255,255,255,0.7);
-      text-align: center;
-      max-width: 736px;
-      width: 542px;
-      margin-bottom: 44px;
-      line-height: 1.5;
-    }
-
-    /* ===== 搜索框 ===== */
-    .search-box {
-      max-width: 728px;
-      width: 100%;
-      height: 200px;
-      background: var(--overlay-dark);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 18px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .search-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .credits-info {
+    .nav-center {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 12px;
-      color: var(--white);
-    }
-
-    .btn-upgrade {
-      background: var(--green-upgrade);
-      border: none;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 11px;
-      color: #000;
-      cursor: pointer;
-    }
-
-    .ai-powered {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-weight: 500;
-      font-size: 12px;
-      color: var(--white);
-    }
-
-    .ai-powered svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    .search-main {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      gap: 12px;
-    }
-
-    .search-input {
-      flex: 1;
-      height: 56px;
-      background: var(--white);
-      border: none;
-      border-radius: 12px;
-      padding: 0 20px;
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-size: 16px;
-      color: #000;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-
-    .search-input::placeholder {
-      color: rgba(0,0,0,0.6);
-    }
-
-    .search-input:focus {
-      outline: none;
-    }
-
-    .btn-submit {
-      width: 56px;
-      height: 56px;
-      background: #000;
-      border: none;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
-
-    .btn-submit:hover {
-      transform: scale(1.05);
-    }
-
-    .btn-submit svg {
-      width: 20px;
-      height: 20px;
-      fill: var(--white);
-    }
-
-    .search-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .search-actions {
-      display: flex;
       gap: 8px;
+      padding: 6px;
+      border-radius: var(--radius-full);
     }
 
-    .action-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: rgba(255,255,255,0.1);
-      border: none;
-      border-radius: 6px;
-      color: var(--white);
-      font-family: 'Schibsted Grotesk', sans-serif;
+    .nav-center a {
+      font-size: 14px;
       font-weight: 500;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .action-btn:hover {
-      background: rgba(255,255,255,0.2);
-    }
-
-    .action-btn svg {
-      width: 14px;
-      height: 14px;
-      fill: var(--white);
-    }
-
-    .char-counter {
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-size: 12px;
-      color: rgba(255,255,255,0.5);
-    }
-
-    /* ===== 检测区域（三栏布局）===== */
-    #detection-section {
-      display: none;
-      min-height: 100vh;
-      background: var(--bg-dark);
-    }
-
-    #detection-section.active {
-      display: flex;
-    }
-
-    /* 左侧边栏 */
-    .sidebar {
-      width: 240px;
-      background: #0f0f14;
-      border-right: 1px solid rgba(255,255,255,0.1);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-
-    .sidebar-header {
-      padding: 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .sidebar-title {
-      font-family: 'Fustat', sans-serif;
-      font-size: 1.2rem;
-      font-weight: 600;
-    }
-
-    .history-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-    }
-
-    .history-item {
-      padding: 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-bottom: 6px;
-      transition: background 0.2s;
-      font-size: 0.9rem;
+      color: rgba(255,255,255,0.9);
+      padding: 8px 12px;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .history-item:hover {
-      background: rgba(255,255,255,0.08);
+    .nav-center a.active {
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+      border-radius: var(--radius-full);
     }
 
-    .history-item.active {
-      background: rgba(59,130,246,0.2);
-    }
-
-    /* 中间聊天区 */
-    .main-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-
-    .chat-header {
-      padding: 16px 24px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      display: flex;
+    .nav-cta {
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      background: #0f0f14;
+      gap: 8px;
+      border-radius: var(--radius-full);
+      background: #fff;
+      color: #000 !important;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
     }
 
-    .chat-title {
-      font-family: 'Fustat', sans-serif;
-      font-size: 1.3rem;
-      font-weight: 600;
-    }
+    .nav-spacer { width: 48px; height: 48px; }
 
-    .chat-messages {
+    .hero {
       flex: 1;
-      overflow-y: auto;
-      padding: 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 120px 16px 26px;
     }
 
-    .message {
-      max-width: 85%;
-      animation: msgIn 0.3s ease;
+    .fade-item {
+      opacity: 0;
+      transform: translateY(20px);
+      filter: blur(10px);
+      transition: opacity 0.9s ease, transform 0.9s ease, filter 0.9s ease;
     }
 
-    @keyframes msgIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .fade-item.in {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
     }
 
-    .message.user { align-self: flex-end; }
-    .message.assistant { align-self: flex-start; }
-
-    .message-content {
-      padding: 14px 18px;
-      border-radius: 16px;
-      line-height: 1.6;
-      font-size: 0.95rem;
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px 8px 8px;
+      border-radius: var(--radius-full);
+      margin-bottom: 24px;
     }
 
-    .message.user .message-content {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
-      border-bottom-right-radius: 4px;
+    .hero-chip {
+      background: #fff;
+      color: #000;
+      border-radius: var(--radius-full);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
     }
 
-    .message.assistant .message-content {
-      background: #1a1a24;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-bottom-left-radius: 4px;
+    .hero-badge span:last-child {
+      font-size: 14px;
+      color: rgba(255,255,255,0.92);
+      padding-right: 6px;
     }
 
-    /* 输入区 */
-    .input-area {
-      padding: 16px 24px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      background: #0f0f14;
-    }
-
-    .input-wrapper {
+    .title {
       display: flex;
-      gap: 12px;
-      align-items: flex-end;
+      flex-wrap: wrap;
+      justify-content: center;
+      row-gap: 0.1em;
+      max-width: 1000px;
+      margin: 0 auto;
+      font-family: "Instrument Serif", "Noto Serif SC", serif;
+      font-style: italic;
+      font-size: clamp(54px, 9.8vw, 92px);
+      line-height: 0.82;
+      letter-spacing: -4px;
     }
 
-    .input-wrapper textarea {
-      flex: 1;
-      background: #1a1a24;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      padding: 14px 16px;
-      color: var(--white);
-      font-family: 'Schibsted Grotesk', sans-serif;
-      font-size: 0.95rem;
-      resize: none;
-      min-height: 48px;
-      max-height: 200px;
-      line-height: 1.5;
+    .title span {
+      display: inline-block;
+      margin-right: 0.28em;
+      opacity: 0;
+      filter: blur(10px);
+      transform: translateY(50px);
     }
 
-    .input-wrapper textarea:focus {
-      outline: none;
-      border-color: #3b82f6;
+    .subtitle {
+      max-width: 790px;
+      margin: 18px auto 0;
+      color: var(--text-soft);
+      font-size: 16px;
+      line-height: 1.68;
+      font-weight: 300;
     }
 
-    .send-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      border: none;
-      color: white;
-      font-size: 1.1rem;
-      cursor: pointer;
-      transition: all 0.2s;
+    .actions {
+      margin-top: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
     }
 
-    .send-btn:hover { transform: scale(1.05); }
-    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* 右侧面板 */
-    .right-panel {
-      width: 340px;
-      background: #0f0f14;
-      border-left: 1px solid rgba(255,255,255,0.1);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-
-    .panel-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      display: flex;
+    .start-btn {
+      border-radius: var(--radius-full);
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      display: inline-flex;
       align-items: center;
       gap: 10px;
+    }
+
+    .text-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hero-cards {
+      margin-top: 32px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .hero-card {
+      width: 230px;
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .hero-card h3 {
+      margin: 20px 0 0;
+      font-family: "Instrument Serif", "Noto Serif SC", serif;
+      font-style: italic;
+      font-size: 40px;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .hero-card p {
+      margin: 10px 0 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.8);
+      font-weight: 300;
+    }
+
+    .partners {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 0 16px 34px;
+    }
+
+    .partners .chip {
+      border-radius: var(--radius-full);
+      padding: 9px 16px;
+      font-size: 12px;
       font-weight: 500;
     }
 
-    .panel-tabs {
+    .partners .row {
       display: flex;
-      gap: 4px;
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .panel-tab {
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: rgba(255,255,255,0.7);
-      border: none;
-      background: none;
-      font-family: 'Schibsted Grotesk', sans-serif;
-    }
-
-    .panel-tab:hover { background: rgba(255,255,255,0.08); }
-    .panel-tab.active {
-      background: rgba(59,130,246,0.2);
-      color: #3b82f6;
-    }
-
-    .panel-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-    }
-
-    /* Agent 卡片 */
-    .agent-card {
-      margin-bottom: 10px;
-      border-radius: 14px;
-      background: #1a1a24;
-      border: 1px solid rgba(255,255,255,0.1);
-      overflow: hidden;
-    }
-
-    .agent-card-header {
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-
-    .agent-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
       justify-content: center;
-      font-size: 0.8rem;
+      font-family: "Instrument Serif", "Noto Serif SC", serif;
+      font-style: italic;
+      font-size: clamp(24px, 3.6vw, 36px);
+      letter-spacing: -1px;
     }
 
-    .agent-icon.semantic { background: rgba(139,92,246,0.2); color: #a78bfa; }
-    .agent-icon.detection { background: rgba(59,130,246,0.2); color: #60a5fa; }
-    .agent-icon.threat { background: rgba(239,68,68,0.2); color: #f87171; }
-    .agent-icon.response { background: rgba(34,197,94,0.2); color: #4ade80; }
-
-    .agent-name { flex: 1; font-weight: 500; font-size: 0.9rem; }
-
-    .agent-status {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 6px;
-    }
-
-    .agent-status.running {
-      background: rgba(59,130,246,0.2);
-      color: #60a5fa;
-    }
-
-    .agent-status.done {
-      background: rgba(34,197,94,0.2);
-      color: #4ade80;
-    }
-
-    .agent-card-body {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.4s ease;
-    }
-
-    .agent-card-body.open {
-      max-height: 600px;
-      overflow-y: auto;
-    }
-
-    .agent-card-inner {
-      padding: 12px 14px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-
-    /* 报告样式 */
-    .report-section {
-      background: #1a1a24;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 14px;
-    }
-
-    .report-title {
-      font-family: 'Fustat', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .risk-score {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 16px;
-      padding: 14px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 12px;
-    }
-
-    .score-value {
-      font-size: 2.5rem;
-      font-weight: 600;
-    }
-
-    .score-value.high { color: #ef4444; }
-    .score-value.medium { color: #f59e0b; }
-    .score-value.low { color: #22c55e; }
-
-    .score-label {
-      font-size: 0.9rem;
-      color: rgba(255,255,255,0.7);
-    }
-
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      font-size: 0.9rem;
-    }
-
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { color: rgba(255,255,255,0.7); }
-
-    /* 数据库模态框 */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-overlay.active { display: flex; }
-
-    .modal {
-      background: #1a1a24;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 20px;
-      padding: 24px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .modal-title {
-      font-family: 'Fustat', sans-serif;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: rgba(255,255,255,0.7);
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-
-    .dataset-item {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .dataset-item:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: #3b82f6;
-    }
-
-    .dataset-name { font-weight: 500; margin-bottom: 4px; }
-    .dataset-desc { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
-    .dataset-count { font-size: 0.75rem; color: #3b82f6; margin-top: 6px; }
-
-    /* 响应式 */
-    @media (max-width: 1024px) {
-      .right-panel { display: none; }
-      .navbar { padding: 16px 40px; }
-      .hero { padding: 60px 40px 0; }
+    @media (max-width: 1080px) {
+      .nav-center { display: none; }
     }
 
     @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .nav-menu { display: none; }
-      .navbar { padding: 16px 20px; }
-      .hero { padding: 40px 20px 0; }
-      .hero-title { font-size: 48px; letter-spacing: -2px; }
-      .search-box { height: auto; }
-      .search-main { flex-direction: column; padding: 16px; }
-      .search-input { width: 100%; }
-      .btn-submit { width: 100%; border-radius: 12px; height: 48px; }
+      .navbar { padding: 0 16px; }
+      .hero { padding-left: 16px; padding-right: 16px; }
+      .partners .row { gap: 16px; }
     }
   </style>
 </head>
 <body>
-  <!-- 视频背景 -->
-  <video id="video-bg" autoplay muted loop playsinline>
-    <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4" type="video/mp4">
-  </video>
-  <div class="video-overlay"></div>
+  <header class="navbar">
+    <div class="nav-logo liquid-glass">P</div>
+    <nav class="nav-center liquid-glass" aria-label="导航">
+      <a class="active" href="#hero">首页</a>
+      <a href="#hero">检测引擎</a>
+      <a href="#hero">知识库</a>
+      <a href="#hero">报告中心</a>
+      <a href="#hero">关于</a>
+      <a href="/studio" class="nav-cta">开始检测 <span aria-hidden="true">↗</span></a>
+    </nav>
+    <div class="nav-spacer"></div>
+  </header>
 
-  <!-- 导航栏 -->
-  <nav class="navbar">
-    <div class="nav-logo">Logoipsum</div>
-    <div class="nav-menu">
-      <div class="nav-menu-item">Platform</div>
-      <div class="nav-menu-item">Features <svg width="10" height="6" viewBox="0 0 10 6"><path d="M1 1L5 5L9 1" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
-      <div class="nav-menu-item">Projects</div>
-      <div class="nav-menu-item">Community</div>
-      <div class="nav-menu-item">Contact</div>
-    </div>
-    <div class="nav-right">
-      <button class="btn-signup">Sign Up</button>
-      <button class="btn-login">Log In</button>
-    </div>
-  </nav>
-
-  <!-- Hero 区域 -->
-  <section class="hero" id="hero-section">
-    <div class="hero-badge">
-      <svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-      <span>New</span>
-      <span style="margin-left: 4px; color: rgba(255,255,255,0.6);">Discover what's possible</span>
-    </div>
-
-    <h1 class="hero-title">Transform Data Quickly</h1>
-    <p class="hero-subtitle">Upload your information and get powerful insights right away. Work smarter and achieve goals effortlessly.</p>
-
-    <!-- 搜索框 -->
-    <div class="search-box">
-      <div class="search-top">
-        <div class="credits-info">
-          <span>60/450 credits</span>
-          <button class="btn-upgrade">Upgrade</button>
+  <section class="section" id="hero">
+    <video id="heroVideo" class="hero-video" autoPlay muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_080021_d598092b-c4c2-4e53-8e46-94cf9064cd50.mp4"></video>
+    <div class="section-inner">
+      <div class="hero">
+        <div class="hero-badge liquid-glass fade-item" data-delay="0.35">
+          <span class="hero-chip">Security</span>
+          <span>实时多 Agent 钓鱼邮件检测编排体验</span>
         </div>
-        <div class="ai-powered">
-          <svg viewBox="0 0 24 24" fill="url(#grad)">
-            <defs>
-              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#8b5cf6"/>
-                <stop offset="100%" style="stop-color:#3b82f6"/>
-              </linearGradient>
-            </defs>
-            <path d="M12 2L14.5 7.5L20 8.5L15.5 12.5L17 18L12 15L7 18L8.5 12.5L4 8.5L9.5 7.5L12 2Z"/>
-          </svg>
-          <span>Powered by GPT-4o</span>
+
+        <h1 class="title" id="heroTitle" aria-label="Detect Phishing Before It Reaches Your Team"></h1>
+
+        <p class="subtitle fade-item" data-delay="0.8">
+          针对企业邮件场景，我们把语义意图分析、URL/发件人/附件检测、风险研判和处置建议串成可追踪的执行链。你看到的不只是结论，而是每一步证据如何汇聚成最终判断。
+        </p>
+
+        <div class="actions fade-item" data-delay="1.1">
+          <a href="/studio" class="start-btn liquid-glass-strong">开始检测 <span aria-hidden="true">↗</span></a>
+          <a href="/studio" class="text-link">查看核心能力 <span aria-hidden="true">▶</span></a>
+        </div>
+
+        <div class="hero-cards fade-item" data-delay="1.25">
+          <div class="hero-card liquid-glass">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            <h3>2.4s</h3>
+            <p>在常规样本下，首个结构化风险信号可在数秒内反馈。</p>
+          </div>
+          <div class="hero-card liquid-glass">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18"></path><path d="M12 3a15 15 0 0 0 0 18"></path></svg>
+            <h3>6+</h3>
+            <p>覆盖语义、行为、URL、头部认证、威胁情报与风险融合六类证据。</p>
+          </div>
         </div>
       </div>
 
-      <div class="search-main">
-        <input type="text" class="search-input" id="main-input" placeholder="Type question... 输入邮件内容进行钓鱼检测...">
-        <button class="btn-submit" onclick="handleSearch()">
-          <svg viewBox="0 0 24 24"><path d="M12 4L20 12L12 20L12 4Z"/></svg>
-        </button>
-      </div>
-
-      <div class="search-bottom">
-        <div class="search-actions">
-          <button class="action-btn" onclick="openDatasetModal()">
-            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-            Attach
-          </button>
-          <button class="action-btn">
-            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            Voice
-          </button>
-          <button class="action-btn">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            Prompts
-          </button>
+      <div class="partners fade-item" data-delay="1.38">
+        <div class="chip liquid-glass">九大检测维度 · 全链路威胁研判</div>
+        <div class="row">
+          <span>域名检测</span>
+          <span>语义意图</span>
+          <span>关联分析</span>
+          <span>风险研判</span>
+          <span>ATT&CK 映射</span>
         </div>
-        <div class="char-counter">0/3,000</div>
       </div>
     </div>
   </section>
-
-  <!-- 检测状态 - 三栏布局 -->
-  <section id="detection-section">
-    <!-- 左侧边栏 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-title">对话历史</div>
-      </div>
-      <div class="history-list">
-        <div class="history-item active">当前会话</div>
-      </div>
-    </aside>
-
-    <!-- 中间聊天区 -->
-    <main class="main-area">
-      <header class="chat-header">
-        <div class="chat-title">AI 钓鱼邮件检测</div>
-        <button class="btn-login" onclick="resetToHero()" style="padding: 8px 16px; font-size: 0.85rem;">
-          ← 返回
-        </button>
-      </header>
-
-      <div class="chat-messages" id="chat-messages"></div>
-
-      <div class="input-area">
-        <div class="input-wrapper">
-          <textarea id="message-input" placeholder="输入您的问题或分析请求..." rows="1"></textarea>
-          <button class="send-btn" onclick="sendMessage()">↑</button>
-        </div>
-      </div>
-    </main>
-
-    <!-- 右侧面板 -->
-    <aside class="right-panel">
-      <div class="panel-header">
-        <span style="color: #3b82f6;">🤖</span>
-        <span>Agent 状态</span>
-      </div>
-      <div class="panel-tabs">
-        <button class="panel-tab active" onclick="switchPanel('agents')">Agents</button>
-        <button class="panel-tab" onclick="switchPanel('report')">报告</button>
-      </div>
-      <div class="panel-content" id="panel-content"></div>
-    </aside>
-  </section>
-
-  <!-- 数据库模态框 -->
-  <div class="modal-overlay" id="dataset-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">选择示例邮件</h3>
-        <button class="modal-close" onclick="closeDatasetModal()">×</button>
-      </div>
-      <div id="dataset-list">
-        <p style="color: rgba(255,255,255,0.5);">加载中...</p>
-      </div>
-    </div>
-  </div>
 
   <script>
-    // ===== 视频自定义 JS Fade 系统 =====
-    const video = document.getElementById('video-bg');
-    let fadingOutRef = false;
-    let animationFrameId = null;
+    const FADE_MS = 500;
+    const FADE_OUT_LEAD = 0.55;
 
-    function fadeIn() {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      
-      let opacity = video.style.opacity || 0;
-      function step() {
-        opacity = parseFloat(opacity) + 0.04;
-        if (opacity >= 1) {
-          video.style.opacity = 1;
-          return;
-        }
-        video.style.opacity = opacity;
-        animationFrameId = requestAnimationFrame(step);
-      }
-      video.style.opacity = 0;
-      step();
-    }
+    function attachFadingVideo(video) {
+      let rafId = 0;
+      let fadeToken = 0;
+      let fadingOut = false;
 
-    function fadeOut() {
-      if (fadingOutRef) return;
-      fadingOutRef = true;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      
-      let opacity = parseFloat(video.style.opacity) || 1;
-      function step() {
-        opacity -= 0.04;
-        if (opacity <= 0) {
-          video.style.opacity = 0;
-          fadingOutRef = false;
-          // 视频结束后重播
-          setTimeout(() => {
-            video.currentTime = 0;
-            video.play();
-            fadeIn();
-          }, 100);
-          return;
-        }
-        video.style.opacity = opacity;
-        animationFrameId = requestAnimationFrame(step);
-      }
-      step();
-    }
-
-    video.addEventListener('loadeddata', function() {
-      video.style.opacity = 0;
-      fadeIn();
-    });
-
-    video.addEventListener('timeupdate', function() {
-      const duration = video.duration;
-      const currentTime = video.currentTime;
-      if (duration && (duration - currentTime) <= 0.55 && !fadingOutRef) {
-        fadeOut();
-      }
-    });
-
-    video.addEventListener('ended', function() {
-      video.style.opacity = 0;
-      setTimeout(() => {
-        video.currentTime = 0;
-        video.play();
-        fadeIn();
-      }, 100);
-    });
-
-    // ===== 搜索/检测功能 =====
-    function handleSearch() {
-      const input = document.getElementById('main-input').value.trim();
-      if (!input) {
-        alert('请输入内容');
-        return;
-      }
-      startDetection(input);
-    }
-
-    // 回车搜索
-    document.getElementById('main-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') handleSearch();
-    });
-
-    // 开始检测
-    function startDetection(content) {
-      // 切换到三栏布局
-      document.getElementById('hero-section').style.display = 'none';
-      document.getElementById('detection-section').classList.add('active');
-
-      // 添加用户消息
-      addMessage('user', content);
-
-      // 开始检测
-      runDetection(content);
-    }
-
-    // ===== 三栏布局功能 =====
-    function addMessage(role, content) {
-      const container = document.getElementById('chat-messages');
-      const div = document.createElement('div');
-      div.className = `message ${role}`;
-      div.innerHTML = `<div class="message-content">${escapeHtml(content).replace(/\n/g, '<br>')}</div>`;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    async function runDetection(content) {
-      const input = document.getElementById('message-input');
-      input.disabled = true;
-
-      try {
-        const res = await fetch('/api/v2/runs/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content, mode: 'analyze' })
-        });
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const text = decoder.decode(value);
-          const lines = text.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                handleSSERecord(data);
-              } catch (e) {}
-            }
-          }
-        }
-      } catch (e) {
-        addMessage('assistant', '检测失败: ' + e.message);
+      function getOpacity() {
+        const raw = parseFloat(video.style.opacity || "0");
+        return Number.isFinite(raw) ? raw : 0;
       }
 
-      input.disabled = false;
-    }
+      function fadeTo(target, duration) {
+        fadeToken += 1;
+        const token = fadeToken;
+        const start = performance.now();
+        const from = getOpacity();
+        cancelAnimationFrame(rafId);
 
-    function handleSSERecord(data) {
-      const type = data.type;
-      const content = data.content;
-
-      if (type === 'message' || type === 'final') {
-        addMessage('assistant', content);
-      } else if (type === 'agent_start' || type === 'agent_thinking') {
-        updateAgentCard(data.agent, 'running', content);
-      } else if (type === 'agent_result') {
-        updateAgentCard(data.agent, 'done', content);
-      } else if (type === 'final_report') {
-        renderReport(typeof content === 'string' ? JSON.parse(content) : content);
-      } else if (type === 'error') {
-        addMessage('assistant', '错误: ' + content);
-      }
-    }
-
-    const agentNames = {
-      'semantic': '语义意图分析',
-      'detection': '多维关联检测',
-      'threat': '威胁情报研判',
-      'response': '响应处置建议'
-    };
-
-    function updateAgentCard(agent, status, thinking) {
-      const panel = document.getElementById('panel-content');
-      let card = document.getElementById(`agent-${agent}`);
-
-      if (!card) {
-        const div = document.createElement('div');
-        div.id = `agent-${agent}`;
-        div.className = 'agent-card';
-        div.innerHTML = `
-          <div class="agent-card-header" onclick="toggleAgentCard('${agent}')">
-            <div class="agent-icon ${agent}">🤖</div>
-            <span class="agent-name">${agentNames[agent] || agent}</span>
-            <span class="agent-status ${status}">${status === 'running' ? '分析中' : '完成'}</span>
-          </div>
-          <div class="agent-card-body ${status === 'running' ? 'open' : ''}">
-            <div class="agent-card-inner">${escapeHtml(thinking)}</div>
-          </div>
-        `;
-        panel.appendChild(div);
-      } else {
-        const body = card.querySelector('.agent-card-body');
-        const statusEl = card.querySelector('.agent-status');
-        const inner = card.querySelector('.agent-card-inner');
-
-        if (status === 'done') {
-          statusEl.className = 'agent-status done';
-          statusEl.textContent = '完成';
-        }
-        inner.textContent = thinking;
-      }
-    }
-
-    function toggleAgentCard(agent) {
-      const card = document.getElementById(`agent-${agent}`);
-      const body = card.querySelector('.agent-card-body');
-      body.classList.toggle('open');
-    }
-
-    function renderReport(data) {
-      const panel = document.getElementById('panel-content');
-      const riskScore = data.risk_score ?? data.riskScore ?? 0;
-      
-      let riskLevel = 'low', riskText = '安全';
-      if (riskScore >= 70) { riskLevel = 'high'; riskText = '高风险'; }
-      else if (riskScore >= 40) { riskLevel = 'medium'; riskText = '中等风险'; }
-
-      let html = `
-        <div class="report-section">
-          <div class="report-title">🛡️ 风险评估</div>
-          <div class="risk-score">
-            <div class="score-value ${riskLevel}">${riskScore}</div>
-            <div>
-              <div>${riskText}</div>
-              <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">风险评分</div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      if (data.sender_profile || data.senderProfile) {
-        const sp = data.sender_profile || data.senderProfile;
-        html += `
-          <div class="report-section">
-            <div class="report-title">👤 发件人画像</div>
-            <div class="detail-row"><span class="detail-label">域名</span><span>${sp.domain || '-'}</span></div>
-            <div class="detail-row"><span class="detail-label">信誉分</span><span>${sp.reputation || '-'}</span></div>
-          </div>
-        `;
-      }
-
-      if (data.semantic_intent || data.semanticIntent) {
-        const si = data.semantic_intent || data.semanticIntent;
-        html += `
-          <div class="report-section">
-            <div class="report-title">🧠 语义意图</div>
-            <div class="detail-row"><span class="detail-label">意图</span><span>${si.intent || '-'}</span></div>
-            <div class="detail-row"><span class="detail-label">置信度</span><span>${si.confidence || '-'}</span></div>
-          </div>
-        `;
-      }
-
-      if (data.recommendation || data.recommendations) {
-        const rec = data.recommendation || data.recommendations;
-        html += `
-          <div class="report-section">
-            <div class="report-title">💡 处置建议</div>
-            <div style="line-height: 1.8;">${Array.isArray(rec) ? rec.map(r => '• ' + r).join('<br>') : rec}</div>
-          </div>
-        `;
-      }
-
-      panel.innerHTML = html;
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById('message-input');
-      const content = input.value.trim();
-      if (!content || input.disabled) return;
-
-      addMessage('user', content);
-      input.value = '';
-      input.disabled = true;
-
-      try {
-        const res = await fetch('/api/analyze/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content })
-        });
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let assistantMsg = '';
-
-        const div = document.createElement('div');
-        div.className = 'message assistant';
-        div.innerHTML = '<div class="message-content"></div>';
-        document.getElementById('chat-messages').appendChild(div);
-        const contentDiv = div.querySelector('.message-content');
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          assistantMsg += text;
-          contentDiv.innerHTML = escapeHtml(assistantMsg).replace(/\n/g, '<br>');
-          document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-        }
-      } catch (e) {
-        addMessage('assistant', '错误: ' + e.message);
-      }
-      input.disabled = false;
-    }
-
-    function resetToHero() {
-      document.getElementById('detection-section').classList.remove('active');
-      document.getElementById('hero-section').style.display = 'flex';
-      document.getElementById('chat-messages').innerHTML = '';
-      document.getElementById('panel-content').innerHTML = '';
-    }
-
-    function switchPanel(panelName) {
-      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
-    }
-
-    // ===== 数据库功能 =====
-    function openDatasetModal() {
-      document.getElementById('dataset-modal').classList.add('active');
-      loadDatasets();
-    }
-
-    function closeDatasetModal() {
-      document.getElementById('dataset-modal').classList.remove('active');
-    }
-
-    async function loadDatasets() {
-      const container = document.getElementById('dataset-list');
-      try {
-        const res = await fetch('/api/datasets');
-        const data = await res.json();
-        
-        if (!data.datasets || data.datasets.length === 0) {
-          container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">暂无可用数据集</p>';
-          return;
+        function tick(now) {
+          if (token !== fadeToken) return;
+          const progress = Math.min((now - start) / duration, 1);
+          video.style.opacity = String(from + (target - from) * progress);
+          if (progress < 1) rafId = requestAnimationFrame(tick);
         }
 
-        container.innerHTML = data.datasets.map((ds, i) => `
-          <div class="dataset-item" onclick="selectDataset(${i})">
-            <div class="dataset-name">${ds.name}</div>
-            <div class="dataset-desc">${ds.description || '暂无描述'}</div>
-            <div class="dataset-count">${ds.count || 0} 条样本</div>
-          </div>
-        `).join('');
-      } catch (e) {
-        container.innerHTML = '<p style="color: #ef4444;">加载失败: ' + e.message + '</p>';
+        rafId = requestAnimationFrame(tick);
       }
-    }
 
-    async function selectDataset(index) {
-      try {
-        const res = await fetch(`/api/datasets/${index}/items?limit=5`);
-        const data = await res.json();
-        
-        if (!data.items || data.items.length === 0) {
-          alert('该数据集为空');
-          return;
+      function onLoadedData() {
+        video.style.opacity = "0";
+        video.play().catch(() => {});
+        fadeTo(1, FADE_MS);
+      }
+
+      function onTimeUpdate() {
+        const remaining = video.duration - video.currentTime;
+        if (!fadingOut && remaining <= FADE_OUT_LEAD && remaining > 0) {
+          fadingOut = true;
+          fadeTo(0, FADE_MS);
         }
-
-        const item = data.items[Math.floor(Math.random() * data.items.length)];
-        
-        const content = `主题: ${item.subject || item.Email_Subject || '无主题'}\n发件人: ${item.sender || item.Sender_Email || 'unknown@example.com'}\n\n正文:\n${item.body || item.Email_Content || item.content || ''}`;
-        
-        document.getElementById('main-input').value = content;
-        closeDatasetModal();
-      } catch (e) {
-        alert('加载样本失败: ' + e.message);
       }
+
+      function onEnded() {
+        video.style.opacity = "0";
+        setTimeout(() => {
+          video.currentTime = 0;
+          video.play().catch(() => {});
+          fadingOut = false;
+          fadeTo(1, FADE_MS);
+        }, 100);
+      }
+
+      video.loop = false;
+      video.addEventListener("loadeddata", onLoadedData);
+      video.addEventListener("timeupdate", onTimeUpdate);
+      video.addEventListener("ended", onEnded);
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function animateTitle() {
+      const text = "Detect Phishing Before It Reaches Your Team";
+      const host = document.getElementById("heroTitle");
+      host.innerHTML = "";
+      text.split(" ").forEach((word, index) => {
+        const span = document.createElement("span");
+        span.textContent = word;
+        host.appendChild(span);
+        setTimeout(() => {
+          span.animate([
+            { filter: "blur(10px)", opacity: 0, transform: "translateY(50px)" },
+            { filter: "blur(5px)", opacity: 0.5, transform: "translateY(-5px)", offset: 0.5 },
+            { filter: "blur(0px)", opacity: 1, transform: "translateY(0)" }
+          ], {
+            duration: 700,
+            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+            fill: "forwards"
+          });
+        }, index * 100);
+      });
     }
 
-    // 回车发送
-    document.getElementById('message-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
+    function revealFadeItems() {
+      document.querySelectorAll(".fade-item").forEach((node) => {
+        const delay = Number(node.dataset.delay || 0) * 1000;
+        setTimeout(() => node.classList.add("in"), delay);
+      });
+    }
+
+    attachFadingVideo(document.getElementById("heroVideo"));
+    animateTitle();
+    revealFadeItems();
   </script>
 </body>
 </html>
