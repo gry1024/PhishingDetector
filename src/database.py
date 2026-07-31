@@ -17,8 +17,8 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 数据库文件路径
-DB_PATH = Path(settings.data_dir).parent / "phishing_detector.db"
+# 数据库文件路径（使用绝对路径，避免 WAL 模式下相对路径权限问题）
+DB_PATH = Path(settings.data_dir).resolve().parent / "phishing_detector.db"
 
 
 KB_SEED_ENTRIES = [
@@ -58,10 +58,12 @@ KB_SEED_ENTRIES = [
 
 
 def get_connection() -> sqlite3.Connection:
-    """获取数据库连接（启用 WAL 模式提升并发性能）"""
+    """获取数据库连接（使用 DELETE 日志模式避免 Windows WAL 锁定问题）"""
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    # Windows 环境下 WAL 模式容易因进程异常退出导致 readonly 锁定，改用 DELETE 模式
+    conn.execute("PRAGMA journal_mode=DELETE")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 

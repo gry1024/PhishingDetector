@@ -44,18 +44,31 @@ class LLMClient:
         self.model = cfg.model
         self.temperature = cfg.temperature
         self.max_tokens = cfg.max_tokens
-        self.auth_failed = False
+        self.persistent_error = False
 
     @staticmethod
-    def _is_auth_error(error: Exception) -> bool:
-        """判断是否为鉴权错误，避免重复无效重试。"""
+    def _is_persistent_error(error: Exception) -> bool:
+        """判断是否为不可恢复的错误（鉴权失败/额度用尽），避免重复无效重试。"""
         message = str(error).lower()
-        return (
+        # 鉴权类错误
+        if (
             "401" in message
             or "authorized_error" in message
             or "invalid api key" in message
-            or "api key" in message and "invalid" in message
-        )
+            or ("api key" in message and "invalid" in message)
+        ):
+            return True
+        # 额度/配额类错误（429 rate_limit / quota exceeded）
+        if (
+            "429" in message
+            or "rate_limit" in message
+            or "quota" in message
+            or "用量上限" in message
+            or "额度" in message
+            or "insufficient" in message
+        ):
+            return True
+        return False
 
     def chat(
         self,
@@ -76,8 +89,8 @@ class LLMClient:
         Returns:
             LLM 生成的文本响应
         """
-        if self.auth_failed:
-            raise LLMUnavailableError("LLM 鉴权已失败，已跳过重复调用。")
+        if self.persistent_error:
+            raise LLMUnavailableError("LLM 不可用（鉴权失败或额度用尽），已跳过重复调用。")
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -99,8 +112,8 @@ class LLMClient:
             logger.debug(f"LLM 响应: {content[:200]}...")
             return content
         except Exception as e:
-            if self._is_auth_error(e):
-                self.auth_failed = True
+            if self._is_persistent_error(e):
+                self.persistent_error = True
             logger.error(f"LLM 调用失败: {e}")
             raise LLMUnavailableError(str(e)) from e
 
@@ -147,8 +160,8 @@ class LLMClient:
         Yields:
             每个 chunk 的文本内容
         """
-        if self.auth_failed:
-            raise LLMUnavailableError("LLM 鉴权已失败，已跳过重复流式调用。")
+        if self.persistent_error:
+            raise LLMUnavailableError("LLM 不可用（鉴权失败或额度用尽），已跳过重复流式调用。")
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -166,19 +179,41 @@ class LLMClient:
                 if chunk.choices and chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
         except Exception as e:
-            if self._is_auth_error(e):
-                self.auth_failed = True
+            if self._is_persistent_error(e):
+                self.persistent_error = True
             logger.error(f"LLM 流式调用失败: {e}")
             raise LLMUnavailableError(str(e)) from e
 
 
 # 全局 LLM 客户端单例
 llm_client = None
+_llm_init_failed = False
+_llm_init_error = ""
 
 
 def get_llm() -> LLMClient:
-    """获取全局 LLM 客户端实例（懒加载单例）"""
-    global llm_client
+    """获取全局 LLM 客户端实例（懒加载单例）
+
+    首次初始化失败后会缓存失败状态，后续调用直接抛出，
+    避免每个 Agent 都重复尝试构建客户端。
+    """
+    global llm_client, _llm_init_failed, _llm_init_error
+    if _llm_init_failed:
+        raise LLMUnavailableError(_llm_init_error)
     if llm_client is None:
-        llm_client = LLMClient()
+        try:
+            llm_client = LLMClient()
+        except (ValueError, Exception) as e:
+            _llm_init_failed = True
+            _llm_init_error = str(e)
+            raise LLMUnavailableError(str(e)) from e
     return llm_client
+
+
+def is_llm_available() -> bool:
+    """检查 LLM 是否可用（不抛异常）。"""
+    try:
+        get_llm()
+        return True
+    except LLMUnavailableError:
+        return False

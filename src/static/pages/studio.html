@@ -3,696 +3,2152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kimi-Style AI Studio Demo - PhishingDetector</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>PhishingDetector Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Fustat:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f3efe6;
-  --paper: #fffdf9;
-  --line: #ded5c1;
-  --ink: #1f2a44;
-  --muted: #67748f;
-  --brand: #2f80ff;
-  --ok: #1e9e55;
-  --warn: #cf7f1a;
-  --bad: #cb3a3a;
+  --bg: #0d0d0d;
+  --surface: #111111;
+  --panel: #161616;
+  --text: #e5e5e5;
+  --muted: #737373;
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.1);
+  --button-bg: #ffffff;
+  --button-text: #000000;
+  --green: #17c964;
+  --accent: #3b82f6;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --radius-full: 999px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --header-h: 56px;
 }
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: "Noto Sans SC", "Space Grotesk", sans-serif;
-  color: var(--ink);
-  background:
-    radial-gradient(circle at 82% 0%, #e8f0ff 0%, transparent 40%),
-    radial-gradient(circle at 15% 0%, #fff5de 0%, transparent 45%),
-    var(--bg);
-}
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 253, 249, 0.86);
-  backdrop-filter: blur(8px);
-}
-.brand { font-weight: 700; letter-spacing: 0.2px; }
-.header-meta {
-  font-size: 13px;
-  color: var(--muted);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }
-.layout {
-  display: grid;
-  grid-template-columns: 270px 1fr 360px;
-  gap: 14px;
-  padding: 14px;
-}
-.panel {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(18, 25, 43, 0.08);
-}
-.left, .right { padding: 14px; }
-.title {
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 700;
-}
-.note {
-  color: var(--muted);
-  font-size: 12px;
-  margin-bottom: 10px;
-}
-.node {
-  background: #fff9ef;
-  border: 1px dashed #d6c8a8;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 8px;
-  cursor: grab;
-  font-size: 13px;
-}
-.node small { display: block; margin-top: 4px; color: var(--muted); }
-.canvas-wrap { padding: 10px; display: grid; grid-template-rows: auto 1fr auto; }
-.toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
-.toolbar select {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px 10px;
-  background: #fff;
-  color: var(--ink);
-  font-weight: 600;
-}
-button {
+
+/* Liquid Glass */
+.liquid-glass {
+  background: rgba(255,255,255,0.01);
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: none;
-  border-radius: 10px;
-  padding: 9px 12px;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.45) 0%,
+    rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0) 40%,
+    rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.15) 80%,
+    rgba(255,255,255,0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.liquid-glass-strong {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+  position: relative;
+  overflow: hidden;
+}
+.liquid-glass-strong::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.5) 0%,
+    rgba(255,255,255,0.2) 20%,
+    rgba(255,255,255,0) 40%,
+    rgba(255,255,255,0) 60%,
+    rgba(255,255,255,0.2) 80%,
+    rgba(255,255,255,0.5) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  letter-spacing: -0.01em;
+}
+
+button, input, textarea {
+  font-family: inherit;
+  letter-spacing: inherit;
+  color: var(--text);
+}
+
+/* ===== Top Header ===== */
+.topbar {
+  height: var(--header-h);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  position: relative;
+  z-index: 50;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.brand-text {
+  font-family: "Schibsted Grotesk", "Noto Sans SC", serif;
+  font-size: 20px;
   font-weight: 600;
-  cursor: pointer;
+  font-style: italic;
+  letter-spacing: -0.06em;
+  color: var(--text);
 }
-.btn-run { background: linear-gradient(135deg, #2f80ff, #7caeff); color: #fff; }
-.btn-mid { background: #ece4d4; color: #4f432c; }
-.canvas {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fffdfa, #faf4e8);
-  min-height: 340px;
-  padding: 12px;
-  overflow: auto;
+
+.brand-beta {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
 }
-.drop-hint { text-align: center; margin-top: 120px; color: #85765c; font-size: 13px; }
-.flow-step {
-  border-radius: 10px;
-  border: 1px solid #d8d0bf;
-  border-left: 6px solid #cab992;
-  background: #fff;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-.flow-step.running { border-left-color: var(--warn); background: #fff5e8; }
-.flow-step.done { border-left-color: var(--ok); background: #f2fbf5; }
-.flow-step.failed { border-left-color: var(--bad); background: #fff0f0; }
-.input-box { margin-top: 10px; display: grid; gap: 8px; }
-input, textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px;
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   font-size: 13px;
-  background: #fff;
+  color: var(--muted);
 }
-textarea { min-height: 95px; resize: vertical; }
-.progress-card {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px;
-  background: #fff;
-}
-.progress-text { font-size: 13px; color: var(--muted); }
-.outline {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  background: #fff;
-}
-.outline-item {
-  padding: 7px 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #50607e;
-}
-.outline-item.running { background: #fff3e5; color: #7c4804; }
-.outline-item.done { background: #eef9f1; color: #115d33; }
-.outline-item.failed { background: #ffeaea; color: #802020; }
-.timeline {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #1c1f29;
-  color: #eff3ff;
-  padding: 8px;
-  min-height: 180px;
-  max-height: 260px;
-  overflow: auto;
-  font-family: Consolas, monospace;
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-soft);
   font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.status-dot.running { background: #f5a623; animation: pulse 1.2s infinite; }
+.status-dot.failed { background: #ef4444; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* ===== App Shell ===== */
+.app-shell {
+  display: flex;
+  height: calc(100vh - var(--header-h));
+  overflow: hidden;
+}
+
+/* ===== Left Sidebar ===== */
+.left-sidebar {
+  width: 260px;
+  border-right: 1px solid var(--border-soft);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.25s ease, transform 0.25s ease;
+}.left-sidebar.collapsed {
+  width: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.sidebar-header {
+  padding: 18px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: var(--radius-full);
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-new:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+
+.conversation-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px 12px;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+.conversation-item:hover { background: rgba(255,255,255,0.04); }
+.conversation-item.active { background: rgba(255,255,255,0.07); }
+
+.conv-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.conv-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.conv-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.conv-delete {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.conversation-item:hover .conv-delete { opacity: 1; }
+.conv-delete:hover { background: rgba(255,255,255,0.06); color: #ef4444; }
+
+.empty-conv {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sidebar-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ===== Center Chat Area ===== */
+.center-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg);
+  position: relative;
+}
+
+/* Ticker */
+.hero-ticker {
+  height: 34px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: var(--surface);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.ticker-track {
+  display: flex;
+  gap: 10px;
+  animation: marquee-left 30s linear infinite;
+  white-space: nowrap;
+  padding-left: 10px;
+}
+
+.ticker-item {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-soft);
+}
+
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Chat Output */
+.chat-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px 0;
+  scroll-behavior: smooth;
+}
+
+.empty-chat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-chat h1 {
+  font-family: "Schibsted Grotesk", "Noto Sans SC", serif;
+  font-size: 48px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: -0.06em;
+  color: var(--text);
+  margin-bottom: 14px;
+  max-width: 520px;
+  line-height: 1.05;
+}
+
+.empty-chat p {
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 420px;
+  color: var(--muted);
+}
+
+/* Message Bubbles */
+.message {
+  max-width: 620px;
+  margin: 0 auto 22px;
+  animation: fadeIn 0.35s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-bubble {
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 12px 16px;
+  border-radius: 18px 18px 4px 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 80%;
+  box-shadow: var(--shadow-sm);
+}
+
+.message-assistant {
+  display: flex;
+  gap: 12px;
+}
+
+.assistant-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.assistant-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assistant-name .tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+  color: var(--muted);
+}
+
+.assistant-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
   white-space: pre-wrap;
 }
-.db-card {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  background: #fff;
+
+.assistant-text p { margin-bottom: 10px; }
+.assistant-text p:last-child { margin-bottom: 0; }
+
+/* Agent Call Cards inside assistant message */
+.agent-card {
+  margin-top: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-.db-item {
-  border-bottom: 1px dashed #e7dfcf;
-  padding: 6px 0;
-  font-size: 12px;
-  color: #46506a;
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.db-item:last-child { border-bottom: none; }
-.health-card,
-.result-card,
-.replay-card {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  background: #fff;
+
+.agent-card-header:hover { background: rgba(255,255,255,0.02); }
+
+.agent-card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
 }
-.tiny-title {
-  font-size: 12px;
-  color: #60708d;
+
+.agent-card-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.agent-card-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.agent-card-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.agent-card-status.running { background: rgba(180,106,0,0.15); color: #f5a623; }
+.agent-card-status.done { background: rgba(17,201,100,0.12); color: #17c964; }
+.agent-card-status.failed { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.agent-card-toggle {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.agent-card-toggle.open { transform: rotate(90deg); }
+
+.agent-card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.agent-card-body.open {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.agent-card-inner {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.agent-thinking-line {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.agent-tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 4px 0 3px;
+}
+
+.agent-tool-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(0,0,0,0.04);
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+}
+
+.agent-tool-chip.done {
+  background: #e8f5ec;
+  color: #0f6b35;
+  border-color: #c5e8d0;
+}
+
+.agent-llm-box {
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  border-left: 2px solid var(--green);
+}
+
+.agent-llm-label {
+  font-size: 9px;
   font-weight: 700;
-  margin-bottom: 6px;
+  color: var(--muted);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.health-row {
+
+.agent-llm-text {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.agent-llm-text.typing::after {
+  content: "▋";
+  animation: blink 1s infinite;
+  color: var(--text);
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.agent-result-line {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(17,201,100,0.1);
+  color: #17c964;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(17,201,100,0.2);
+}
+
+/* Report Card (inside chat) */
+.report-card {
+  max-width: 620px;
+  margin: 18px auto 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.45s ease;
+}
+
+.report-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+}
+
+.report-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
   font-size: 12px;
-  color: #475675;
+  font-weight: 700;
+}
+
+.risk-critical { background: rgba(180,35,24,0.15); color: #fca5a5; border: 1px solid rgba(180,35,24,0.3); }
+.risk-high { background: rgba(180,106,0,0.15); color: #fcd34d; border: 1px solid rgba(180,106,0,0.3); }
+.risk-medium { background: rgba(161,98,7,0.15); color: #fde68a; border: 1px solid rgba(161,98,7,0.3); }
+.risk-low { background: rgba(4,120,87,0.15); color: #6ee7b7; border: 1px solid rgba(4,120,87,0.3); }
+.risk-safe { background: rgba(21,128,61,0.15); color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
+.risk-unknown { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border-soft); }
+
+.report-body { padding: 18px 20px; }
+
+.report-section { margin-bottom: 18px; }
+.report-section:last-child { margin-bottom: 0; }
+
+.report-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.report-box {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--bg);
+}
+
+.report-box-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
   margin-bottom: 4px;
 }
-.health-row:last-child { margin-bottom: 0; }
-.badge {
-  display: inline-block;
-  border-radius: 999px;
+
+.report-box-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.report-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.report-text strong { font-weight: 600; }
+
+.report-evidence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  margin-bottom: 7px;
+  font-size: 12px;
+  background: var(--bg);
+}
+
+.evidence-info { flex: 1; min-width: 0; }
+.evidence-type { font-weight: 600; }
+.evidence-meta { color: var(--muted); font-size: 11px; margin-top: 1px; }
+
+.evidence-bar-wrap {
+  width: 70px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.evidence-bar {
+  height: 100%;
+  background: var(--green);
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+/* Input Area */
+.input-area {
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface);
+  padding: 16px 24px 20px;
+  transition: padding 0.25s ease;
+}
+
+.input-area.shrink { padding: 10px 24px 12px; }
+
+.input-card {
+  max-width: 620px;
+  margin: 0 auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.input-fields {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  transition: all 0.25s ease;
+}
+
+.input-area.shrink .input-fields {
+  grid-template-columns: 1fr;
+  padding: 8px 12px;
+}
+
+.input-area.shrink .input-row-2 { display: none; }
+
+.input-card input,
+.input-card textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 4px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  resize: none;
+}
+
+.input-card input::placeholder,
+.input-card textarea::placeholder { color: #525252; }
+
+.input-card textarea { min-height: 70px; line-height: 1.5; }
+.input-area.shrink .input-card textarea { min-height: 24px; }
+
+.input-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 0 12px;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg);
+}
+
+.input-hint {
   font-size: 11px;
-  padding: 2px 8px;
+  color: var(--muted);
+}
+
+.btn-run {
+  height: 38px;
+  padding: 0 20px;
+  border-radius: var(--radius-full);
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-run:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,255,255,0.14); }
+.btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-run.running { background: #f5a623; color: #000; }
+
+/* ===== Right Sidebar ===== */
+.right-sidebar {
+  width: 320px;
+  border-left: 1px solid var(--border-soft);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  transition: width 0.25s ease;
+}.right-sidebar.collapsed {
+  width: 0;
+  overflow: hidden;
+  border-left: none;
+}
+
+.right-header {
+  padding: 16px 18px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.right-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.right-body {
+  padding: 0 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-card {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}.panel-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+
+.status-row:last-child { margin-bottom: 0; }
+
+.status-label { color: var(--muted); }
+.status-value { font-weight: 600; color: var(--text); }
+
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
   font-weight: 700;
 }
-.badge-ok { background: #e8f7ee; color: #0f6b35; }
-.badge-warn { background: #fff4e8; color: #8d4f04; }
-.badge-bad { background: #ffe9e9; color: #912727; }
+
+.health-ok { background: rgba(17,201,100,0.12); color: #17c964; }
+.health-degraded { background: rgba(180,106,0,0.15); color: #f5a623; }
+.health-fail { background: rgba(239,68,68,0.12); color: #ef4444; }
+
 .score-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
 .score-box {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px;
-  background: #fcfbf8;
-  font-size: 12px;
-  color: #3d4a66;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  background: var(--bg);
 }
-.score-gap-warn {
-  margin-top: 6px;
-  font-size: 12px;
-  border-radius: 8px;
-  padding: 6px;
-  background: #fff3de;
-  color: #8d4f04;
-  border: 1px solid #f0cd93;
+
+.score-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 4px;
 }
-.evidence-item {
-  border: 1px solid #e7dfcf;
-  border-radius: 8px;
-  padding: 6px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #3f4e6d;
+
+.score-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
-.evidence-item:last-child { margin-bottom: 0; }
-.bar-wrap {
-  margin-top: 4px;
-  height: 8px;
-  border-radius: 999px;
-  background: #ece6d8;
+
+.score-diff {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+  text-align: center;
+}
+
+.evidence-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12px;
+}
+
+.evidence-mini-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.evidence-mini-bar-wrap {
+  width: 50px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.06);
   overflow: hidden;
 }
-.bar {
-  height: 100%;
-  background: linear-gradient(90deg, #2f80ff, #4db7ff);
+
+.evidence-mini-bar { height: 100%; background: var(--green); border-radius: var(--radius-full); }
+
+.kb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
+
 .kb-item {
-  border: 1px dashed #d9ceba;
-  border-radius: 8px;
-  padding: 6px;
-  margin-bottom: 6px;
   font-size: 12px;
-  color: #3c4a67;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
 }
-.kb-item:last-child { margin-bottom: 0; }
-.replay-actions {
+
+.kb-item-empty {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.replay-controls {
   display: flex;
   gap: 8px;
 }
-.btn-sm {
+
+.replay-btn {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-soft);
+  background: var(--bg);
   font-size: 12px;
-  padding: 6px 10px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
 }
-.honest {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px;
-  background: #fff;
+
+.replay-btn:hover { background: rgba(255,255,255,0.04); }
+.replay-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-soft);
   font-size: 12px;
-  color: #4d5a74;
+  cursor: pointer;
+  transition: background 0.15s;
 }
-@media (max-width: 1180px) {
-  .layout { grid-template-columns: 1fr; }
+
+.recent-item:hover { background: rgba(255,255,255,0.03); }
+
+.recent-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.recent-score { font-weight: 700; }
+
+/* Layout toggles */
+.layout-toggles {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  transition: all 0.15s;
+}
+
+.icon-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+.icon-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
+
+/* Dataset Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal-card {
+  width: 640px;
+  max-width: 92vw;
+  max-height: 84vh;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(10px);
+  transition: transform 0.2s ease;
+}
+.modal-overlay.open .modal-card { transform: translateY(0); }
+
+.modal-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+.modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,0,0,0.05);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+}
+.modal-close:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+
+.modal-toolbar {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.modal-toolbar input, .modal-toolbar select {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-full);
+  padding: 7px 12px;
+  font-size: 13px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+}
+.modal-toolbar input { flex: 1; }
+.modal-toolbar select { min-width: 120px; }
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px 14px;
+}
+
+.dataset-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dataset-item {
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  background: var(--bg);
+}
+.dataset-item:hover { background: rgba(255,255,255,0.02); border-color: var(--border); }
+
+.dataset-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.dataset-item-subject {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 340px;
+}
+.dataset-item-label {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+.dataset-item-label.phishing { background: rgba(180,35,24,0.15); color: #fca5a5; }
+.dataset-item-label.benign, .dataset-item-label.legitimate, .dataset-item-label.ham, .dataset-item-label.safe {
+  background: rgba(17,201,100,0.12); color: #6ee7b7;
+}
+.dataset-item-label.spam { background: rgba(180,106,0,0.15); color: #fcd34d; }
+
+.dataset-item-sender {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.dataset-item-body {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dataset-footer {
+  padding: 10px 18px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .right-sidebar { width: 280px; }
+}
+
+@media (max-width: 900px) {
+  .left-sidebar { position: absolute; z-index: 40; height: 100%; box-shadow: var(--shadow); }
+  .right-sidebar { position: absolute; right: 0; z-index: 40; height: 100%; box-shadow: var(--shadow); }
+  .chat-output { padding: 20px 16px 0; }
+}
+
+@media (max-width: 640px) {
+  .report-grid { grid-template-columns: 1fr; }
+  .input-fields { grid-template-columns: 1fr; }
+  .empty-chat h1 { font-size: 34px; }
 }
 </style>
 </head>
 <body>
-<header class="header">
-  <div class="brand">PhishingDetector · Kimi-Style Thinking Demo</div>
-  <div class="header-meta">
-    <span class="dot"></span>
-    <span id="globalProgress">当前进度 0/0</span>
-    <span>|</span>
-    <span>实时思考大纲</span>
+
+<!-- Top Header -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">🎯</div>
+    <div class="brand-text">PhishingDetector</div>
+    <div class="brand-beta">Studio</div>
+  </div>
+  <div class="topbar-meta">
+    <div class="layout-toggles">
+      <button class="icon-btn active" id="toggleLeft" title="历史对话" onclick="toggleSidebar('left')">☰</button>
+      <button class="icon-btn active" id="toggleRight" title="分析概览" onclick="toggleSidebar('right')">⊞</button>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">待命</span>
+    </div>
   </div>
 </header>
 
-<div class="layout">
-  <aside class="panel left">
-    <h3 class="title">可执行模块</h3>
-    <div class="note">拖拽到中间画布后，只会运行你放入的模块，不会强制全量执行。</div>
-    <div class="node" draggable="true" data-step="semantic" data-title="语义意图分析">语义意图分析<small>识别话术、意图和可疑语义</small></div>
-    <div class="node" draggable="true" data-step="detector" data-title="多维关联检测">多维关联检测<small>URL/附件/行为/发件人检测</small></div>
-    <div class="node" draggable="true" data-step="risk" data-title="风险研判">风险研判<small>证据融合与分数研判</small></div>
-    <div class="node" draggable="true" data-step="response" data-title="响应处置">响应处置<small>输出建议与处置动作</small></div>
+<!-- App Shell -->
+<div class="app-shell">
+
+  <!-- Left Sidebar: History -->
+  <aside class="left-sidebar" id="leftSidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">历史对话</div>
+      <button class="btn-new" onclick="startNewChat()">
+        <span>+</span> 新对话
+      </button>
+    </div>
+    <div style="padding:0 14px 10px;">
+      <button class="btn-new" style="width:100%;justify-content:center;background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border-soft);" onclick="openDatasetModal()">
+        <span>📧</span> 示例邮件库
+      </button>
+    </div>
+    <div class="conversation-list" id="conversationList">
+      <div class="empty-conv">暂无历史对话<br>开始一次检测即可创建</div>
+    </div>
+    <div class="sidebar-footer">PhishingDetector · AI 钓鱼邮件检测</div>
   </aside>
 
-  <main class="panel canvas-wrap">
-    <div class="toolbar">
-      <button class="btn-run" id="runBtn">运行</button>
-      <select id="execMode" title="执行模式">
-        <option value="serial">串行模式</option>
-        <option value="cluster">并行集群模式</option>
-      </select>
-      <button class="btn-mid" id="presetBtn">装载默认流程</button>
-      <button class="btn-mid" id="replayBtn">回放上次运行</button>
-      <button class="btn-mid" id="clearBtn">清空</button>
+  <!-- Center: Chat -->
+  <main class="center-area">
+    <div class="hero-ticker">
+      <div class="ticker-track" id="tickerTrack">
+        <span class="ticker-item">语义意图分析</span>
+        <span class="ticker-item">多维关联检测</span>
+        <span class="ticker-item">风险研判</span>
+        <span class="ticker-item">响应处置</span>
+        <span class="ticker-item">ATT&CK 映射</span>
+        <span class="ticker-item">知识库命中</span>
+        <span class="ticker-item">URL 信誉</span>
+        <span class="ticker-item">发件人域名检测</span>
+        <span class="ticker-item">语义意图分析</span>
+        <span class="ticker-item">多维关联检测</span>
+        <span class="ticker-item">风险研判</span>
+        <span class="ticker-item">响应处置</span>
+        <span class="ticker-item">ATT&CK 映射</span>
+        <span class="ticker-item">知识库命中</span>
+        <span class="ticker-item">URL 信誉</span>
+        <span class="ticker-item">发件人域名检测</span>
+      </div>
     </div>
-    <section class="canvas" id="canvas">
-      <div class="drop-hint" id="dropHint">拖拽模块到此处，形成你的执行链路</div>
-    </section>
-    <div class="input-box">
-      <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题（可选）">
-      <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人（可选）">
-      <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+
+    <div class="chat-output" id="chatOutput">
+      <div class="empty-chat" id="emptyChat">
+        <h1>AI 钓鱼邮件智能检测</h1>
+        <p>输入邮件内容，编排器将自动调用语义分析、技术检测、风险研判和处置建议等子 Agent 进行深度检测，并实时展示完整思考过程。</p>
+      </div>
+    </div>
+
+    <div class="input-area" id="inputArea">
+      <div class="input-card">
+        <div class="input-fields">
+          <div class="input-row-1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题">
+            <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人">
+          </div>
+          <div class="input-row-2">
+            <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+          </div>
+        </div>
+        <div class="input-divider"></div>
+        <div class="input-actions">
+          <div class="input-hint">按 Enter 快速运行 · 支持中文/英文邮件</div>
+          <button class="btn-run" id="runBtn" onclick="runFlow()">▶ 运行检测</button>
+        </div>
+      </div>
     </div>
   </main>
 
-  <aside class="panel right">
-    <h3 class="title">AI 思考过程</h3>
-    <div class="progress-card">
-      <div class="progress-text" id="runState">状态：待命</div>
-      <div class="progress-text" id="llmState">LLM：未触发</div>
+  <!-- Right Sidebar: Analysis Overview -->
+  <aside class="right-sidebar" id="rightSidebar">
+    <div class="right-header">
+      <div class="right-title">分析概览</div>
     </div>
-
-    <div class="outline" id="outline"></div>
-    <div class="timeline" id="timeline"></div>
-
-    <div class="health-card">
-      <div class="tiny-title">环境健康与版本签名</div>
-      <div id="healthPanel">
-        <div class="health-row">加载中...</div>
+    <div class="right-body">
+      <!-- Status -->
+      <div class="panel-card">
+        <div class="panel-card-title">运行状态</div>
+        <div class="status-row">
+          <span class="status-label">状态</span>
+          <span class="status-value" id="panelStatus">待命</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">LLM</span>
+          <span class="status-value" id="panelLLM">未触发</span>
+        </div>
       </div>
-    </div>
 
-    <div class="result-card">
-      <div class="tiny-title">风险双轨评分（规则 vs LLM）</div>
-      <div class="score-grid">
-        <div class="score-box" id="ruleScoreBox">规则评分：-</div>
-        <div class="score-box" id="llmScoreBox">LLM评分：-</div>
+      <!-- Environment Health -->
+      <div class="panel-card">
+        <div class="panel-card-title">环境健康</div>
+        <div class="status-row">
+          <span class="status-label">探针</span>
+          <span class="health-badge health-ok" id="healthBadge">ok</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">模型</span>
+          <span class="status-value" id="healthModel">-</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">延迟</span>
+          <span class="status-value" id="healthLatency">-</span>
+        </div>
       </div>
-      <div id="scoreGapBox" style="margin-top:6px;font-size:12px;color:#50607e;">分差：-</div>
-      <div id="scoreWarningBox" style="display:none;"></div>
-    </div>
 
-    <div class="result-card">
-      <div class="tiny-title">结构化证据权重</div>
-      <div id="evidenceList"><div class="health-row">暂无证据</div></div>
-    </div>
-
-    <div class="result-card">
-      <div class="tiny-title">知识库命中（RAG-MVP）</div>
-      <div id="kbHitList"><div class="health-row">暂无命中</div></div>
-    </div>
-
-    <div class="replay-card">
-      <div class="tiny-title">运行回放</div>
-      <div class="replay-actions">
-        <button class="btn-mid btn-sm" id="replaySlowBtn">慢速回放</button>
-        <button class="btn-mid btn-sm" id="replayFastBtn">快速回放</button>
+      <!-- Risk Score -->
+      <div class="panel-card">
+        <div class="panel-card-title">风险评分</div>
+        <div class="score-grid">
+          <div class="score-box">
+            <div class="score-label">规则</div>
+            <div class="score-value" id="scoreRule">-</div>
+          </div>
+          <div class="score-box">
+            <div class="score-label">LLM</div>
+            <div class="score-value" id="scoreLLM">-</div>
+          </div>
+        </div>
+        <div class="score-diff" id="scoreDiff">分差：-</div>
       </div>
-    </div>
 
-    <div class="db-card">
-      <div style="font-size:12px;color:#60708d;font-weight:700;margin-bottom:5px;">数据库最近报告（/api/reports）</div>
-      <div id="dbList"></div>
-    </div>
+      <!-- Evidence Weights -->
+      <div class="panel-card">
+        <div class="panel-card-title">证据权重</div>
+        <div id="evidenceList">
+          <div class="kb-item-empty">暂无证据</div>
+        </div>
+      </div>
 
-    <div class="honest">
-      <div><strong>诚实声明（当前版本）</strong></div>
-      <div>已实现：按拖拽顺序执行、前置并行模式、知识库命中展示、风险双轨评分、证据权重条、运行回放、健康签名面板。</div>
-      <div>未实现：节点连线条件分支、暂停恢复、多人协同编辑、向量检索知识库。</div>
+      <!-- KB Hits -->
+      <div class="panel-card">
+        <div class="panel-card-title">知识库命中</div>
+        <div class="kb-list" id="kbList">
+          <div class="kb-item-empty">暂无命中</div>
+        </div>
+      </div>
+
+      <!-- Replay -->
+      <div class="panel-card">
+        <div class="panel-card-title">运行回放</div>
+        <div class="replay-controls">
+          <button class="replay-btn active" id="speedNormal" onclick="setReplaySpeed(1)">慢速</button>
+          <button class="replay-btn" id="speedFast" onclick="setReplaySpeed(2)">快速</button>
+        </div>
+      </div>
+
+      <!-- Recent Reports -->
+      <div class="panel-card">
+        <div class="panel-card-title">最近报告</div>
+        <div class="recent-list" id="recentList">
+          <div class="kb-item-empty">暂无报告</div>
+        </div>
+      </div>
     </div>
   </aside>
+
+</div>
+
+<!-- Dataset Modal -->
+<div class="modal-overlay" id="datasetModal" onclick="closeDatasetModalOnBackdrop(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">GitHub 示例邮件库</div>
+      <button class="modal-close" onclick="closeDatasetModal()">×</button>
+    </div>
+    <div class="modal-toolbar">
+      <select id="datasetSelect" onchange="loadDataset()">
+        <option value="sunny_phishing_benign">Phishing & Benign (JSONL)</option>
+        <option value="rokibul_phishing">Phishing Email Dataset (CSV)</option>
+      </select>
+      <select id="datasetLabelFilter" onchange="loadDataset()">
+        <option value="">全部标签</option>
+        <option value="phishing">钓鱼</option>
+        <option value="benign">正常</option>
+      </select>
+      <input id="datasetSearch" type="text" placeholder="搜索主题或正文..." oninput="loadDataset()">
+    </div>
+    <div class="modal-body" id="datasetBody">
+      <div class="dataset-empty">正在加载数据集...</div>
+    </div>
+    <div class="dataset-footer">数据来自 GitHub 公开数据集，仅供研究测试使用</div>
+  </div>
 </div>
 
 <script>
-const canvas = document.getElementById("canvas");
-const dropHint = document.getElementById("dropHint");
+// ===== State =====
+const STORAGE_KEY = "phishing_detector_conversations";
+const chatOutput = document.getElementById("chatOutput");
+const emptyChat = document.getElementById("emptyChat");
+const inputArea = document.getElementById("inputArea");
 const runBtn = document.getElementById("runBtn");
-const presetBtn = document.getElementById("presetBtn");
-const replayBtn = document.getElementById("replayBtn");
-const replaySlowBtn = document.getElementById("replaySlowBtn");
-const replayFastBtn = document.getElementById("replayFastBtn");
-const clearBtn = document.getElementById("clearBtn");
-const execMode = document.getElementById("execMode");
-const outlineEl = document.getElementById("outline");
-const timeline = document.getElementById("timeline");
-const runState = document.getElementById("runState");
-const llmState = document.getElementById("llmState");
-const globalProgress = document.getElementById("globalProgress");
-const dbList = document.getElementById("dbList");
-const healthPanel = document.getElementById("healthPanel");
-const ruleScoreBox = document.getElementById("ruleScoreBox");
-const llmScoreBox = document.getElementById("llmScoreBox");
-const scoreGapBox = document.getElementById("scoreGapBox");
-const scoreWarningBox = document.getElementById("scoreWarningBox");
-const evidenceList = document.getElementById("evidenceList");
-const kbHitList = document.getElementById("kbHitList");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const statusPill = document.getElementById("statusPill");
 
-const stepOrder = [];
-const stepMap = new Map();
 let running = false;
-let doneCount = 0;
-let lastRunEvents = [];
-let lastRunResult = null;
-let replayRenderer = null;
+let currentAgentKey = null;
+let currentAgentCard = null;
+let currentAssistantBody = null;
+let currentNarrativeEl = null;
+let conversations = [];
+let activeConversationId = null;
+let replaySpeed = 1;
+let llmFallbackUsed = false;
 
-function appendLine(text) {
-  timeline.textContent += text + "\n";
-  timeline.scrollTop = timeline.scrollHeight;
+// ===== Helpers =====
+function generateId() {
+  return "conv_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
 }
 
-function updateProgress() {
-  globalProgress.textContent = `当前进度 ${doneCount}/${stepOrder.length}`;
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function renderOutline() {
-  outlineEl.innerHTML = "";
-  if (stepOrder.length === 0) {
-    outlineEl.innerHTML = '<div class="outline-item">尚未添加执行步骤</div>';
-    return;
-  }
-  for (const stepId of stepOrder) {
-    const block = stepMap.get(stepId);
-    const title = block.querySelector("strong").textContent;
-    const status = block.dataset.status || "idle";
-    const item = document.createElement("div");
-    item.className = `outline-item ${status === "running" ? "running" : status === "done" ? "done" : status === "failed" ? "failed" : ""}`;
-    item.textContent = `${title} · ${status === "idle" ? "等待" : status === "running" ? "执行中" : status === "done" ? "完成" : "失败"}`;
-    outlineEl.appendChild(item);
-  }
+function setStatus(state, text) {
+  statusDot.className = "status-dot " + state;
+  statusText.textContent = text || "待命";
+  document.getElementById("panelStatus").textContent = text || "待命";
+  document.getElementById("panelLLM").textContent = llmFallbackUsed ? "规则兜底" : (running ? "运行中" : "未触发");
 }
 
-function severityBadgeClass(status) {
-  if (status === "ok") return "badge badge-ok";
-  if (status === "degraded") return "badge badge-warn";
-  return "badge badge-bad";
+function scrollToBottom() {
+  chatOutput.scrollTop = chatOutput.scrollHeight;
 }
 
-async function loadHealthPanel() {
+function cleanText(text) {
+  return (text || "")
+    .replace(/\[run\]\s*/g, "")
+    .replace(/\[step\]\s*/g, "")
+    .replace(/\[thinking\]\[[^\]]*\]\s*/g, "")
+    .replace(/\[tool\]\[[^\]]*\]\s*/g, "")
+    .replace(/\[llm_failed\]\s*/g, "")
+    .replace(/\[run_finished\]\s*/g, "")
+    .replace(/\[error\]\s*/g, "")
+    .replace(/\[warn\]\s*/g, "")
+    .trim();
+}
+
+function getRiskClass(level) {
+  const map = { critical: "risk-critical", high: "risk-high", medium: "risk-medium", low: "risk-low", safe: "risk-safe" };
+  return map[level] || "risk-unknown";
+}
+
+function getRiskLabel(level) {
+  const map = { critical: "极高风险", high: "高风险", medium: "中等风险", low: "低风险", safe: "安全" };
+  return map[level] || level;
+}
+
+// 证据类型 → 中文名 + 说明
+const EVIDENCE_TYPE_MAP = {
+  "semantic": { name: "语义意图分析", desc: "识别邮件语义层面的钓鱼话术与意图判定" },
+  "detection": { name: "多维关联检测", desc: "URL、发件人可信度、内容标记等多维度交叉验证" },
+  "url_reputation": { name: "URL 安全信誉", desc: "验证邮件中 URL 链接的安全信誉评分与风险" },
+  "behavior_anomaly": { name: "行为异常检测", desc: "检测邮件中的异常行为模式（如紧迫威胁措辞）" },
+  "header_validation": { name: "邮件头认证校验", desc: "SPF/DKIM/DMARC 认证协议一致性与真实性校验" },
+  "risk": { name: "风险综合研判", desc: "融合所有维度的分析结果，综合评估风险评分" },
+  "attachment": { name: "附件风险分析", desc: "检测邮件附件的潜在安全风险与恶意倾向" },
+  "sender_profile": { name: "发件人画像", desc: "域名声誉、品牌仿冒、地址结构异常等发件人维度分析" },
+  "threat_intel": { name: "威胁情报关联", desc: "IOC 指标匹配、已知攻击模式对比、ATT&CK 映射" },
+};
+
+function getEvidenceLabel(type) {
+  const info = EVIDENCE_TYPE_MAP[type];
+  return info ? info : { name: type, desc: "" };
+}
+
+// ===== Conversation Storage =====
+function loadConversations() {
   try {
-    const resp = await fetch("/api/health/llm?probe=true");
-    if (!resp.ok) throw new Error("health api failed");
-    const data = await resp.json();
-    const signature = data.service && data.service.signature ? data.service.signature : {};
-    const probe = data.llm && data.llm.probe ? data.llm.probe : {};
-    const badgeClass = severityBadgeClass(data.status);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    conversations = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    conversations = [];
+  }
+  renderConversationList();
+}
 
-    healthPanel.innerHTML = `
-      <div class="health-row"><span class="${badgeClass}">${data.status || "unknown"}</span></div>
-      <div class="health-row">build: ${(data.service && data.service.build) || "-"}</div>
-      <div class="health-row">signature: studio=${!!signature.has_studio_page}, v2=${!!signature.has_v2_stream}, legacy_removed=${!!signature.legacy_analyze_removed}</div>
-      <div class="health-row">model: ${(data.llm && data.llm.model) || "-"}</div>
-      <div class="health-row">probe: ${probe.success ? "success" : "fail"} / latency=${probe.latency_ms ?? "-"}ms</div>
-    `;
-  } catch (err) {
-    healthPanel.innerHTML = '<div class="health-row">健康检查失败</div>';
+function saveConversations() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+  renderConversationList();
+}
+
+function createConversation(subject, sender, body) {
+  const id = generateId();
+  const conv = {
+    id,
+    title: subject || "未命名检测",
+    sender,
+    bodyPreview: body.slice(0, 80),
+    timestamp: Date.now(),
+    report: null,
+    hasResult: false,
+  };
+  conversations.unshift(conv);
+  activeConversationId = id;
+  saveConversations();
+  return conv;
+}
+
+function updateConversation(id, updates) {
+  const idx = conversations.findIndex(c => c.id === id);
+  if (idx >= 0) {
+    conversations[idx] = { ...conversations[idx], ...updates };
+    saveConversations();
   }
 }
 
-function renderRiskScores(result) {
-  const risk = result && result.risk ? result.risk : {};
-  const rule = risk.rule_score;
-  const llm = risk.llm_score;
-  const gap = risk.score_gap;
-  ruleScoreBox.textContent = `规则评分：${Number.isFinite(rule) ? rule : "-"}`;
-  llmScoreBox.textContent = `LLM评分：${Number.isFinite(llm) ? llm : "-"}`;
-  scoreGapBox.textContent = `分差：${Number.isFinite(gap) ? gap : "-"}`;
-
-  const warning = risk.consistency_warning || "";
-  if (warning) {
-    scoreWarningBox.style.display = "block";
-    scoreWarningBox.className = "score-gap-warn";
-    scoreWarningBox.textContent = warning;
+function deleteConversation(id, ev) {
+  if (ev) ev.stopPropagation();
+  conversations = conversations.filter(c => c.id !== id);
+  if (activeConversationId === id) activeConversationId = null;
+  saveConversations();
+  if (conversations.length > 0) {
+    loadConversation(conversations[0].id);
   } else {
-    scoreWarningBox.style.display = "none";
-    scoreWarningBox.textContent = "";
+    resetToEmpty();
   }
 }
 
-function renderEvidence(result) {
-  const items = result && Array.isArray(result.evidence_items) ? result.evidence_items : [];
-  if (items.length === 0) {
-    evidenceList.innerHTML = '<div class="health-row">暂无证据</div>';
+function renderConversationList() {
+  const list = document.getElementById("conversationList");
+  if (!conversations.length) {
+    list.innerHTML = '<div class="empty-conv">暂无历史对话<br>开始一次检测即可创建</div>';
     return;
   }
+  list.innerHTML = conversations.map(conv => `
+    <div class="conversation-item ${conv.id === activeConversationId ? 'active' : ''}" onclick="loadConversation('${conv.id}')">
+      <div class="conv-icon">🎯</div>
+      <div class="conv-body">
+        <div class="conv-title">${escapeHtml(conv.title)}</div>
+        <div class="conv-meta">${formatTime(conv.timestamp)} · ${conv.hasResult ? '已完成' : '进行中'}</div>
+      </div>
+      <div class="conv-delete" onclick="deleteConversation('${conv.id}', event)" title="删除">×</div>
+    </div>
+  `).join("");
+}
 
-  evidenceList.innerHTML = "";
-  items.forEach((item) => {
-    const weight = Math.max(0, Math.min(100, item.weight || 0));
-    const confidence = Math.round((item.confidence || 0) * 100);
-    const div = document.createElement("div");
-    div.className = "evidence-item";
-    div.innerHTML = `
-      <div><strong>${item.type}</strong> · weight=${weight}% · confidence=${confidence}%</div>
-      <div style="margin-top:3px;color:#5a6782;">${item.reason || "-"}</div>
-      <div class="bar-wrap"><div class="bar" style="width:${weight}%;"></div></div>
+function escapeHtml(str) {
+  return (str || "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function loadConversation(id) {
+  const conv = conversations.find(c => c.id === id);
+  if (!conv) return;
+  activeConversationId = id;
+  renderConversationList();
+  document.getElementById("subject").value = conv.title || "";
+  document.getElementById("sender").value = conv.sender || "";
+  document.getElementById("body").value = conv.bodyPreview || "";
+
+  chatOutput.innerHTML = "";
+  if (conv.report) {
+    renderUserBubble(conv);
+    renderReportCard(conv.report);
+    updateOverviewPanel(conv.report);
+  } else {
+    resetToEmpty();
+  }
+}
+
+function resetToEmpty() {
+  chatOutput.innerHTML = "";
+  chatOutput.appendChild(emptyChat);
+  emptyChat.style.display = "flex";
+  clearOverviewPanel();
+}
+
+function renderUserBubble(conv) {
+  const msg = document.createElement("div");
+  msg.className = "message message-user";
+  msg.innerHTML = `
+    <div class="user-bubble">
+      <div style="font-weight:600;margin-bottom:3px;">${escapeHtml(conv.title)}</div>
+      <div style="font-size:12px;opacity:0.85;">${escapeHtml(conv.sender)}</div>
+      <div style="margin-top:6px;font-size:13px;">${escapeHtml(conv.bodyPreview)}</div>
+    </div>
+  `;
+  chatOutput.appendChild(msg);
+}
+
+// ===== Sidebar Toggles =====
+function toggleSidebar(side) {
+  if (side === "left") {
+    const sb = document.getElementById("leftSidebar");
+    sb.classList.toggle("collapsed");
+    document.getElementById("toggleLeft").classList.toggle("active");
+  } else {
+    const sb = document.getElementById("rightSidebar");
+    sb.classList.toggle("collapsed");
+    document.getElementById("toggleRight").classList.toggle("active");
+  }
+}
+
+// ===== Replay Speed =====
+function setReplaySpeed(speed) {
+  replaySpeed = speed;
+  document.getElementById("speedNormal").classList.toggle("active", speed === 1);
+  document.getElementById("speedFast").classList.toggle("active", speed === 2);
+}
+
+// ===== Chat Rendering =====
+function ensureAssistantMessage() {
+  if (!currentAssistantBody) {
+    const msg = document.createElement("div");
+    msg.className = "message message-assistant";
+    msg.innerHTML = `
+      <div class="assistant-avatar">🎯</div>
+      <div class="assistant-body">
+        <div class="assistant-name">钓鱼检测编排器 <span class="tag" id="orchTag">思考中</span></div>
+        <div class="assistant-text" id="orchText"></div>
+      </div>
     `;
-    evidenceList.appendChild(div);
-  });
+    chatOutput.appendChild(msg);
+    currentAssistantBody = msg.querySelector(".assistant-text");
+    currentNarrativeEl = currentAssistantBody;
+  }
+  return currentAssistantBody;
 }
 
-function renderKbHits(result) {
-  const hits = result && result.detection && Array.isArray(result.detection.kb_hits)
-    ? result.detection.kb_hits
-    : [];
-  if (hits.length === 0) {
-    kbHitList.innerHTML = '<div class="health-row">暂无命中</div>';
-    return;
-  }
-
-  kbHitList.innerHTML = "";
-  hits.forEach((hit) => {
-    const item = document.createElement("div");
-    item.className = "kb-item";
-    item.innerHTML = `
-      <div><strong>${hit.title}</strong> <span style="color:#6f7d97;">(${hit.severity}, score=${hit.score})</span></div>
-      <div style="margin-top:3px;">${hit.content || ""}</div>
-    `;
-    kbHitList.appendChild(item);
-  });
+function appendNarrative(text) {
+  const clean = cleanText(text);
+  if (!clean) return;
+  const body = ensureAssistantMessage();
+  const p = document.createElement("p");
+  p.textContent = clean;
+  body.appendChild(p);
+  scrollToBottom();
 }
 
-function resetResultPanels() {
-  lastRunResult = null;
-  ruleScoreBox.textContent = "规则评分：-";
-  llmScoreBox.textContent = "LLM评分：-";
-  scoreGapBox.textContent = "分差：-";
-  scoreWarningBox.style.display = "none";
-  scoreWarningBox.textContent = "";
-  evidenceList.innerHTML = '<div class="health-row">暂无证据</div>';
-  kbHitList.innerHTML = '<div class="health-row">暂无命中</div>';
+function createAgentCard(agentKey, agentName, agentIcon, agentDesc) {
+  const body = ensureAssistantMessage();
+  const card = document.createElement("div");
+  card.className = "agent-card";
+  card.dataset.agentKey = agentKey;
+  card.innerHTML = `
+    <div class="agent-card-header" onclick="toggleAgentCard('${agentKey}')">
+      <div class="agent-card-icon">${agentIcon}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="agent-card-title">${agentName}</div>
+        <div class="agent-card-desc">${agentDesc}</div>
+      </div>
+      <div class="agent-card-status running" id="agentStatus-${agentKey}">执行中</div>
+      <div class="agent-card-toggle" id="agentToggle-${agentKey}">▶</div>
+    </div>
+    <div class="agent-card-body" id="agentBody-${agentKey}">
+      <div class="agent-card-inner">
+        <div class="agent-thinking-text" id="agentThinking-${agentKey}"></div>
+        <div class="agent-tool-row" id="agentTools-${agentKey}"></div>
+        <div class="agent-llm-box" id="agentLLM-${agentKey}" style="display:none;">
+          <div class="agent-llm-label">LLM 深度分析</div>
+          <div class="agent-llm-text typing" id="agentLLMText-${agentKey}"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  body.appendChild(card);
+  currentAgentCard = card;
+  scrollToBottom();
+  return card;
 }
 
-async function replayLastRun(delayMs) {
-  if (running) return;
-  if (!lastRunEvents.length) {
-    appendLine("[replay] 暂无可回放运行");
-    return;
-  }
-
-  timeline.textContent = "";
-  doneCount = 0;
-  updateProgress();
-  for (const stepId of stepOrder) {
-    setStepStatus(stepId, "idle", "等待执行");
-  }
-
-  runState.textContent = "状态：回放中";
-  llmState.textContent = "LLM：回放";
-  for (const event of lastRunEvents) {
-    if (replayRenderer) {
-      replayRenderer(event.type, event.data, true);
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  runState.textContent = "状态：回放完成";
-  if (lastRunResult) {
-    renderRiskScores(lastRunResult);
-    renderEvidence(lastRunResult);
-    renderKbHits(lastRunResult);
+function openAgentCard(agentKey) {
+  const body = document.getElementById(`agentBody-${agentKey}`);
+  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+  if (body && !body.classList.contains("open")) {
+    body.classList.add("open");
+    if (toggle) toggle.classList.add("open");
   }
 }
 
-function setStepStatus(stepId, status, text) {
-  const el = stepMap.get(stepId);
+function closeAgentCard(agentKey) {
+  const body = document.getElementById(`agentBody-${agentKey}`);
+  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+  if (body && body.classList.contains("open")) {
+    body.classList.remove("open");
+    if (toggle) toggle.classList.remove("open");
+  }
+}
+
+function toggleAgentCard(agentKey) {
+  const body = document.getElementById(`agentBody-${agentKey}`);
+  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+  if (!body || !toggle) return;
+  if (body.classList.contains("open")) {
+    body.classList.remove("open");
+    toggle.classList.remove("open");
+  } else {
+    body.classList.add("open");
+    toggle.classList.add("open");
+  }
+}
+
+function addAgentThinking(agentKey, text) {
+  const el = document.getElementById(`agentThinking-${agentKey}`);
   if (!el) return;
-  el.classList.remove("running", "done", "failed");
-  if (status !== "idle") {
-    el.classList.add(status);
+  const clean = cleanText(text);
+  if (!clean) return;
+  openAgentCard(agentKey);
+  const div = document.createElement("div");
+  div.className = "agent-thinking-line";
+  div.textContent = clean;
+  el.appendChild(div);
+  scrollToBottom();
+}
+
+function addAgentTool(agentKey, toolName) {
+  const list = document.getElementById(`agentTools-${agentKey}`);
+  if (!list) return;
+  openAgentCard(agentKey);
+  const chip = document.createElement("span");
+  chip.className = "agent-tool-chip done";
+  chip.innerHTML = `<span>✓</span> ${toolName}`;
+  list.appendChild(chip);
+  scrollToBottom();
+}
+
+function appendAgentLLM(agentKey, chunk) {
+  const box = document.getElementById(`agentLLM-${agentKey}`);
+  const textEl = document.getElementById(`agentLLMText-${agentKey}`);
+  if (!box || !textEl) return;
+  const clean = cleanText(chunk);
+  if (!clean) return;
+  openAgentCard(agentKey);
+  box.style.display = "block";
+  textEl.textContent += clean;
+  scrollToBottom();
+}
+
+function finalizeAgentLLM(agentKey) {
+  const textEl = document.getElementById(`agentLLMText-${agentKey}`);
+  if (textEl) textEl.classList.remove("typing");
+}
+
+function setAgentStatus(agentKey, status, text) {
+  const el = document.getElementById(`agentStatus-${agentKey}`);
+  if (el) {
+    el.className = "agent-card-status " + status;
+    el.textContent = text;
   }
-  el.dataset.status = status;
-  el.querySelector("div").textContent = `状态：${text}`;
-  renderOutline();
 }
 
-document.querySelectorAll(".node").forEach((node) => {
-  node.addEventListener("dragstart", (e) => {
-    e.dataTransfer.setData("step", node.dataset.step);
-    e.dataTransfer.setData("title", node.dataset.title);
-  });
-});
-
-function addStep(stepId, title) {
-  if (!stepId || stepMap.has(stepId)) return;
-  dropHint.style.display = "none";
-  const block = document.createElement("div");
-  block.className = "flow-step";
-  block.dataset.status = "idle";
-  block.id = `step-${stepId}`;
-  block.innerHTML = `<strong>${title}</strong><div style="font-size:12px;color:#6f6553;">状态：等待执行</div>`;
-  canvas.appendChild(block);
-  stepMap.set(stepId, block);
-  stepOrder.push(stepId);
-  renderOutline();
-  updateProgress();
+function addAgentResultInline(agentKey, summary) {
+  const body = document.getElementById(`agentBody-${agentKey}`);
+  if (!body) return;
+  let resultText = "";
+  if (agentKey === "semantic") {
+    resultText = `意图：${summary.intent || "?"} · 置信度 ${(summary.confidence * 100).toFixed(0) || "?"}% · 话术 ${(summary.techniques || []).join(", ") || "无"}`;
+  } else if (agentKey === "detector") {
+    resultText = `发件人 ${(summary.sender_score || 0).toFixed(1)} · URL ${(summary.url_score || 0).toFixed(1)} · 标记 ${(summary.content_flags || []).length} 个 · KB ${summary.kb_hits || 0} 条`;
+  } else if (agentKey === "risk") {
+    resultText = `${getRiskLabel(summary.risk_level)} · 评分 ${summary.risk_score || 0}/100 · ATT&CK ${(summary.attack_techniques || []).join(", ") || "无"}`;
+  } else if (agentKey === "response") {
+    resultText = `处置：${summary.action || "?"} · ${summary.has_alert ? "已告警" : "无告警"}`;
+  } else if (agentKey === "header_forensics") {
+    resultText = `邮件头异常 ${summary.header_anomalies || 0} 项 · 认证 ${summary.auth_status || "?"}`;
+  } else if (agentKey === "sender_profiler") {
+    resultText = `域名声誉 ${summary.domain_reputation || "?"} · 相似域名 ${summary.lookalike_domains || 0} 个`;
+  } else if (agentKey === "threat_intel") {
+    resultText = `IOC ${summary.ioc_count || 0} 个 · 已知威胁 ${summary.known_threats || 0} 条`;
+  } else if (agentKey === "report_composer") {
+    resultText = `报告已生成 · 包含 ${summary.sections || 0} 个章节`;
+  }
+  if (resultText) {
+    const div = document.createElement("div");
+    div.className = "agent-result-line";
+    div.textContent = resultText;
+    body.querySelector(".agent-card-inner").appendChild(div);
+  }
+  // 执行完成后自动折叠，避免留下大片空白
+  closeAgentCard(agentKey);
 }
 
-function loadDefaultFlow() {
-  if (stepOrder.length > 0) return;
-  addStep("semantic", "语义意图分析");
-  addStep("detector", "多维关联检测");
-  addStep("risk", "风险研判");
-  addStep("response", "响应处置");
+// ===== Report Rendering =====
+function renderReportCard(report) {
+  const riskLevel = report.risk_level || "unknown";
+  const riskScore = report.risk_score || 0;
+  const risk = report.risk || {};
+  const response = report.response || {};
+  const evidence = report.evidence_items || [];
+  const sp = report.sender_profiler || {};
+  const hf = report.header_forensics || {};
+  const ti = report.threat_intel || {};
+  const sem = report.semantic || {};
+  const det = report.detection || {};
+
+  let evidenceHtml = "";
+  if (evidence.length > 0) {
+    evidenceHtml = evidence.map(item => {
+      const evInfo = getEvidenceLabel(item.type);
+      return `
+      <div class="report-evidence-item">
+        <div class="evidence-info">
+          <div class="evidence-type">${escapeHtml(evInfo.name)}</div>
+          <div class="evidence-meta">${evInfo.desc ? escapeHtml(evInfo.desc) : ""} · 权重 ${item.weight}% · 置信度 ${Math.round((item.confidence || 0) * 100)}%</div>
+        </div>
+        <div class="evidence-bar-wrap"><div class="evidence-bar" style="width:${item.weight}%;"></div></div>
+      </div>
+    `;
+    }).join("");
+  } else {
+    evidenceHtml = '<div style="font-size:12px;color:var(--muted);">暂无证据</div>';
+  }
+
+  // 构建新 Agent 专项分析区块
+  let senderProfileHtml = "";
+  if (sp.sender_type || sp.domain_reputation) {
+    const reputationColor = sp.domain_reputation === "trusted" ? "#047857" : sp.domain_reputation === "malicious" ? "#b42318" : sp.domain_reputation === "suspicious" ? "#b46a00" : "#6b6b6b";
+    senderProfileHtml = `
+      <div class="report-section">
+        <div class="report-section-title">👤 发件人画像</div>
+        <div class="report-grid">
+          <div class="report-box">
+            <div class="report-box-label">发件人类型</div>
+            <div class="report-box-value" style="font-size:14px;">${escapeHtml(sp.sender_type || "?")}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">域名声誉</div>
+            <div class="report-box-value" style="font-size:14px;color:${reputationColor};">${escapeHtml(sp.domain_reputation || "?")} (${(sp.reputation_score || 0).toFixed(2)})</div>
+          </div>
+        </div>
+        ${sp.brand_impersonated ? `<div style="margin-top:8px;padding:8px 10px;background:#ffeaea;border-radius:8px;font-size:12px;color:#b42318;border:1px solid #fecaca;">⚠ 疑似仿冒品牌：${escapeHtml(sp.brand_impersonated)}</div>` : ""}
+        ${sp.suspicious_patterns && sp.suspicious_patterns.length ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">可疑模式：${sp.suspicious_patterns.join("、")}</div>` : ""}
+        ${sp.explanation ? `<div style="margin-top:8px;font-size:12px;color:var(--text);line-height:1.6;">${escapeHtml(sp.explanation)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  let headerForensicsHtml = "";
+  if (hf.spf_status || hf.auth_alignment) {
+    const authColor = hf.auth_alignment === "pass" ? "#047857" : hf.auth_alignment === "fail" ? "#b42318" : "#b46a00";
+    headerForensicsHtml = `
+      <div class="report-section">
+        <div class="report-section-title">📨 邮件头取证</div>
+        <div class="report-grid">
+          <div class="report-box">
+            <div class="report-box-label">SPF</div>
+            <div class="report-box-value" style="font-size:14px;color:${hf.spf_status === "pass" ? "#047857" : hf.spf_status === "fail" ? "#b42318" : "#6b6b6b"};">${escapeHtml(hf.spf_status || "?")}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">DKIM</div>
+            <div class="report-box-value" style="font-size:14px;color:${hf.dkim_status === "pass" ? "#047857" : hf.dkim_status === "fail" ? "#b42318" : "#6b6b6b"};">${escapeHtml(hf.dkim_status || "?")}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">DMARC</div>
+            <div class="report-box-value" style="font-size:14px;color:${hf.dmarc_status === "pass" ? "#047857" : hf.dmarc_status === "fail" ? "#b42318" : "#6b6b6b"};">${escapeHtml(hf.dmarc_status || "?")}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">认证对齐性</div>
+            <div class="report-box-value" style="font-size:14px;color:${authColor};">${escapeHtml(hf.auth_alignment || "?")}</div>
+          </div>
+        </div>
+        ${hf.header_anomalies && hf.header_anomalies.length ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">异常项：${hf.header_anomalies.map(a => escapeHtml(a)).join("；")}</div>` : ""}
+        ${hf.anomaly_score ? `<div style="margin-top:6px;font-size:12px;color:var(--muted);">异常评分 ${hf.anomaly_score}/100</div>` : ""}
+      </div>
+    `;
+  }
+
+  let threatIntelHtml = "";
+  if (ti.ioc_count > 0 || ti.threat_patterns && ti.threat_patterns.length > 0) {
+    threatIntelHtml = `
+      <div class="report-section">
+        <div class="report-section-title">🛰️ 威胁情报关联</div>
+        <div class="report-grid">
+          <div class="report-box">
+            <div class="report-box-label">IOC 指标数</div>
+            <div class="report-box-value" style="font-size:14px;color:${ti.ioc_count > 0 ? "#b42318" : "#047857"};">${ti.ioc_count}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">威胁评分</div>
+            <div class="report-box-value" style="font-size:14px;color:${(ti.threat_score || 0) >= 60 ? "#b42318" : (ti.threat_score || 0) >= 40 ? "#b46a00" : "#047857"};">${(ti.threat_score || 0).toFixed(0)}/100</div>
+          </div>
+        </div>
+        ${ti.ioc_list && ti.ioc_list.length ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">IOC 详情：${ti.ioc_list.slice(0, 5).map(ioc => escapeHtml(ioc.description)).join("、")}</div>` : ""}
+        ${ti.threat_patterns && ti.threat_patterns.length ? `<div style="margin-top:6px;font-size:12px;color:var(--muted);">威胁话术模式：${ti.threat_patterns.join("、")}</div>` : ""}
+        ${ti.attack_techniques && ti.attack_techniques.length ? `<div style="margin-top:6px;font-size:12px;color:var(--muted);">ATT&CK：${ti.attack_techniques.join(", ")}</div>` : ""}
+        ${ti.explanation ? `<div style="margin-top:8px;font-size:12px;color:var(--text);line-height:1.6;">${escapeHtml(ti.explanation)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  const card = document.createElement("div");
+  card.className = "report-card";
+  card.innerHTML = `
+    <div class="report-header">
+      <div class="report-header-title">钓鱼邮件智能检测报告</div>
+      <div class="risk-badge ${getRiskClass(riskLevel)}">${getRiskLabel(riskLevel)} · ${riskScore}/100</div>
+    </div>
+    <div class="report-body">
+      <div class="report-section">
+        <div class="report-section-title">风险评估</div>
+        <div class="report-grid">
+          <div class="report-box">
+            <div class="report-box-label">综合评分</div>
+            <div class="report-box-value" style="color:${riskScore >= 60 ? '#b42318' : riskScore >= 40 ? '#b46a00' : '#047857'};">${riskScore}/100</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">风险等级</div>
+            <div class="report-box-value" style="font-size:14px;">${getRiskLabel(riskLevel)}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">规则评分</div>
+            <div class="report-box-value">${risk.rule_score ?? "-"}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">LLM 评分</div>
+            <div class="report-box-value">${risk.llm_score ?? "-"}</div>
+          </div>
+        </div>
+        ${risk.consistency_warning ? `<div style="margin-top:10px;padding:9px 11px;background:#fff7e6;border-radius:8px;font-size:12px;color:#b46a00;border:1px solid #fedfb3;">⚠ ${escapeHtml(risk.consistency_warning)}</div>` : ""}
+      </div>
+
+      ${senderProfileHtml}
+      ${headerForensicsHtml}
+
+      <div class="report-section">
+        <div class="report-section-title">🧠 语义意图分析</div>
+        <div class="report-grid">
+          <div class="report-box">
+            <div class="report-box-label">意图判定</div>
+            <div class="report-box-value" style="font-size:14px;">${escapeHtml(sem.intent || "?")}</div>
+          </div>
+          <div class="report-box">
+            <div class="report-box-label">置信度</div>
+            <div class="report-box-value" style="font-size:14px;">${sem.confidence ? (sem.confidence * 100).toFixed(0) + "%" : "?"}</div>
+          </div>
+        </div>
+        ${sem.persuasion_techniques && sem.persuasion_techniques.length ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">话术：${sem.persuasion_techniques.join("、")}</div>` : ""}
+        ${sem.explanation ? `<div style="margin-top:8px;font-size:12px;color:var(--text);line-height:1.6;">${escapeHtml(sem.explanation)}</div>` : ""}
+      </div>
+
+      ${threatIntelHtml}
+
+      <div class="report-section">
+        <div class="report-section-title">处置建议</div>
+        <div class="report-text">
+          ${response.action ? `<div style="margin-bottom:6px;"><strong>处置动作：</strong>${escapeHtml(response.action)}</div>` : ""}
+          ${response.alert_message ? `<div style="margin-bottom:6px;"><strong>告警消息：</strong>${escapeHtml(response.alert_message)}</div>` : ""}
+          ${response.trace_report ? `<div style="margin-bottom:6px;"><strong>溯源分析：</strong>${escapeHtml(response.trace_report)}</div>` : ""}
+          ${response.recommendation ? `<div><strong>安全建议：</strong>${escapeHtml(response.recommendation)}</div>` : ""}
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title">证据权重</div>
+        ${evidenceHtml}
+      </div>
+
+      ${risk.explanation ? `
+      <div class="report-section">
+        <div class="report-section-title">综合研判说明</div>
+        <div class="report-text">${escapeHtml(risk.explanation)}</div>
+      </div>
+      ` : ""}
+    </div>
+  `;
+  chatOutput.appendChild(card);
+  scrollToBottom();
 }
 
-canvas.addEventListener("dragover", (e) => e.preventDefault());
-canvas.addEventListener("drop", (e) => {
-  e.preventDefault();
-  addStep(e.dataTransfer.getData("step"), e.dataTransfer.getData("title"));
-});
+// ===== Right Panel Updates =====
+function clearOverviewPanel() {
+  document.getElementById("panelStatus").textContent = "待命";
+  document.getElementById("panelLLM").textContent = "未触发";
+  document.getElementById("scoreRule").textContent = "-";
+  document.getElementById("scoreLLM").textContent = "-";
+  document.getElementById("scoreDiff").textContent = "分差：-";
+  document.getElementById("evidenceList").innerHTML = '<div class="kb-item-empty">暂无证据</div>';
+  document.getElementById("kbList").innerHTML = '<div class="kb-item-empty">暂无命中</div>';
+}
 
-clearBtn.addEventListener("click", () => {
-  stepOrder.length = 0;
-  stepMap.clear();
-  doneCount = 0;
-  lastRunEvents = [];
-  canvas.innerHTML = "";
-  canvas.appendChild(dropHint);
-  dropHint.style.display = "block";
-  runState.textContent = "状态：待命";
-  llmState.textContent = "LLM：未触发";
-  timeline.textContent = "";
-  resetResultPanels();
-  renderOutline();
-  updateProgress();
-});
+function updateOverviewPanel(report) {
+  const risk = report.risk || {};
+  document.getElementById("scoreRule").textContent = risk.rule_score ?? "-";
+  document.getElementById("scoreLLM").textContent = risk.llm_score ?? "-";
+  const diff = (risk.rule_score !== undefined && risk.llm_score !== undefined) ? Math.abs(risk.rule_score - risk.llm_score) : null;
+  document.getElementById("scoreDiff").textContent = diff !== null ? `分差：${diff}` : "分差：-";
 
-async function loadDbReports() {
-  try {
-    const r = await fetch("/api/reports?limit=5");
-    if (!r.ok) throw new Error("load reports failed");
-    const reports = await r.json();
-    dbList.innerHTML = "";
-    if (!reports || reports.length === 0) {
-      dbList.innerHTML = '<div class="db-item">暂无历史报告</div>';
-      return;
+  const evidence = report.evidence_items || [];
+  const evidenceList = document.getElementById("evidenceList");
+  if (evidence.length) {
+    evidenceList.innerHTML = evidence.map(item => {
+      const evInfo = getEvidenceLabel(item.type);
+      return `
+      <div class="evidence-mini-item">
+        <div style="flex:1;min-width:0;">
+          <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(evInfo.name)}</span>
+          <span style="font-size:10px;color:var(--muted);display:block;margin-top:1px;">${evInfo.desc ? escapeHtml(evInfo.desc) : ""}</span>
+        </div>
+        <span style="font-size:10px;color:var(--muted);margin-right:4px;">${item.weight}%</span>
+        <div class="evidence-mini-bar-wrap"><div class="evidence-mini-bar" style="width:${item.weight}%;"></div></div>
+      </div>
+    `;
+    }).join("");
+  }
+
+  const kbList = document.getElementById("kbList");
+  let kbHits = report.detection?.kb_hits;
+  if (typeof kbHits === "number" && kbHits > 0) {
+    kbList.innerHTML = `<div class="kb-item">命中 ${kbHits} 条知识库记录</div>`;
+  } else if (Array.isArray(kbHits) && kbHits.length > 0) {
+    kbList.innerHTML = kbHits.map(hit => `<div class="kb-item">${escapeHtml(typeof hit === "string" ? hit : hit.title || JSON.stringify(hit))}</div>`).join("");
+  } else {
+    kbList.innerHTML = '<div class="kb-item-empty">暂无命中</div>';
+  }
+}
+
+function updatePanelFromAgentResult(agentKey, resultSummary) {
+  if (agentKey === "detector" && resultSummary.kb_hits > 0) {
+    const kbList = document.getElementById("kbList");
+    if (kbList.querySelector(".kb-item-empty")) {
+      kbList.innerHTML = `<div class="kb-item">命中 ${resultSummary.kb_hits} 条知识库记录</div>`;
     }
-    reports.forEach((item) => {
-      const div = document.createElement("div");
-      const level = item.risk_level || "unknown";
-      const score = item.risk_score ?? "-";
-      div.className = "db-item";
-      div.textContent = `#${item.id || "?"}  风险:${level}  分数:${score}`;
-      dbList.appendChild(div);
-    });
-  } catch (err) {
-    dbList.innerHTML = '<div class="db-item">读取数据库报告失败</div>';
   }
+}
+
+// ===== Run Flow =====
+function startNewChat() {
+  activeConversationId = null;
+  renderConversationList();
+  resetToEmpty();
+  document.getElementById("subject").value = "";
+  document.getElementById("sender").value = "";
+  document.getElementById("body").value = "";
+  inputArea.classList.remove("shrink");
+  document.getElementById("subject").focus();
 }
 
 async function runFlow() {
   if (running) return;
-  if (stepOrder.length === 0) {
-    alert("请先拖拽步骤或点击装载默认流程");
-    return;
-  }
-
   running = true;
-  doneCount = 0;
-  updateProgress();
-  runBtn.disabled = true;
-  runBtn.textContent = "运行中...";
-  runState.textContent = "状态：执行中";
-  llmState.textContent = "LLM：运行中（严格模式）";
-  timeline.textContent = "";
-  lastRunEvents = [];
-  resetResultPanels();
+  llmFallbackUsed = false;
 
-  for (const stepId of stepOrder) {
-    setStepStatus(stepId, "idle", "等待执行");
-  }
+  const subject = document.getElementById("subject").value.trim() || "未命名检测";
+  const sender = document.getElementById("sender").value.trim();
+  const body = document.getElementById("body").value.trim();
+
+  const conv = createConversation(subject, sender, body);
+
+  // UI state
+  runBtn.disabled = true;
+  runBtn.textContent = "⏳ 运行中";
+  runBtn.classList.add("running");
+  inputArea.classList.add("shrink");
+  setStatus("running", "编排器分析中...");
+
+  // Render user message
+  emptyChat.style.display = "none";
+  chatOutput.innerHTML = "";
+  renderUserBubble(conv);
+
+  // Reset assistant state
+  currentAgentKey = null;
+  currentAgentCard = null;
+  currentAssistantBody = null;
+  currentNarrativeEl = null;
+  clearOverviewPanel();
 
   const payload = {
-    subject: document.getElementById("subject").value,
-    sender: document.getElementById("sender").value,
-    body: document.getElementById("body").value,
-    selected_steps: stepOrder,
-    strict_llm: true,
-    execution_mode: execMode.value,
+    subject,
+    sender,
+    body,
+    selected_steps: [],
+    strict_llm: false,
+    execution_mode: "serial",
   };
 
   let resp;
@@ -700,25 +2156,17 @@ async function runFlow() {
     resp = await fetch("/api/v2/runs/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   } catch (err) {
-    appendLine("[error] 无法连接后端接口");
-    runState.textContent = "状态：失败";
-    llmState.textContent = "LLM：连接失败";
-    running = false;
-    runBtn.disabled = false;
-    runBtn.textContent = "运行";
+    setStatus("failed", "连接失败");
+    resetUI();
     return;
   }
 
   if (!resp.ok || !resp.body) {
-    appendLine(`[error] 接口不可用 status=${resp.status}`);
-    runState.textContent = "状态：失败";
-    llmState.textContent = "LLM：接口失败";
-    running = false;
-    runBtn.disabled = false;
-    runBtn.textContent = "运行";
+    setStatus("failed", "接口失败");
+    resetUI();
     return;
   }
 
@@ -726,108 +2174,343 @@ async function runFlow() {
   const decoder = new TextDecoder();
   let buffer = "";
   let currentEvent = "message";
+  let finalReport = null;
 
   const finishRun = () => {
     running = false;
     runBtn.disabled = false;
-    runBtn.textContent = "运行";
-    loadDbReports();
-    loadHealthPanel();
+    runBtn.textContent = "▶ 运行检测";
+    runBtn.classList.remove("running");
+    inputArea.classList.remove("shrink");
   };
 
-  const renderEvent = (eventType, data, isReplay = false) => {
+  const renderEvent = (eventType, data) => {
     if (eventType === "run_started") {
-      appendLine(`[run] ${data.run_id} started steps=${(data.payload && data.payload.selected_steps || []).join(',')}`);
+      setStatus("running", "编排器启动");
       return;
     }
-    if (eventType === "step_started") {
-      setStepStatus(data.step_id, "running", "执行中");
-      appendLine(`[step] ${data.step_name} started`);
+
+    if (eventType === "orchestrator_start") {
+      setStatus("running", "编排器思考中");
+      ensureAssistantMessage();
       return;
     }
+
+    if (eventType === "orchestrator_thinking") {
+      const msg = data.payload?.message?.trim() || "";
+      if (!msg) return;
+      if (msg.includes("规则兜底") || msg.includes("LLM 不可用") || msg.includes("LLM 未配置")) llmFallbackUsed = true;
+      appendNarrative(msg);
+      return;
+    }
+
+    if (eventType === "agent_call") {
+      const agentKey = data.payload?.agent_key || "unknown";
+      const agentName = data.payload?.agent_name || "未知 Agent";
+      const agentIcon = data.payload?.agent_icon || "🤖";
+      const agentDesc = data.payload?.agent_desc || "";
+      currentAgentKey = agentKey;
+      createAgentCard(agentKey, agentName, agentIcon, agentDesc);
+      setStatus("running", `${agentName} 执行中`);
+      return;
+    }
+
+    if (eventType === "agent_result") {
+      const agentKey = data.payload?.agent_key || currentAgentKey;
+      setAgentStatus(agentKey, "done", "已完成");
+      finalizeAgentLLM(agentKey);
+      const summary = data.payload?.result_summary || {};
+      addAgentResultInline(agentKey, summary);
+      updatePanelFromAgentResult(agentKey, summary);
+      currentAgentKey = null;
+      return;
+    }
+
     if (eventType === "step_progress") {
-      const msg = data.payload && data.payload.message ? data.payload.message.trim() : "";
-      if (msg) appendLine(`[thinking][${data.step_name}] ${msg}`);
+      const msg = data.payload?.message?.trim() || "";
+      if (!msg) return;
+      if (msg.includes("规则兜底") || msg.includes("LLM 不可用") || msg.includes("LLM 未配置")) llmFallbackUsed = true;
+      const channel = data.payload?.channel || "thinking";
+      const agentKey = data.step_id || currentAgentKey;
+      if (channel === "llm_chunk") appendAgentLLM(agentKey, msg);
+      else if (channel === "thinking" || channel === "sub_step") addAgentThinking(agentKey, msg);
       return;
     }
+
     if (eventType === "tool_finished") {
-      const tool = data.payload ? data.payload.tool : "tool";
-      appendLine(`[tool][${data.step_name}] ${tool}`);
+      const tool = data.payload?.tool || "tool";
+      const agentKey = data.step_id || currentAgentKey;
+      addAgentTool(agentKey, tool);
       return;
     }
-    if (eventType === "step_finished") {
-      setStepStatus(data.step_id, "done", "已完成");
-      doneCount += 1;
-      updateProgress();
-      appendLine(`[step] ${data.step_name} finished`);
+
+    if (eventType === "report") {
+      finalReport = data.payload || {};
+      renderReportCard(finalReport);
+      updateOverviewPanel(finalReport);
       return;
     }
-    if (eventType === "llm_failed") {
-      llmState.textContent = `LLM：失败 - ${data.payload ? data.payload.message : 'unknown'}`;
-      appendLine(`[llm_failed] ${data.payload ? data.payload.message : 'unknown'}`);
+
+    if (eventType === "orchestrator_done") {
+      const tag = document.getElementById("orchTag");
+      if (tag) { tag.className = "tag"; tag.textContent = "检测完成"; tag.style.background = "#e8f5ec"; tag.style.color = "#0f6b35"; }
       return;
     }
-    if (eventType === "run_failed") {
-      runState.textContent = "状态：失败";
-      llmState.textContent = "LLM：失败（已中止）";
-      appendLine(`[run_failed] ${data.payload ? data.payload.message : 'unknown'}`);
-      if (data.step_id) {
-        setStepStatus(data.step_id, "failed", "失败");
-      }
-      if (!isReplay) finishRun();
-      return;
-    }
+
     if (eventType === "run_finished") {
-      const result = data.payload ? data.payload.result : null;
-      lastRunResult = result;
-      runState.textContent = `状态：完成 风险=${result ? result.risk_level : 'unknown'} 分数=${result ? result.risk_score : 'unknown'}`;
-      llmState.textContent = "LLM：成功";
-      appendLine(`[run_finished] level=${result ? result.risk_level : 'unknown'} score=${result ? result.risk_score : 'unknown'}`);
-      renderRiskScores(result);
-      renderEvidence(result);
-      renderKbHits(result);
-      if (!isReplay) finishRun();
+      const result = data.payload?.result || {};
+      const riskLevel = result.risk_level || "unknown";
+      const riskScore = result.risk_score || 0;
+      setStatus("done", `${getRiskLabel(riskLevel)} · ${riskScore}/100`);
+      if (activeConversationId) {
+        updateConversation(activeConversationId, { report: finalReport || result, hasResult: true });
+      }
+      updateRecentReports();
+      finishRun();
+      return;
+    }
+
+    if (eventType === "llm_failed") {
+      llmFallbackUsed = true;
+      return;
+    }
+
+    if (eventType === "run_failed") {
+      setStatus("failed", "检测失败");
+      const msg = data.payload?.message || "未知错误";
+      appendNarrative(`⚠ 检测失败：${msg}`);
+      const tag = document.getElementById("orchTag");
+      if (tag) { tag.textContent = "失败"; tag.style.background = "#ffeaea"; tag.style.color = "#912727"; }
+      finishRun();
+      return;
     }
   };
-  replayRenderer = renderEvent;
 
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-
     let idx;
     while ((idx = buffer.indexOf("\n\n")) >= 0) {
       const chunk = buffer.slice(0, idx);
       buffer = buffer.slice(idx + 2);
       const lines = chunk.split("\n");
       for (const line of lines) {
-        if (line.startsWith("event:")) {
-          currentEvent = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
+        if (line.startsWith("event:")) currentEvent = line.slice(6).trim();
+        else if (line.startsWith("data:")) {
           const raw = line.slice(5).trim();
           try {
             const payload = JSON.parse(raw);
-            lastRunEvents.push({ type: currentEvent, data: payload });
             renderEvent(currentEvent, payload);
-          } catch (e) {
-            appendLine(`[warn] 无法解析事件: ${raw.slice(0, 60)}`);
-          }
+          } catch (e) {}
         }
       }
     }
   }
 }
 
-runBtn.addEventListener("click", runFlow);
-presetBtn.addEventListener("click", loadDefaultFlow);
-replayBtn.addEventListener("click", () => replayLastRun(180));
-replaySlowBtn.addEventListener("click", () => replayLastRun(300));
-replayFastBtn.addEventListener("click", () => replayLastRun(80));
-renderOutline();
-updateProgress();
-loadDbReports();
-loadHealthPanel();
+function resetUI() {
+  running = false;
+  runBtn.disabled = false;
+  runBtn.textContent = "▶ 运行检测";
+  runBtn.classList.remove("running");
+  inputArea.classList.remove("shrink");
+}
+
+// ===== Dataset Modal =====
+let datasetCache = {};
+
+function openDatasetModal() {
+  document.getElementById("datasetModal").classList.add("open");
+  loadDataset();
+}
+
+function closeDatasetModal() {
+  document.getElementById("datasetModal").classList.remove("open");
+}
+
+function closeDatasetModalOnBackdrop(ev) {
+  if (ev.target.id === "datasetModal") closeDatasetModal();
+}
+
+async function loadDataset() {
+  const body = document.getElementById("datasetBody");
+  const datasetId = document.getElementById("datasetSelect").value;
+  const label = document.getElementById("datasetLabelFilter").value;
+  const q = document.getElementById("datasetSearch").value.trim();
+
+  body.innerHTML = '<div class="dataset-empty">正在加载数据集...</div>';
+
+  const cacheKey = `${datasetId}_${label}_${q}`;
+  try {
+    if (!datasetCache[cacheKey]) {
+      const params = new URLSearchParams();
+      if (label) params.set("label", label);
+      if (q) params.set("q", q);
+      params.set("limit", "50");
+      const resp = await fetch(`/api/datasets/${datasetId}?${params.toString()}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      datasetCache[cacheKey] = await resp.json();
+    }
+    const data = datasetCache[cacheKey];
+    renderDatasetItems(data.items || []);
+  } catch (e) {
+    body.innerHTML = `<div class="dataset-empty">加载失败：${escapeHtml(e.message)}<br>请检查网络连接或稍后重试</div>`;
+  }
+}
+
+function renderDatasetItems(items) {
+  const body = document.getElementById("datasetBody");
+  if (!items.length) {
+    body.innerHTML = '<div class="dataset-empty">没有匹配的邮件样本</div>';
+    return;
+  }
+  body.innerHTML = items.map((item, idx) => `
+    <div class="dataset-item" onclick="useDatasetItem(${idx})">
+      <div class="dataset-item-header">
+        <div class="dataset-item-subject">${escapeHtml(item.subject || "无主题")}</div>
+        <div class="dataset-item-label ${item.label}">${escapeHtml(item.label || "未知")}</div>
+      </div>
+      <div class="dataset-item-sender">${escapeHtml(item.sender || "未知发件人")}</div>
+      <div class="dataset-item-body">${escapeHtml(item.body || "")}</div>
+    </div>
+  `).join("");
+  body.dataset.items = JSON.stringify(items);
+}
+
+function useDatasetItem(idx) {
+  const body = document.getElementById("datasetBody");
+  const items = JSON.parse(body.dataset.items || "[]");
+  const item = items[idx];
+  if (!item) return;
+  closeDatasetModal();
+  // 只填写输入框，不自动开始检测——用户需要手动点击运行
+  document.getElementById("subject").value = item.subject || "";
+  document.getElementById("sender").value = item.sender || "";
+  document.getElementById("body").value = item.body || "";
+  inputArea.classList.remove("shrink");
+  // 清空聊天区域，显示欢迎页面
+  chatOutput.innerHTML = "";
+  chatOutput.appendChild(emptyChat);
+  emptyChat.style.display = "flex";
+  activeConversationId = null;
+  renderConversationList();
+}
+
+// ===== Health Check =====
+async function checkHealth() {
+  try {
+    const resp = await fetch("/api/health/llm?probe=true");
+    const data = await resp.json();
+    const badge = document.getElementById("healthBadge");
+    const modelEl = document.getElementById("healthModel");
+    const latencyEl = document.getElementById("healthLatency");
+
+    badge.textContent = data.status || "unknown";
+    badge.className = "health-badge " + (data.status === "ok" ? "health-ok" : data.status === "degraded" ? "health-degraded" : "health-fail");
+    modelEl.textContent = data.llm?.model || "-";
+    latencyEl.textContent = data.llm?.probe?.latency_ms ? `${data.llm.probe.latency_ms}ms` : "-";
+  } catch (e) {
+    document.getElementById("healthBadge").textContent = "offline";
+    document.getElementById("healthBadge").className = "health-badge health-fail";
+  }
+}
+
+// ===== Recent Reports =====
+async function updateRecentReports() {
+  try {
+    const resp = await fetch("/api/reports?limit=5");
+    const data = await resp.json();
+    const list = document.getElementById("recentList");
+    if (!data || !data.length) {
+      list.innerHTML = '<div class="kb-item-empty">暂无报告</div>';
+      return;
+    }
+    list.innerHTML = data.map((r, i) => `
+      <div class="recent-item" onclick="loadReport(${r.id})">
+        <span class="recent-title">#${r.id} ${getRiskLabel(r.risk_level)}</span>
+        <span class="recent-score">${r.risk_score}分</span>
+      </div>
+    `).join("");
+  } catch (e) {
+    document.getElementById("recentList").innerHTML = '<div class="kb-item-empty">加载失败</div>';
+  }
+}
+
+function safeJsonParse(val) {
+  if (!val) return {};
+  if (typeof val === "object") return val;
+  try { return JSON.parse(val); } catch (e) { return {}; }
+}
+
+async function loadReport(reportId) {
+  try {
+    const resp = await fetch(`/api/reports?limit=50`);
+    const data = await resp.json();
+    const r = data.find(x => x.id === reportId);
+    if (!r) return;
+    const risk = safeJsonParse(r.risk_result);
+    const detection = safeJsonParse(r.detection_result);
+    const response = safeJsonParse(r.response_result);
+    const report = {
+      risk_level: r.risk_level,
+      risk_score: r.risk_score,
+      is_phishing: r.is_phishing,
+      risk: risk,
+      response: response,
+      detection: detection,
+      evidence_items: risk.evidence_items || [],
+    };
+    activeConversationId = null;
+    renderConversationList();
+    chatOutput.innerHTML = "";
+    const msg = document.createElement("div");
+    msg.className = "message message-user";
+    msg.innerHTML = `<div class="user-bubble"><div style="font-weight:600;margin-bottom:3px;">${escapeHtml(r.subject || "历史报告")}</div><div style="font-size:12px;opacity:0.85;">${escapeHtml(r.sender || "")}</div></div>`;
+    chatOutput.appendChild(msg);
+    renderReportCard(report);
+    updateOverviewPanel(report);
+  } catch (e) {}
+}
+
+// ===== Keyboard shortcut =====
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    runFlow();
+  }
+});
+
+// ===== Init =====
+loadConversations();
+checkHealth();
+updateRecentReports();
+setInterval(checkHealth, 30000);
+setStatus("idle", "待命");
+
+// 从首页传入的参数
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const contentParam = params.get("content");
+  const modeParam = params.get("mode");
+  
+  if (contentParam) {
+    if (modeParam === 'prompt') {
+      // 自定义分析模式：内容放入 body，用户直接运行
+      document.getElementById("body").value = decodeURIComponent(contentParam);
+    } else {
+      // 邮件模式：解析内容
+      const content = decodeURIComponent(contentParam);
+      const subjectMatch = content.match(/主题:\s*(.*)/);
+      const senderMatch = content.match(/发件人:\s*(.*)/);
+      const bodyMatch = content.match(/正文:\s*(.*)/s);
+      
+      if (subjectMatch) document.getElementById("subject").value = subjectMatch[1].trim();
+      if (senderMatch) document.getElementById("sender").value = senderMatch[1].trim();
+      if (bodyMatch) document.getElementById("body").value = bodyMatch[1].trim();
+    }
+    inputArea.classList.remove("shrink");
+  }
+})();
 </script>
 </body>
 </html>

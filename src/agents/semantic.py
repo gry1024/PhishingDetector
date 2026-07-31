@@ -60,26 +60,34 @@ class SemanticAgent(BaseAgent):
         # ---- Step 1: 工具预扫描 ----
         combined_text = f"{email.subject} {email.body}"
 
-        self.emit_thinking("🔧 预扫描邮件内容中的钓鱼话术模式...\n", callback)
+        self.emit_thinking("第一步：对邮件内容进行规则化预扫描，识别显性钓鱼模式。", callback)
+        self.emit_sub_step("提取邮件主题、正文、发件人字段，组合为待分析文本", "running", callback)
+        self.emit_sub_step("调用钓鱼话术模式库，匹配紧急施压、权威冒充、凭证窃取等已知话术", "running", callback)
         pattern_result = self.call_tool("scan_phishing_patterns", combined_text, callback=callback)
+        self.emit_sub_step(f"预扫描完成，命中 {pattern_result.output.count('命中')} 个模式", "done", callback)
 
-        self.emit_thinking("🔗 提取邮件中的 URL 链接...\n", callback)
+        self.emit_thinking("第二步：提取邮件中的 URL 链接，作为后续分析的关键锚点。", callback)
+        self.emit_sub_step("使用正则表达式从正文中提取所有 URL", "running", callback)
         url_result = self.call_tool("extract_urls", combined_text, callback=callback)
+        self.emit_sub_step(f"URL 提取完成：{url_result.output}", "done", callback)
 
         # ---- Step 2: 构造 LLM 提示 ----
         self.emit_thinking(
-            "🧠 预扫描完成，正在由 LLM 深度分析邮件语义意图...\n"
-            "   分析维度：意图分类 | 社会工程话术 | AI生成特征\n",
+            "第三步：调用大模型进行深度语义分析，从意图、话术、AI生成特征三个维度综合研判。\n"
+            "   分析维度：意图分类 | 社会工程话术 | AI生成特征",
             callback,
         )
+        self.emit_sub_step("将预扫描结果、邮件全文、URL 列表构造为 LLM 提示词", "running", callback)
         user_prompt = self._build_prompt(email)
 
         # ---- Step 3: LLM 语义分析（带规则兜底） ----
+        self.emit_sub_step("通过 OpenAI 兼容接口调用 Qwen-Plus 模型进行流式分析", "running", callback)
         try:
             result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+            self.emit_sub_step("LLM 返回结构化结果，解析意图、话术、置信度", "done", callback)
         except Exception as e:
-            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
-            self.emit_thinking("⚠️ 启用规则兜底语义分析...\n", callback)
+            self.emit_thinking("⚠️ LLM 不可用，已启用规则兜底语义分析。", callback)
+            self.emit_sub_step(f"规则兜底接管：基于预扫描命中模式生成语义判定（原因：{str(e)[:80]}）", "done", callback)
             result = self._fallback_semantic_result(email, pattern_result, url_result)
 
         semantic = SemanticResult(
@@ -87,6 +95,12 @@ class SemanticAgent(BaseAgent):
             persuasion_techniques=result.get("persuasion_techniques", []),
             explanation=result.get("explanation", ""),
             confidence=float(result.get("confidence", 0.5)),
+        )
+
+        self.emit_sub_step(
+            f"语义意图分析完成：判定为 {semantic.intent}，置信度 {semantic.confidence:.0%}，识别到 {len(semantic.persuasion_techniques)} 种话术",
+            "done",
+            callback,
         )
 
         return {"semantic": semantic}
@@ -117,22 +131,35 @@ class SemanticAgent(BaseAgent):
         if not techniques:
             techniques = ["generic_social_engineering"]
 
+        # 增强兜底解释的自然语言细节
         if "命中" in pattern_result.output or "http://192.168.1.100" in url_text:
             intent = "phishing"
             confidence = 0.82
-            explanation = "规则模式检测到钓鱼诱导信号，且 URL 结构存在可疑特征，已启用安全兜底判定。"
+            explanation = (
+                "规则兜底判定：预扫描命中了明确的钓鱼诱导模式（如紧急施压、账户冻结威胁、凭证验证诱导），"
+                "同时邮件正文包含非官方 IP 地址和异常端口，具有明显的钓鱼链接特征。"
+            )
         elif email.has_attachment and attachment_bec_signals:
             intent = "suspicious"
             confidence = 0.76
-            explanation = "规则兜底识别到附件诱导与付款类业务话术，即使没有显式链接，也需要按可疑邮件处理。"
+            explanation = (
+                "规则兜底判定：邮件包含附件且正文出现付款、单据、发票等 BEC 高频关键词，"
+                "即使没有显式恶意链接，也存在商务欺诈风险，建议按可疑邮件处理。"
+            )
         elif "未发现URL" in url_result.output:
             intent = "legitimate"
             confidence = 0.64
-            explanation = "规则模式未命中明显钓鱼话术，未提取到可疑链接，采用安全放行兜底。"
+            explanation = (
+                "规则兜底判定：预扫描未命中明显钓鱼话术，正文中也未提取到外部 URL，"
+                "暂无典型钓鱼特征，采用安全放行兜底。"
+            )
         else:
             intent = "suspicious"
             confidence = 0.7
-            explanation = "未命中强钓鱼话术，但提取到外部链接，继续采用审慎的可疑判定。"
+            explanation = (
+                "规则兜底判定：未命中强钓鱼话术，但正文中提取到外部链接，"
+                "无法完全排除风险，继续采用审慎的可疑判定。"
+            )
 
         return {
             "intent": intent,

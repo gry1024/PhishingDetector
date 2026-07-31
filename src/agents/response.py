@@ -65,7 +65,8 @@ class ResponseAgent(BaseAgent):
 
         # ---- 安全邮件快速放行 ----
         if risk.risk_level == "safe":
-            self.emit_thinking("✅ 邮件判定为安全，无需处置，直接放行。\n", callback)
+            self.emit_thinking("邮件风险等级为 safe，触发快速放行通道，无需调用 LLM。", callback)
+            self.emit_sub_step("根据风险等级直接匹配处置策略：safe → pass（正常放行）", "done", callback)
             return {"response": ResponseResult(
                 action="pass",
                 alert_message="",
@@ -75,8 +76,16 @@ class ResponseAgent(BaseAgent):
 
         # ---- 钓鱼邮件：生成处置报告 ----
         self.emit_thinking(
-            f"⚠️ 风险等级 {risk.risk_level}，需要生成处置方案...\n"
-            f"   正在调用 LLM 分析攻击手法并制定响应策略...\n",
+            f"风险等级为 {risk.risk_level}（{risk.risk_score}/100），需要生成处置方案。"
+        )
+        self.emit_sub_step(
+            f"匹配策略映射：{risk.risk_level} → 强制处置动作 {self._enforce_policy('alert', risk.risk_level)}",
+            "done",
+            callback,
+        )
+        self.emit_sub_step(
+            "调用 LLM 分析攻击手法、生成告警消息、溯源摘要和用户建议",
+            "running",
             callback,
         )
 
@@ -88,20 +97,28 @@ class ResponseAgent(BaseAgent):
         )
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+            self.emit_sub_step("LLM 生成处置报告完成，提取 action、alert_message、trace_report、recommendation", "done", callback)
         except Exception as e:
-            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}", callback)
-            self.emit_thinking("⚠️ 启用规则化响应兜底...", callback)
+            self.emit_thinking("⚠️ LLM 不可用，已启用规则化响应兜底。", callback)
+            self.emit_sub_step(f"规则兜底接管：按风险等级匹配默认处置策略（原因：{str(e)[:80]}）", "done", callback)
             llm_result = self._fallback_response_result(risk)
 
         # 强制执行策略映射（安全底线）
         action = llm_result.get("action", "alert")
         action = self._enforce_policy(action, risk.risk_level)
+        self.emit_sub_step(f"最终处置动作：{action}（已强制执行策略安全底线）", "done", callback)
 
         response = ResponseResult(
             action=action,
             alert_message=llm_result.get("alert_message", ""),
             trace_report=llm_result.get("trace_report", ""),
             recommendation=llm_result.get("recommendation", ""),
+        )
+
+        self.emit_sub_step(
+            f"响应处置完成：动作={action}，告警长度={len(response.alert_message)}字，建议长度={len(response.recommendation)}字",
+            "done",
+            callback,
         )
 
         return {"response": response}
@@ -112,9 +129,12 @@ class ResponseAgent(BaseAgent):
         action = policy.get(risk.risk_level, "alert")
         return {
             "action": action,
-            "alert_message": f"风险等级为 {risk.risk_level}，已按规则策略执行自动处置。",
-            "trace_report": "规则模式识别出高风险社工特征，建议即时隔离并进行人工复核。",
-            "recommendation": "请勿点击邮件中的任何链接，优先人工确认并同步安全团队。",
+            "alert_message": f"检测到风险等级为 {risk.risk_level}（{risk.risk_score}/100）的钓鱼邮件，已自动执行 {action} 处置。",
+            "trace_report": (
+                f"规则模式识别出高风险社工特征。攻击技术：{', '.join(risk.attack_techniques) or '未知'}。"
+                f"风险研判说明：{risk.explanation[:120]}"
+            ),
+            "recommendation": "请勿点击邮件中的任何链接或下载附件，优先通过官方渠道人工确认，并同步安全团队进一步调查。",
         }
 
     def _enforce_policy(self, action: str, risk_level: str) -> str:

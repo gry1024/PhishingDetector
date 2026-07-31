@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Phishing Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Fustat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --text-black: #000000;
+      --text-gray: #505050;
+      --text-light-gray: #f8f8f8;
+      --green-upgrade: rgba(90,225,76,0.89);
+      --dark-badge: #0e1311;
+      --white: #ffffff;
+      --overlay-dark: rgba(0,0,0,0.24);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Schibsted Grotesk', 'Noto Sans SC', sans-serif;
+      background: var(--bg-dark);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== 视频背景 ===== */
+    #video-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 115%;
+      height: 115%;
+      object-fit: cover;
+      object-position: center top;
+      z-index: -2;
+      opacity: 0;
+    }
+
+    /* 暗色叠加层 */
+    .video-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(10,10,15,0.85) 0%, rgba(10,10,15,0.7) 100%);
+      z-index: -1;
+    }
+
+    /* ===== 导航栏 ===== */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 120px;
+      position: relative;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 24px;
+      letter-spacing: -1.44px;
+      color: var(--white);
+    }
+
+    .nav-menu {
+      display: flex;
+      gap: 34px;
+    }
+
+    .nav-menu-item {
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      letter-spacing: -0.2px;
+      color: var(--white);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-menu-item:hover {
+      opacity: 0.8;
+    }
+
+    .nav-right {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-signup {
+      width: 82px;
+      padding: 10px 0;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-signup:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .btn-login {
+      width: 101px;
+      padding: 10px 0;
+      background: #000;
+      border: none;
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-login:hover {
+      background: #222;
+    }
+
+    /* ===== Hero 区域 ===== */
+    .hero {
+      padding: 60px 120px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: -50px;
+    }
+
+    /* 徽章 */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--dark-badge);
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-bottom: 34px;
+    }
+
+    .hero-badge svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--white);
+    }
+
+    .hero-badge span {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--white);
+    }
+
+    /* 主标题 */
+    .hero-title {
+      font-family: 'Fustat', sans-serif;
+      font-weight: 700;
+      font-size: 80px;
+      letter-spacing: -4.8px;
+      color: var(--white);
+      text-align: center;
+      margin-bottom: 34px;
+      line-height: 1;
+    }
+
+    /* 副标题 */
+    .hero-subtitle {
+      font-family: 'Fustat', sans-serif;
+      font-weight: 500;
+      font-size: 20px;
+      letter-spacing: -0.4px;
+      color: rgba(255,255,255,0.7);
+      text-align: center;
+      max-width: 736px;
+      width: 542px;
+      margin-bottom: 44px;
+      line-height: 1.5;
+    }
+
+    /* ===== 搜索框 ===== */
+    .search-box {
+      max-width: 728px;
+      width: 100%;
+      height: 200px;
+      background: var(--overlay-dark);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .search-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .credits-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--white);
+    }
+
+    .btn-upgrade {
+      background: var(--green-upgrade);
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .ai-powered {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--white);
+    }
+
+    .ai-powered svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .search-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 56px;
+      background: var(--white);
+      border: none;
+      border-radius: 12px;
+      padding: 0 20px;
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-size: 16px;
+      color: #000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .search-input::placeholder {
+      color: rgba(0,0,0,0.6);
+    }
+
+    .search-input:focus {
+      outline: none;
+    }
+
+    .btn-submit {
+      width: 56px;
+      height: 56px;
+      background: #000;
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-submit:hover {
+      transform: scale(1.05);
+    }
+
+    .btn-submit svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--white);
+    }
+
+    .search-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 6px;
+      color: var(--white);
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .action-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--white);
+    }
+
+    .char-counter {
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ===== 检测区域（三栏布局）===== */
+    #detection-section {
+      display: none;
+      min-height: 100vh;
+      background: var(--bg-dark);
+    }
+
+    #detection-section.active {
+      display: flex;
+    }
+
+    /* 左侧边栏 */
+    .sidebar {
+      width: 240px;
+      background: #0f0f14;
+      border-right: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar-title {
+      font-family: 'Fustat', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .history-item {
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: background 0.2s;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .history-item.active {
+      background: rgba(59,130,246,0.2);
+    }
+
+    /* 中间聊天区 */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0f0f14;
+    }
+
+    .chat-title {
+      font-family: 'Fustat', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      max-width: 85%;
+      animation: msgIn 0.3s ease;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { align-self: flex-end; }
+    .message.assistant { align-self: flex-start; }
+
+    .message-content {
+      padding: 14px 18px;
+      border-radius: 16px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .message.user .message-content {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.assistant .message-content {
+      background: #1a1a24;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* 输入区 */
+    .input-area {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      background: #0f0f14;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .input-wrapper textarea {
+      flex: 1;
+      background: #1a1a24;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: var(--white);
+      font-family: 'Schibsted Grotesk', sans-serif;
+      font-size: 0.95rem;
+      resize: none;
+      min-height: 48px;
+      max-height: 200px;
+      line-height: 1.5;
+    }
+
+    .input-wrapper textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn:hover { transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 右侧面板 */
+    .right-panel {
+      width: 340px;
+      background: #0f0f14;
+      border-left: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+
+    .panel-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .panel-tab {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: rgba(255,255,255,0.7);
+      border: none;
+      background: none;
+      font-family: 'Schibsted Grotesk', sans-serif;
+    }
+
+    .panel-tab:hover { background: rgba(255,255,255,0.08); }
+    .panel-tab.active {
+      background: rgba(59,130,246,0.2);
+      color: #3b82f6;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    /* Agent 卡片 */
+    .agent-card {
+      margin-bottom: 10px;
+      border-radius: 14px;
+      background: #1a1a24;
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+
+    .agent-card-header {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .agent-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+    }
+
+    .agent-icon.semantic { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .agent-icon.detection { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .agent-icon.threat { background: rgba(239,68,68,0.2); color: #f87171; }
+    .agent-icon.response { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+    .agent-name { flex: 1; font-weight: 500; font-size: 0.9rem; }
+
+    .agent-status {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .agent-status.running {
+      background: rgba(59,130,246,0.2);
+      color: #60a5fa;
+    }
+
+    .agent-status.done {
+      background: rgba(34,197,94,0.2);
+      color: #4ade80;
+    }
+
+    .agent-card-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .agent-card-body.open {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .agent-card-inner {
+      padding: 12px 14px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    /* 报告样式 */
+    .report-section {
+      background: #1a1a24;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .report-title {
+      font-family: 'Fustat', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .risk-score {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+    }
+
+    .score-value {
+      font-size: 2.5rem;
+      font-weight: 600;
+    }
+
+    .score-value.high { color: #ef4444; }
+    .score-value.medium { color: #f59e0b; }
+    .score-value.low { color: #22c55e; }
+
+    .score-label {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.9rem;
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: rgba(255,255,255,0.7); }
+
+    /* 数据库模态框 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: #1a1a24;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 24px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-family: 'Fustat', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.7);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .dataset-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dataset-item:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #3b82f6;
+    }
+
+    .dataset-name { font-weight: 500; margin-bottom: 4px; }
+    .dataset-desc { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+    .dataset-count { font-size: 0.75rem; color: #3b82f6; margin-top: 6px; }
+
+    /* 响应式 */
+    @media (max-width: 1024px) {
+      .right-panel { display: none; }
+      .navbar { padding: 16px 40px; }
+      .hero { padding: 60px 40px 0; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .nav-menu { display: none; }
+      .navbar { padding: 16px 20px; }
+      .hero { padding: 40px 20px 0; }
+      .hero-title { font-size: 48px; letter-spacing: -2px; }
+      .search-box { height: auto; }
+      .search-main { flex-direction: column; padding: 16px; }
+      .search-input { width: 100%; }
+      .btn-submit { width: 100%; border-radius: 12px; height: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 视频背景 -->
+  <video id="video-bg" autoplay muted loop playsinline>
+    <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4" type="video/mp4">
+  </video>
+  <div class="video-overlay"></div>
+
+  <!-- 导航栏 -->
+  <nav class="navbar">
+    <div class="nav-logo">Logoipsum</div>
+    <div class="nav-menu">
+      <div class="nav-menu-item">Platform</div>
+      <div class="nav-menu-item">Features <svg width="10" height="6" viewBox="0 0 10 6"><path d="M1 1L5 5L9 1" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
+      <div class="nav-menu-item">Projects</div>
+      <div class="nav-menu-item">Community</div>
+      <div class="nav-menu-item">Contact</div>
+    </div>
+    <div class="nav-right">
+      <button class="btn-signup">Sign Up</button>
+      <button class="btn-login">Log In</button>
+    </div>
+  </nav>
+
+  <!-- Hero 区域 -->
+  <section class="hero" id="hero-section">
+    <div class="hero-badge">
+      <svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+      <span>New</span>
+      <span style="margin-left: 4px; color: rgba(255,255,255,0.6);">Discover what's possible</span>
+    </div>
+
+    <h1 class="hero-title">Transform Data Quickly</h1>
+    <p class="hero-subtitle">Upload your information and get powerful insights right away. Work smarter and achieve goals effortlessly.</p>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+      <div class="search-top">
+        <div class="credits-info">
+          <span>60/450 credits</span>
+          <button class="btn-upgrade">Upgrade</button>
+        </div>
+        <div class="ai-powered">
+          <svg viewBox="0 0 24 24" fill="url(#grad)">
+            <defs>
+              <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#8b5cf6"/>
+                <stop offset="100%" style="stop-color:#3b82f6"/>
+              </linearGradient>
+            </defs>
+            <path d="M12 2L14.5 7.5L20 8.5L15.5 12.5L17 18L12 15L7 18L8.5 12.5L4 8.5L9.5 7.5L12 2Z"/>
+          </svg>
+          <span>Powered by GPT-4o</span>
+        </div>
+      </div>
+
+      <div class="search-main">
+        <input type="text" class="search-input" id="main-input" placeholder="Type question... 输入邮件内容进行钓鱼检测...">
+        <button class="btn-submit" onclick="handleSearch()">
+          <svg viewBox="0 0 24 24"><path d="M12 4L20 12L12 20L12 4Z"/></svg>
+        </button>
+      </div>
+
+      <div class="search-bottom">
+        <div class="search-actions">
+          <button class="action-btn" onclick="openDatasetModal()">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            Attach
+          </button>
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            Voice
+          </button>
+          <button class="action-btn">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Prompts
+          </button>
+        </div>
+        <div class="char-counter">0/3,000</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 检测状态 - 三栏布局 -->
+  <section id="detection-section">
+    <!-- 左侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">对话历史</div>
+      </div>
+      <div class="history-list">
+        <div class="history-item active">当前会话</div>
+      </div>
+    </aside>
+
+    <!-- 中间聊天区 -->
+    <main class="main-area">
+      <header class="chat-header">
+        <div class="chat-title">AI 钓鱼邮件检测</div>
+        <button class="btn-login" onclick="resetToHero()" style="padding: 8px 16px; font-size: 0.85rem;">
+          ← 返回
+        </button>
+      </header>
+
+      <div class="chat-messages" id="chat-messages"></div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="message-input" placeholder="输入您的问题或分析请求..." rows="1"></textarea>
+          <button class="send-btn" onclick="sendMessage()">↑</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧面板 -->
+    <aside class="right-panel">
+      <div class="panel-header">
+        <span style="color: #3b82f6;">🤖</span>
+        <span>Agent 状态</span>
+      </div>
+      <div class="panel-tabs">
+        <button class="panel-tab active" onclick="switchPanel('agents')">Agents</button>
+        <button class="panel-tab" onclick="switchPanel('report')">报告</button>
+      </div>
+      <div class="panel-content" id="panel-content"></div>
+    </aside>
+  </section>
+
+  <!-- 数据库模态框 -->
+  <div class="modal-overlay" id="dataset-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">选择示例邮件</h3>
+        <button class="modal-close" onclick="closeDatasetModal()">×</button>
+      </div>
+      <div id="dataset-list">
+        <p style="color: rgba(255,255,255,0.5);">加载中...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 视频自定义 JS Fade 系统 =====
+    const video = document.getElementById('video-bg');
+    let fadingOutRef = false;
+    let animationFrameId = null;
+
+    function fadeIn() {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      
+      let opacity = video.style.opacity || 0;
+      function step() {
+        opacity = parseFloat(opacity) + 0.04;
+        if (opacity >= 1) {
+          video.style.opacity = 1;
+          return;
+        }
+        video.style.opacity = opacity;
+        animationFrameId = requestAnimationFrame(step);
+      }
+      video.style.opacity = 0;
+      step();
+    }
+
+    function fadeOut() {
+      if (fadingOutRef) return;
+      fadingOutRef = true;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      
+      let opacity = parseFloat(video.style.opacity) || 1;
+      function step() {
+        opacity -= 0.04;
+        if (opacity <= 0) {
+          video.style.opacity = 0;
+          fadingOutRef = false;
+          // 视频结束后重播
+          setTimeout(() => {
+            video.currentTime = 0;
+            video.play();
+            fadeIn();
+          }, 100);
+          return;
+        }
+        video.style.opacity = opacity;
+        animationFrameId = requestAnimationFrame(step);
+      }
+      step();
+    }
+
+    video.addEventListener('loadeddata', function() {
+      video.style.opacity = 0;
+      fadeIn();
+    });
+
+    video.addEventListener('timeupdate', function() {
+      const duration = video.duration;
+      const currentTime = video.currentTime;
+      if (duration && (duration - currentTime) <= 0.55 && !fadingOutRef) {
+        fadeOut();
+      }
+    });
+
+    video.addEventListener('ended', function() {
+      video.style.opacity = 0;
+      setTimeout(() => {
+        video.currentTime = 0;
+        video.play();
+        fadeIn();
+      }, 100);
+    });
+
+    // ===== 搜索/检测功能 =====
+    function handleSearch() {
+      const input = document.getElementById('main-input').value.trim();
+      if (!input) {
+        alert('请输入内容');
+        return;
+      }
+      startDetection(input);
+    }
+
+    // 回车搜索
+    document.getElementById('main-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleSearch();
+    });
+
+    // 开始检测
+    function startDetection(content) {
+      // 切换到三栏布局
+      document.getElementById('hero-section').style.display = 'none';
+      document.getElementById('detection-section').classList.add('active');
+
+      // 添加用户消息
+      addMessage('user', content);
+
+      // 开始检测
+      runDetection(content);
+    }
+
+    // ===== 三栏布局功能 =====
+    function addMessage(role, content) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.innerHTML = `<div class="message-content">${escapeHtml(content).replace(/\n/g, '<br>')}</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function runDetection(content) {
+      const input = document.getElementById('message-input');
+      input.disabled = true;
+
+      try {
+        const res = await fetch('/api/v2/runs/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, mode: 'analyze' })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const text = decoder.decode(value);
+          const lines = text.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                handleSSERecord(data);
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (e) {
+        addMessage('assistant', '检测失败: ' + e.message);
+      }
+
+      input.disabled = false;
+    }
+
+    function handleSSERecord(data) {
+      const type = data.type;
+      const content = data.content;
+
+      if (type === 'message' || type === 'final') {
+        addMessage('assistant', content);
+      } else if (type === 'agent_start' || type === 'agent_thinking') {
+        updateAgentCard(data.agent, 'running', content);
+      } else if (type === 'agent_result') {
+        updateAgentCard(data.agent, 'done', content);
+      } else if (type === 'final_report') {
+        renderReport(typeof content === 'string' ? JSON.parse(content) : content);
+      } else if (type === 'error') {
+        addMessage('assistant', '错误: ' + content);
+      }
+    }
+
+    const agentNames = {
+      'semantic': '语义意图分析',
+      'detection': '多维关联检测',
+      'threat': '威胁情报研判',
+      'response': '响应处置建议'
+    };
+
+    function updateAgentCard(agent, status, thinking) {
+      const panel = document.getElementById('panel-content');
+      let card = document.getElementById(`agent-${agent}`);
+
+      if (!card) {
+        const div = document.createElement('div');
+        div.id = `agent-${agent}`;
+        div.className = 'agent-card';
+        div.innerHTML = `
+          <div class="agent-card-header" onclick="toggleAgentCard('${agent}')">
+            <div class="agent-icon ${agent}">🤖</div>
+            <span class="agent-name">${agentNames[agent] || agent}</span>
+            <span class="agent-status ${status}">${status === 'running' ? '分析中' : '完成'}</span>
+          </div>
+          <div class="agent-card-body ${status === 'running' ? 'open' : ''}">
+            <div class="agent-card-inner">${escapeHtml(thinking)}</div>
+          </div>
+        `;
+        panel.appendChild(div);
+      } else {
+        const body = card.querySelector('.agent-card-body');
+        const statusEl = card.querySelector('.agent-status');
+        const inner = card.querySelector('.agent-card-inner');
+
+        if (status === 'done') {
+          statusEl.className = 'agent-status done';
+          statusEl.textContent = '完成';
+        }
+        inner.textContent = thinking;
+      }
+    }
+
+    function toggleAgentCard(agent) {
+      const card = document.getElementById(`agent-${agent}`);
+      const body = card.querySelector('.agent-card-body');
+      body.classList.toggle('open');
+    }
+
+    function renderReport(data) {
+      const panel = document.getElementById('panel-content');
+      const riskScore = data.risk_score ?? data.riskScore ?? 0;
+      
+      let riskLevel = 'low', riskText = '安全';
+      if (riskScore >= 70) { riskLevel = 'high'; riskText = '高风险'; }
+      else if (riskScore >= 40) { riskLevel = 'medium'; riskText = '中等风险'; }
+
+      let html = `
+        <div class="report-section">
+          <div class="report-title">🛡️ 风险评估</div>
+          <div class="risk-score">
+            <div class="score-value ${riskLevel}">${riskScore}</div>
+            <div>
+              <div>${riskText}</div>
+              <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">风险评分</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (data.sender_profile || data.senderProfile) {
+        const sp = data.sender_profile || data.senderProfile;
+        html += `
+          <div class="report-section">
+            <div class="report-title">👤 发件人画像</div>
+            <div class="detail-row"><span class="detail-label">域名</span><span>${sp.domain || '-'}</span></div>
+            <div class="detail-row"><span class="detail-label">信誉分</span><span>${sp.reputation || '-'}</span></div>
+          </div>
+        `;
+      }
+
+      if (data.semantic_intent || data.semanticIntent) {
+        const si = data.semantic_intent || data.semanticIntent;
+        html += `
+          <div class="report-section">
+            <div class="report-title">🧠 语义意图</div>
+            <div class="detail-row"><span class="detail-label">意图</span><span>${si.intent || '-'}</span></div>
+            <div class="detail-row"><span class="detail-label">置信度</span><span>${si.confidence || '-'}</span></div>
+          </div>
+        `;
+      }
+
+      if (data.recommendation || data.recommendations) {
+        const rec = data.recommendation || data.recommendations;
+        html += `
+          <div class="report-section">
+            <div class="report-title">💡 处置建议</div>
+            <div style="line-height: 1.8;">${Array.isArray(rec) ? rec.map(r => '• ' + r).join('<br>') : rec}</div>
+          </div>
+        `;
+      }
+
+      panel.innerHTML = html;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('message-input');
+      const content = input.value.trim();
+      if (!content || input.disabled) return;
+
+      addMessage('user', content);
+      input.value = '';
+      input.disabled = true;
+
+      try {
+        const res = await fetch('/api/analyze/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let assistantMsg = '';
+
+        const div = document.createElement('div');
+        div.className = 'message assistant';
+        div.innerHTML = '<div class="message-content"></div>';
+        document.getElementById('chat-messages').appendChild(div);
+        const contentDiv = div.querySelector('.message-content');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          assistantMsg += text;
+          contentDiv.innerHTML = escapeHtml(assistantMsg).replace(/\n/g, '<br>');
+          document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+        }
+      } catch (e) {
+        addMessage('assistant', '错误: ' + e.message);
+      }
+      input.disabled = false;
+    }
+
+    function resetToHero() {
+      document.getElementById('detection-section').classList.remove('active');
+      document.getElementById('hero-section').style.display = 'flex';
+      document.getElementById('chat-messages').innerHTML = '';
+      document.getElementById('panel-content').innerHTML = '';
+    }
+
+    function switchPanel(panelName) {
+      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // ===== 数据库功能 =====
+    function openDatasetModal() {
+      document.getElementById('dataset-modal').classList.add('active');
+      loadDatasets();
+    }
+
+    function closeDatasetModal() {
+      document.getElementById('dataset-modal').classList.remove('active');
+    }
+
+    async function loadDatasets() {
+      const container = document.getElementById('dataset-list');
+      try {
+        const res = await fetch('/api/datasets');
+        const data = await res.json();
+        
+        if (!data.datasets || data.datasets.length === 0) {
+          container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">暂无可用数据集</p>';
+          return;
+        }
+
+        container.innerHTML = data.datasets.map((ds, i) => `
+          <div class="dataset-item" onclick="selectDataset(${i})">
+            <div class="dataset-name">${ds.name}</div>
+            <div class="dataset-desc">${ds.description || '暂无描述'}</div>
+            <div class="dataset-count">${ds.count || 0} 条样本</div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = '<p style="color: #ef4444;">加载失败: ' + e.message + '</p>';
+      }
+    }
+
+    async function selectDataset(index) {
+      try {
+        const res = await fetch(`/api/datasets/${index}/items?limit=5`);
+        const data = await res.json();
+        
+        if (!data.items || data.items.length === 0) {
+          alert('该数据集为空');
+          return;
+        }
+
+        const item = data.items[Math.floor(Math.random() * data.items.length)];
+        
+        const content = `主题: ${item.subject || item.Email_Subject || '无主题'}\n发件人: ${item.sender || item.Sender_Email || 'unknown@example.com'}\n\n正文:\n${item.body || item.Email_Content || item.content || ''}`;
+        
+        document.getElementById('main-input').value = content;
+        closeDatasetModal();
+      } catch (e) {
+        alert('加载样本失败: ' + e.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 回车发送
+    document.getElementById('message-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>

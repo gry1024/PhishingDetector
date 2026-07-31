@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel, Field
 
 
@@ -122,6 +122,10 @@ class WorkflowState(BaseModel):
     evidence_items: list[EvidenceItem] = Field(default_factory=list)
     workflow_log: list[str] = Field(default_factory=list)
     is_phishing: bool = False  # 最终判定结果
+    # 新增子 Agent 结果（使用 Any 类型以兼容非 Pydantic 数据类）
+    sender_profiler_result: Optional[Any] = None
+    header_forensics_result: Optional[Any] = None
+    threat_intel_result: Optional[Any] = None
 
     class Config:
         arbitrary_types_allowed = True

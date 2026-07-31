@@ -14,7 +14,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
-from src.llm import get_llm, LLMClient
+from src.llm import get_llm, is_llm_available, LLMClient, LLMUnavailableError
 from src.models import EmailInput
 from src.tools import ToolResult
 
@@ -87,6 +87,14 @@ class BaseAgent(ABC):
                 "data": {"agent": self.name, "chunk": text}
             })
 
+    def emit_sub_step(self, text: str, status: str = "running", callback: EventCallback = None):
+        """推送 Agent 内部工作流子步骤到前端"""
+        if callback:
+            callback({
+                "type": "sub_step",
+                "data": {"agent": self.name, "text": text, "status": status}
+            })
+
     def emit_llm_chunk(self, text: str, callback: EventCallback = None):
         """推送 LLM 流式输出的单个 token 到前端"""
         if callback:
@@ -112,6 +120,10 @@ class BaseAgent(ABC):
         而非全部拿到后再假装打字。后端自然阻塞到流结束才返回，
         下一个 agent 不会提前启动。
         """
+        # 前置检查：LLM 未配置时直接抛出，跳过 stream→sync→fail 三步链
+        if not is_llm_available():
+            raise LLMUnavailableError("LLM 未配置 API Key，已跳过 LLM 分析")
+
         self.emit_thinking("⏳ 正在调用 LLM 深度分析...\n", callback)
 
         json_buffer = ""
@@ -167,6 +179,10 @@ class BaseAgent(ABC):
                 "401" in err_text
                 or "authorized_error" in err_text
                 or "invalid api key" in err_text
+                or "未设置" in str(e)
+                or "not set" in err_text
+                or "not configured" in err_text
+                or "llm unavailable" in err_text
             )
 
             if is_auth_error:
