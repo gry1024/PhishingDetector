@@ -11,6 +11,7 @@ Agent 基类
 
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
@@ -218,38 +219,101 @@ class BaseAgent(ABC):
             json_str = "\n".join(lines).strip()
 
         def _try_parse(raw: str) -> dict:
-            return json.loads(raw)
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                return parsed
+            raise ValueError("LLM JSON 根对象不是 object")
 
+        def _sanitize(raw: str) -> str:
+            return (raw or "").replace("\ufeff", "").strip()
+
+        def _remove_trailing_commas(raw: str) -> str:
+            return re.sub(r",\s*([}\]])", r"\1", raw)
+
+        def _extract_balanced_object(raw: str) -> str:
+            """提取首个平衡的 JSON 对象片段，忽略对象外的噪声文本。"""
+            start = raw.find("{")
+            if start < 0:
+                return ""
+            depth = 0
+            in_str = False
+            escaped = False
+            for i in range(start, len(raw)):
+                ch = raw[i]
+                if in_str:
+                    if escaped:
+                        escaped = False
+                    elif ch == "\\":
+                        escaped = True
+                    elif ch == '"':
+                        in_str = False
+                    continue
+                if ch == '"':
+                    in_str = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        return raw[start:i + 1]
+            return ""
+
+        def _attempt_parse(raw: str) -> dict:
+            candidate = _sanitize(raw)
+            variants = []
+
+            # 原文与去尾逗号版本
+            if candidate:
+                variants.append(candidate)
+                variants.append(_remove_trailing_commas(candidate))
+
+            # 若存在对象外噪声，提取平衡对象后再试
+            balanced = _extract_balanced_object(candidate)
+            if balanced:
+                variants.append(balanced)
+                variants.append(_remove_trailing_commas(balanced))
+
+            seen = set()
+            for v in variants:
+                if not v or v in seen:
+                    continue
+                seen.add(v)
+                try:
+                    return _try_parse(v)
+                except Exception:
+                    continue
+            raise ValueError(f"LLM JSON 解析失败: {candidate[:300]}")
+
+        # 1) 直接解析（含容错）
         try:
-            parsed = _try_parse(json_str)
+            parsed = _attempt_parse(json_str)
             self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
             return parsed
-        except json.JSONDecodeError:
+        except Exception:
             pass
 
-        # 尝试从 markdown 代码块提取
+        # 2) 尝试从 markdown 代码块提取
         try:
             if "```json" in json_str:
                 start = json_str.index("```json") + 7
                 end = json_str.index("```", start)
-                parsed = _try_parse(json_str[start:end].strip())
+                parsed = _attempt_parse(json_str[start:end])
                 self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
                 return parsed
             if "```" in json_str:
                 start = json_str.index("```") + 3
                 end = json_str.index("```", start)
-                parsed = _try_parse(json_str[start:end].strip())
+                parsed = _attempt_parse(json_str[start:end])
                 self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
                 return parsed
         except Exception:
             pass
 
-        # 尝试从首个 { 到最后一个 } 提取 JSON（处理前缀说明文本）
+        # 3) 最后兜底：首个平衡对象提取
         try:
-            l_idx = json_str.find("{")
-            r_idx = json_str.rfind("}")
-            if l_idx >= 0 and r_idx > l_idx:
-                parsed = _try_parse(json_str[l_idx:r_idx + 1].strip())
+            balanced = _extract_balanced_object(json_str)
+            if balanced:
+                parsed = _attempt_parse(balanced)
                 self.emit_thinking("✅ LLM 结构化解析成功\n", callback)
                 return parsed
         except Exception:

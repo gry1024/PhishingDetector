@@ -9,7 +9,7 @@
 <title>PhishingDetector Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Fustat:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0d0d0d;
@@ -91,10 +91,32 @@
 html, body {
   height: 100%;
   overflow: hidden;
-  font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Barlow", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--bg);
   letter-spacing: -0.01em;
+}
+
+body {
+  position: relative;
+}
+
+.studio-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0;
+}
+
+.studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(0,0,0,0.82);
 }
 
 button, input, textarea {
@@ -105,21 +127,28 @@ button, input, textarea {
 
 /* ===== Top Header ===== */
 .topbar {
-  height: var(--header-h);
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--surface);
+  height: 56px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-full);
+  background: rgba(10,10,10,0.38);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 22px;
-  position: relative;
-  z-index: 50;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 20;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-right: auto;
 }
 
 .brand-mark {
@@ -135,7 +164,7 @@ button, input, textarea {
 }
 
 .brand-text {
-  font-family: "Schibsted Grotesk", "Noto Sans SC", serif;
+  font-family: "Instrument Serif", "Noto Serif SC", serif;
   font-size: 20px;
   font-weight: 600;
   font-style: italic;
@@ -158,6 +187,47 @@ button, input, textarea {
   gap: 14px;
   font-size: 13px;
   color: var(--muted);
+  margin-left: auto;
+}
+
+.top-nav {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-full);
+}
+
+.top-nav-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  padding: 8px 12px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.top-nav a {
+  text-decoration: none;
+}
+
+.top-nav-link.active {
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border-radius: var(--radius-full);
+}
+
+.top-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  color: #000;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-pill {
@@ -187,15 +257,20 @@ button, input, textarea {
 /* ===== App Shell ===== */
 .app-shell {
   display: flex;
-  height: calc(100vh - var(--header-h));
+  height: calc(100vh - 88px);
+  margin-top: 88px;
   overflow: hidden;
+  position: relative;
+  z-index: 10;
 }
 
 /* ===== Left Sidebar ===== */
 .left-sidebar {
-  width: 260px;
+  width: 240px;
   border-right: 1px solid var(--border-soft);
-  background: var(--surface);
+  background: rgba(10,10,10,0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -204,6 +279,7 @@ button, input, textarea {
   width: 0;
   overflow: hidden;
   border-right: none;
+  padding: 0;
 }
 
 .sidebar-header {
@@ -334,41 +410,57 @@ button, input, textarea {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--bg);
+  background: transparent;
   position: relative;
 }
 
 /* Ticker */
 .hero-ticker {
-  height: 34px;
-  border-bottom: 1px solid var(--border-soft);
+  height: auto;
+  border-bottom: none;
   display: flex;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
-  background: var(--surface);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+  background: transparent;
+  padding: 10px 16px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
 .ticker-track {
   display: flex;
-  gap: 10px;
-  animation: marquee-left 30s linear infinite;
+  gap: 8px;
+  flex-wrap: nowrap;
   white-space: nowrap;
-  padding-left: 10px;
+  width: max-content;
+  animation: ticker-scroll 36s linear infinite;
+}
+
+.ticker-group {
+  display: flex;
+  gap: 8px;
 }
 
 .ticker-item {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--muted);
-  padding: 5px 12px;
+  color: rgba(255,255,255,0.9);
+  padding: 6px 12px;
   border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.06);
   border: 1px solid var(--border-soft);
 }
 
-@keyframes marquee-left {
+.ticker-item.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.hero-ticker:hover .ticker-track { animation-play-state: paused; }
+
+@keyframes ticker-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
@@ -392,8 +484,8 @@ button, input, textarea {
 }
 
 .empty-chat h1 {
-  font-family: "Schibsted Grotesk", "Noto Sans SC", serif;
-  font-size: 48px;
+  font-family: "Instrument Serif", "Noto Serif SC", serif;
+  font-size: 40px;
   font-weight: 600;
   font-style: italic;
   letter-spacing: -0.06em;
@@ -495,7 +587,10 @@ button, input, textarea {
   margin-top: 6px;
   border: 1px solid var(--border-soft);
   border-radius: 14px;
-  background: var(--panel);
+  background: rgba(8,8,8,0.34);
+  white-space: normal;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
@@ -564,7 +659,7 @@ button, input, textarea {
 }
 
 .agent-card-body.open {
-  max-height: 600px;
+  max-height: none;
   overflow-y: auto;
 }
 
@@ -598,9 +693,9 @@ button, input, textarea {
 }
 
 .agent-tool-chip.done {
-  background: #e8f5ec;
-  color: #0f6b35;
-  border-color: #c5e8d0;
+  background: rgba(17,201,100,0.12);
+  color: #6ee7b7;
+  border-color: rgba(17,201,100,0.25);
 }
 
 .agent-llm-box {
@@ -652,7 +747,9 @@ button, input, textarea {
   margin: 18px auto 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel);
+  background: rgba(10,10,10,0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   box-shadow: var(--shadow);
   animation: fadeIn 0.45s ease;
@@ -664,11 +761,13 @@ button, input, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--surface);
+  background: rgba(255,255,255,0.03);
 }
 
 .report-header-title {
-  font-size: 15px;
+  font-family: "Instrument Serif", "Noto Serif SC", serif;
+  font-style: italic;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -772,25 +871,29 @@ button, input, textarea {
 /* Input Area */
 .input-area {
   border-top: 1px solid var(--border-soft);
-  background: var(--surface);
-  padding: 16px 24px 20px;
+  background: rgba(10,10,10,0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 24px 14px;
   transition: padding 0.25s ease;
 }
 
-.input-area.shrink { padding: 10px 24px 12px; }
+.input-area.shrink { padding: 8px 24px 10px; }
 
 .input-card {
   max-width: 620px;
   margin: 0 auto;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 .input-fields {
-  padding: 12px;
+  padding: 10px 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -819,7 +922,7 @@ button, input, textarea {
 .input-card input::placeholder,
 .input-card textarea::placeholder { color: #525252; }
 
-.input-card textarea { min-height: 70px; line-height: 1.5; }
+.input-card textarea { min-height: 64px; line-height: 1.5; }
 .input-area.shrink .input-card textarea { min-height: 24px; }
 
 .input-divider {
@@ -832,8 +935,8 @@ button, input, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--bg);
+  padding: 8px 12px;
+  background: transparent;
 }
 
 .input-hint {
@@ -865,11 +968,15 @@ button, input, textarea {
 .right-sidebar {
   width: 320px;
   border-left: 1px solid var(--border-soft);
-  background: var(--surface);
+  background: rgba(10,10,10,0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  overflow-y: auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   transition: width 0.25s ease;
 }.right-sidebar.collapsed {
   width: 0;
@@ -882,6 +989,7 @@ button, input, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .right-title {
@@ -891,17 +999,24 @@ button, input, textarea {
 }
 
 .right-body {
-  padding: 0 14px 18px;
+  flex: 1;
+  padding: 0 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-content: flex-start;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .panel-card {
-  background: var(--panel);
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
-  padding: 14px;
+  padding: 11px 12px;
+  flex-shrink: 0;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-sm);
 }.panel-card-title {
   font-size: 11px;
@@ -909,7 +1024,7 @@ button, input, textarea {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .status-row {
@@ -917,7 +1032,7 @@ button, input, textarea {
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 
 .status-row:last-child { margin-bottom: 0; }
@@ -1002,9 +1117,9 @@ button, input, textarea {
 
 .kb-item {
   font-size: 12px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 8px;
-  background: var(--bg);
+  background: rgba(0,0,0,0.18);
   border: 1px solid var(--border-soft);
   color: var(--text);
 }
@@ -1247,6 +1362,12 @@ button, input, textarea {
   .right-sidebar { width: 280px; }
 }
 
+@media (min-width: 1024px) {
+  .top-nav {
+    display: inline-flex;
+  }
+}
+
 @media (max-width: 900px) {
   .left-sidebar { position: absolute; z-index: 40; height: 100%; box-shadow: var(--shadow); }
   .right-sidebar { position: absolute; right: 0; z-index: 40; height: 100%; box-shadow: var(--shadow); }
@@ -1262,13 +1383,24 @@ button, input, textarea {
 </head>
 <body>
 
+<video id="studioBgVideo" class="studio-bg" autoPlay muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_094631_d30ab262-45ee-4b7d-99f3-5d5848c8ef13.mp4"></video>
+<div class="studio-overlay"></div>
+
 <!-- Top Header -->
 <header class="topbar">
   <div class="brand">
-    <div class="brand-mark">🎯</div>
+    <div class="brand-mark">P</div>
     <div class="brand-text">PhishingDetector</div>
     <div class="brand-beta">Studio</div>
   </div>
+  <nav class="top-nav liquid-glass" aria-label="Studio 导航">
+    <a class="top-nav-link" href="/">首页</a>
+    <a class="top-nav-link" href="/studio">检测引擎</a>
+    <a class="top-nav-link" href="/studio">知识库</a>
+    <a class="top-nav-link" href="/studio">报告中心</a>
+    <a class="top-nav-link" href="/studio">关于</a>
+    <a class="top-nav-cta" href="/studio">开始检测 <span aria-hidden="true">↗</span></a>
+  </nav>
   <div class="topbar-meta">
     <div class="layout-toggles">
       <button class="icon-btn active" id="toggleLeft" title="历史对话" onclick="toggleSidebar('left')">☰</button>
@@ -1285,7 +1417,7 @@ button, input, textarea {
 <div class="app-shell">
 
   <!-- Left Sidebar: History -->
-  <aside class="left-sidebar" id="leftSidebar">
+  <aside class="left-sidebar liquid-glass" id="leftSidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">历史对话</div>
       <button class="btn-new" onclick="startNewChat()">
@@ -1307,22 +1439,28 @@ button, input, textarea {
   <main class="center-area">
     <div class="hero-ticker">
       <div class="ticker-track" id="tickerTrack">
-        <span class="ticker-item">语义意图分析</span>
-        <span class="ticker-item">多维关联检测</span>
-        <span class="ticker-item">风险研判</span>
-        <span class="ticker-item">响应处置</span>
-        <span class="ticker-item">ATT&CK 映射</span>
-        <span class="ticker-item">知识库命中</span>
-        <span class="ticker-item">URL 信誉</span>
-        <span class="ticker-item">发件人域名检测</span>
-        <span class="ticker-item">语义意图分析</span>
-        <span class="ticker-item">多维关联检测</span>
-        <span class="ticker-item">风险研判</span>
-        <span class="ticker-item">响应处置</span>
-        <span class="ticker-item">ATT&CK 映射</span>
-        <span class="ticker-item">知识库命中</span>
-        <span class="ticker-item">URL 信誉</span>
-        <span class="ticker-item">发件人域名检测</span>
+        <div class="ticker-group">
+          <span class="ticker-item liquid-glass" data-step="域名检测">域名检测</span>
+          <span class="ticker-item liquid-glass" data-step="语义意图分析">语义意图分析</span>
+          <span class="ticker-item liquid-glass" data-step="多维关联检测">多维关联检测</span>
+          <span class="ticker-item liquid-glass" data-step="风险研判">风险研判</span>
+          <span class="ticker-item liquid-glass" data-step="响应处置">响应处置</span>
+          <span class="ticker-item liquid-glass" data-step="ATT&CK 映射">ATT&CK 映射</span>
+          <span class="ticker-item liquid-glass" data-step="知识库命中">知识库命中</span>
+          <span class="ticker-item liquid-glass" data-step="URL 信誉">URL 信誉</span>
+          <span class="ticker-item liquid-glass" data-step="发件人域名检测">发件人域名检测</span>
+        </div>
+        <div class="ticker-group" aria-hidden="true">
+          <span class="ticker-item liquid-glass" data-step="域名检测">域名检测</span>
+          <span class="ticker-item liquid-glass" data-step="语义意图分析">语义意图分析</span>
+          <span class="ticker-item liquid-glass" data-step="多维关联检测">多维关联检测</span>
+          <span class="ticker-item liquid-glass" data-step="风险研判">风险研判</span>
+          <span class="ticker-item liquid-glass" data-step="响应处置">响应处置</span>
+          <span class="ticker-item liquid-glass" data-step="ATT&CK 映射">ATT&CK 映射</span>
+          <span class="ticker-item liquid-glass" data-step="知识库命中">知识库命中</span>
+          <span class="ticker-item liquid-glass" data-step="URL 信誉">URL 信誉</span>
+          <span class="ticker-item liquid-glass" data-step="发件人域名检测">发件人域名检测</span>
+        </div>
       </div>
     </div>
 
@@ -1334,7 +1472,7 @@ button, input, textarea {
     </div>
 
     <div class="input-area" id="inputArea">
-      <div class="input-card">
+      <div class="input-card liquid-glass">
         <div class="input-fields">
           <div class="input-row-1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题">
@@ -1346,7 +1484,7 @@ button, input, textarea {
         </div>
         <div class="input-divider"></div>
         <div class="input-actions">
-          <div class="input-hint">按 Enter 快速运行 · 支持中文/英文邮件</div>
+          <div class="input-hint">Ctrl+Enter 快速运行 · 支持中文/英文邮件</div>
           <button class="btn-run" id="runBtn" onclick="runFlow()">▶ 运行检测</button>
         </div>
       </div>
@@ -1354,13 +1492,13 @@ button, input, textarea {
   </main>
 
   <!-- Right Sidebar: Analysis Overview -->
-  <aside class="right-sidebar" id="rightSidebar">
+  <aside class="right-sidebar liquid-glass" id="rightSidebar">
     <div class="right-header">
       <div class="right-title">分析概览</div>
     </div>
     <div class="right-body">
       <!-- Status -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">运行状态</div>
         <div class="status-row">
           <span class="status-label">状态</span>
@@ -1373,7 +1511,7 @@ button, input, textarea {
       </div>
 
       <!-- Environment Health -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">环境健康</div>
         <div class="status-row">
           <span class="status-label">探针</span>
@@ -1390,7 +1528,7 @@ button, input, textarea {
       </div>
 
       <!-- Risk Score -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">风险评分</div>
         <div class="score-grid">
           <div class="score-box">
@@ -1406,7 +1544,7 @@ button, input, textarea {
       </div>
 
       <!-- Evidence Weights -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">证据权重</div>
         <div id="evidenceList">
           <div class="kb-item-empty">暂无证据</div>
@@ -1414,7 +1552,7 @@ button, input, textarea {
       </div>
 
       <!-- KB Hits -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">知识库命中</div>
         <div class="kb-list" id="kbList">
           <div class="kb-item-empty">暂无命中</div>
@@ -1422,7 +1560,7 @@ button, input, textarea {
       </div>
 
       <!-- Replay -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">运行回放</div>
         <div class="replay-controls">
           <button class="replay-btn active" id="speedNormal" onclick="setReplaySpeed(1)">慢速</button>
@@ -1431,7 +1569,7 @@ button, input, textarea {
       </div>
 
       <!-- Recent Reports -->
-      <div class="panel-card">
+      <div class="panel-card liquid-glass">
         <div class="panel-card-title">最近报告</div>
         <div class="recent-list" id="recentList">
           <div class="kb-item-empty">暂无报告</div>
@@ -1478,6 +1616,7 @@ const runBtn = document.getElementById("runBtn");
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const statusPill = document.getElementById("statusPill");
+const studioBgVideo = document.getElementById("studioBgVideo");
 
 let running = false;
 let currentAgentKey = null;
@@ -1488,6 +1627,68 @@ let conversations = [];
 let activeConversationId = null;
 let replaySpeed = 1;
 let llmFallbackUsed = false;
+
+const FADE_MS = 500;
+const FADE_OUT_LEAD = 0.55;
+
+function attachFadingVideo(video) {
+  let rafId = 0;
+  let fadeToken = 0;
+  let fadingOut = false;
+
+  function getOpacity() {
+    const raw = parseFloat(video.style.opacity || "0");
+    return Number.isFinite(raw) ? raw : 0;
+  }
+
+  function fadeTo(target, duration) {
+    fadeToken += 1;
+    const token = fadeToken;
+    const start = performance.now();
+    const from = getOpacity();
+    cancelAnimationFrame(rafId);
+
+    function tick(now) {
+      if (token !== fadeToken) return;
+      const progress = Math.min((now - start) / duration, 1);
+      video.style.opacity = String(from + (target - from) * progress);
+      if (progress < 1) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function onLoadedData() {
+    video.style.opacity = "0";
+    video.play().catch(() => {});
+    fadeTo(1, FADE_MS);
+  }
+
+  function onTimeUpdate() {
+    const remaining = video.duration - video.currentTime;
+    if (!fadingOut && remaining <= FADE_OUT_LEAD && remaining > 0) {
+      fadingOut = true;
+      fadeTo(0, FADE_MS);
+    }
+  }
+
+  function onEnded() {
+    video.style.opacity = "0";
+    setTimeout(() => {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+      fadingOut = false;
+      fadeTo(1, FADE_MS);
+    }, 100);
+  }
+
+  video.loop = false;
+  video.addEventListener("loadeddata", onLoadedData);
+  video.addEventListener("timeupdate", onTimeUpdate);
+  video.addEventListener("ended", onEnded);
+}
 
 // ===== Helpers =====
 function generateId() {
@@ -1545,6 +1746,31 @@ const EVIDENCE_TYPE_MAP = {
   "sender_profile": { name: "发件人画像", desc: "域名声誉、品牌仿冒、地址结构异常等发件人维度分析" },
   "threat_intel": { name: "威胁情报关联", desc: "IOC 指标匹配、已知攻击模式对比、ATT&CK 映射" },
 };
+
+const AGENT_TICKER_STEP_MAP = {
+  semantic: "语义意图分析",
+  detector: "多维关联检测",
+  risk: "风险研判",
+  response: "响应处置",
+  header_forensics: "发件人域名检测",
+  sender_profiler: "发件人域名检测",
+  threat_intel: "ATT&CK 映射",
+};
+
+function clearActiveTickerSteps() {
+  document.querySelectorAll(".ticker-item.active").forEach((el) => el.classList.remove("active"));
+}
+
+function highlightTickerStepByAgentKey(agentKey) {
+  const stepName = AGENT_TICKER_STEP_MAP[agentKey];
+  if (!stepName) return;
+  clearActiveTickerSteps();
+  document.querySelectorAll(".ticker-item").forEach((el) => {
+    if (el.dataset.step === stepName) {
+      el.classList.add("active");
+    }
+  });
+}
 
 function getEvidenceLabel(type) {
   const info = EVIDENCE_TYPE_MAP[type];
@@ -1717,7 +1943,7 @@ function appendNarrative(text) {
 function createAgentCard(agentKey, agentName, agentIcon, agentDesc) {
   const body = ensureAssistantMessage();
   const card = document.createElement("div");
-  card.className = "agent-card";
+  card.className = "agent-card liquid-glass";
   card.dataset.agentKey = agentKey;
   card.innerHTML = `
     <div class="agent-card-header" onclick="toggleAgentCard('${agentKey}')">
@@ -1905,7 +2131,7 @@ function renderReportCard(report) {
             <div class="report-box-value" style="font-size:14px;color:${reputationColor};">${escapeHtml(sp.domain_reputation || "?")} (${(sp.reputation_score || 0).toFixed(2)})</div>
           </div>
         </div>
-        ${sp.brand_impersonated ? `<div style="margin-top:8px;padding:8px 10px;background:#ffeaea;border-radius:8px;font-size:12px;color:#b42318;border:1px solid #fecaca;">⚠ 疑似仿冒品牌：${escapeHtml(sp.brand_impersonated)}</div>` : ""}
+        ${sp.brand_impersonated ? `<div style="margin-top:8px;padding:8px 10px;background:rgba(180,35,24,0.12);border-radius:8px;font-size:12px;color:#fca5a5;border:1px solid rgba(180,35,24,0.3);">⚠ 疑似仿冒品牌：${escapeHtml(sp.brand_impersonated)}</div>` : ""}
         ${sp.suspicious_patterns && sp.suspicious_patterns.length ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">可疑模式：${sp.suspicious_patterns.join("、")}</div>` : ""}
         ${sp.explanation ? `<div style="margin-top:8px;font-size:12px;color:var(--text);line-height:1.6;">${escapeHtml(sp.explanation)}</div>` : ""}
       </div>
@@ -1966,7 +2192,7 @@ function renderReportCard(report) {
   }
 
   const card = document.createElement("div");
-  card.className = "report-card";
+  card.className = "report-card liquid-glass";
   card.innerHTML = `
     <div class="report-header">
       <div class="report-header-title">钓鱼邮件智能检测报告</div>
@@ -1993,7 +2219,7 @@ function renderReportCard(report) {
             <div class="report-box-value">${risk.llm_score ?? "-"}</div>
           </div>
         </div>
-        ${risk.consistency_warning ? `<div style="margin-top:10px;padding:9px 11px;background:#fff7e6;border-radius:8px;font-size:12px;color:#b46a00;border:1px solid #fedfb3;">⚠ ${escapeHtml(risk.consistency_warning)}</div>` : ""}
+        ${risk.consistency_warning ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(180,106,0,0.12);border-radius:8px;font-size:12px;color:#fcd34d;border:1px solid rgba(180,106,0,0.3);">⚠ ${escapeHtml(risk.consistency_warning)}</div>` : ""}
       </div>
 
       ${senderProfileHtml}
@@ -2211,6 +2437,7 @@ async function runFlow() {
       const agentDesc = data.payload?.agent_desc || "";
       currentAgentKey = agentKey;
       createAgentCard(agentKey, agentName, agentIcon, agentDesc);
+      highlightTickerStepByAgentKey(agentKey);
       setStatus("running", `${agentName} 执行中`);
       return;
     }
@@ -2253,7 +2480,7 @@ async function runFlow() {
 
     if (eventType === "orchestrator_done") {
       const tag = document.getElementById("orchTag");
-      if (tag) { tag.className = "tag"; tag.textContent = "检测完成"; tag.style.background = "#e8f5ec"; tag.style.color = "#0f6b35"; }
+      if (tag) { tag.className = "tag"; tag.textContent = "检测完成"; tag.style.background = "rgba(17,201,100,0.15)"; tag.style.color = "#6ee7b7"; }
       return;
     }
 
@@ -2261,6 +2488,7 @@ async function runFlow() {
       const result = data.payload?.result || {};
       const riskLevel = result.risk_level || "unknown";
       const riskScore = result.risk_score || 0;
+      clearActiveTickerSteps();
       setStatus("done", `${getRiskLabel(riskLevel)} · ${riskScore}/100`);
       if (activeConversationId) {
         updateConversation(activeConversationId, { report: finalReport || result, hasResult: true });
@@ -2280,7 +2508,8 @@ async function runFlow() {
       const msg = data.payload?.message || "未知错误";
       appendNarrative(`⚠ 检测失败：${msg}`);
       const tag = document.getElementById("orchTag");
-      if (tag) { tag.textContent = "失败"; tag.style.background = "#ffeaea"; tag.style.color = "#912727"; }
+      if (tag) { tag.textContent = "失败"; tag.style.background = "rgba(239,68,68,0.15)"; tag.style.color = "#fca5a5"; }
+      clearActiveTickerSteps();
       finishRun();
       return;
     }
@@ -2315,6 +2544,7 @@ function resetUI() {
   runBtn.textContent = "▶ 运行检测";
   runBtn.classList.remove("running");
   inputArea.classList.remove("shrink");
+  clearActiveTickerSteps();
 }
 
 // ===== Dataset Modal =====
@@ -2482,6 +2712,7 @@ document.addEventListener("keydown", (e) => {
 
 // ===== Init =====
 loadConversations();
+attachFadingVideo(studioBgVideo);
 checkHealth();
 updateRecentReports();
 setInterval(checkHealth, 30000);
