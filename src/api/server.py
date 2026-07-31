@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
@@ -40,13 +40,16 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+NOCACHE = {"Cache-Control": "no-cache, no-store, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+
+
 @app.get("/")
 async def root():
-    """首页：直接进入 Studio 页面。"""
-    return FileResponse(str(PAGES_DIR / "studio.html"))
+    """直接跳转 Studio 页面"""
+    return RedirectResponse(url="/studio", status_code=302)
 
 
 @app.get("/studio")
 async def studio_page():
     """Studio 页：可视化编排与运行状态演示页"""
-    return FileResponse(str(PAGES_DIR / "studio.html"))
+    return FileResponse(str(PAGES_DIR / "studio.html"), headers=NOCACHE)

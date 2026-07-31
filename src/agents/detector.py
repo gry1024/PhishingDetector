@@ -66,8 +66,10 @@ class DetectorAgent(BaseAgent):
         # ---- Step 1: 提取并分析所有 URL ----
         combined_text = f"{email.subject} {email.body}"
 
-        self.emit_thinking("🔗 提取邮件中的 URL 链接...\n", callback)
+        self.emit_thinking("第一步：提取邮件中的 URL，并对每个 URL 进行多维安全分析。", callback)
+        self.emit_sub_step("从邮件主题和正文中提取所有 URL 候选", "running", callback)
         url_extract = self.call_tool("extract_urls", combined_text, callback=callback)
+        self.emit_sub_step(f"URL 提取结果：{url_extract.output}", "done", callback)
 
         all_urls = email.urls.copy()
         # 从提取结果中解析 URL
@@ -81,56 +83,77 @@ class DetectorAgent(BaseAgent):
         url_tool_results = []
         url_reputation_results = []
         if all_urls:
-            self.emit_thinking(f"🔍 发现 {len(all_urls[:5])} 个 URL，逐一安全分析...\n", callback)
-        for url in all_urls[:5]:  # 最多分析 5 个
-            r = self.call_tool("analyze_url", url, callback=callback)
-            url_tool_results.append(r)
-            reputation = self.call_tool("check_url_reputation", url, callback=callback)
-            url_reputation_results.append(reputation)
+            self.emit_sub_step(f"发现 {len(all_urls[:5])} 个 URL，逐一分析域名结构、IP 形式、端口、路径异常", "running", callback)
+            for idx, url in enumerate(all_urls[:5], 1):  # 最多分析 5 个
+                self.emit_sub_step(f"正在分析第 {idx}/{len(all_urls[:5])} 个 URL: {url[:60]}...", "running", callback)
+                r = self.call_tool("analyze_url", url, callback=callback)
+                url_tool_results.append(r)
+                reputation = self.call_tool("check_url_reputation", url, callback=callback)
+                url_reputation_results.append(reputation)
+            self.emit_sub_step(f"URL 安全分析与信誉检查完成，综合风险分 {max((self._parse_score(r.output, '风险分') for r in url_tool_results), default=0):.0f}/100", "done", callback)
+        else:
+            self.emit_sub_step("邮件中未检测到 URL，跳过 URL 安全分析", "done", callback)
 
         # ---- Step 2: 附件与行为异常分析 ----
-        self.emit_thinking("📎 分析附件风险与行为异常模式...\n", callback)
-        attachment_result = self.call_tool("analyze_attachment_risk", combined_text, callback=callback) if email.has_attachment else None
+        self.emit_thinking("第二步：分析附件风险与行为异常模式，识别 BEC 和商业欺诈特征。", callback)
+        if email.has_attachment:
+            self.emit_sub_step("邮件包含附件，调用附件风险分析器检测诱导文件名和异常类型", "running", callback)
+            attachment_result = self.call_tool("analyze_attachment_risk", combined_text, callback=callback)
+            self.emit_sub_step(f"附件风险分析完成：{attachment_result.output}", "done", callback)
+        else:
+            self.emit_sub_step("邮件无附件，跳过附件风险分析", "done", callback)
+            attachment_result = None
+
+        self.emit_sub_step("分析发件人行为、主题语气、正文行为诱导等异常模式", "running", callback)
         behavior_result = self.call_tool(
             "analyze_behavior_anomalies",
             f"{email.sender}\n{email.subject}\n{email.body}",
             callback=callback,
         )
+        self.emit_sub_step(f"行为异常分析完成：{behavior_result.output}", "done", callback)
 
         # ---- Step 2.5: 知识库检索（RAG-MVP） ----
+        self.emit_thinking("第三步：检索本地知识库，匹配已知钓鱼攻击模式。", callback)
         kb_query_text = "\n".join([
             email.subject or "",
             email.sender or "",
             email.body or "",
             " ".join(all_urls),
         ])
+        self.emit_sub_step("将邮件主题、发件人、正文、URL 拼接为知识库查询向量", "running", callback)
         kb_hits = db.search_kb(kb_query_text, limit=5)
         if kb_hits:
             top_titles = "；".join(hit["title"] for hit in kb_hits[:3])
-            self.emit_thinking(f"📚 命中知识库 {len(kb_hits)} 条：{top_titles}\n", callback)
+            self.emit_sub_step(f"命中知识库 {len(kb_hits)} 条：{top_titles}", "done", callback)
         else:
-            self.emit_thinking("📚 未命中知识库条目（继续按规则与LLM分析）\n", callback)
+            self.emit_sub_step("未命中知识库条目，继续按规则与 LLM 分析", "done", callback)
 
         # ---- Step 3: 发件人域名检测 ----
-        self.emit_thinking("📧 检测发件人域名可信度...\n", callback)
+        self.emit_thinking("第四步：校验发件人域名可信度，识别品牌仿冒和免费邮箱。", callback)
+        self.emit_sub_step("解析发件人域名，检查是否为知名品牌仿冒、异常子域名或免费邮箱", "running", callback)
         sender_result = self.call_tool("check_sender_domain", email.sender, callback=callback)
+        self.emit_sub_step(f"发件人检测完成：{sender_result.output}", "done", callback)
 
-        # ---- Step 3: 关键词扫描 ----
-        self.emit_thinking("🔎 扫描邮件内容中的风险关键词...\n", callback)
+        # ---- Step 4: 关键词扫描 ----
+        self.emit_thinking("第五步：扫描邮件内容中的风险关键词，形成内容标记。", callback)
+        self.emit_sub_step("扫描中文与英文钓鱼关键词库，生成内容标记列表", "running", callback)
         pattern_result = self.call_tool("scan_phishing_patterns", combined_text, callback=callback)
+        self.emit_sub_step(f"关键词扫描完成：{pattern_result.output}", "done", callback)
 
-        # ---- Step 4: LLM 深度分析（带规则兜底） ----
+        # ---- Step 5: LLM 深度分析（带规则兜底） ----
         self.emit_thinking(
-            "🧠 工具扫描完成，正在由 LLM 进行多维关联检测...\n"
-            "   检测维度：发件人身份 | URL 安全 | 内容特征 | 邮件头校验\n",
+            "第六步：将工具扫描结果汇总，调用 LLM 进行多维关联检测与综合研判。\n"
+            "   检测维度：发件人身份 | URL 安全 | 内容特征 | 邮件头校验",
             callback,
         )
+        self.emit_sub_step("整合 URL 风险、发件人可信度、行为异常、知识库命中、内容标记为统一提示词", "running", callback)
         user_prompt = self._build_prompt(email, all_urls, semantic_result)
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+            self.emit_sub_step("LLM 多维关联分析完成，提取结构化检测结果", "done", callback)
         except Exception as e:
-            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
-            self.emit_thinking("⚠️ 启用规则化技术兜底分析...\n", callback)
+            self.emit_thinking("⚠️ LLM 不可用，已启用规则化技术兜底分析。", callback)
+            self.emit_sub_step(f"规则兜底接管：基于工具分数融合生成技术判定（原因：{str(e)[:80]}）", "done", callback)
             llm_result = self._fallback_detection_result(
                 email=email,
                 sender_result=sender_result,
@@ -139,7 +162,10 @@ class DetectorAgent(BaseAgent):
                 semantic_result=semantic_result,
             )
 
-        # ---- Step 5: 分数融合（工具 + LLM + 邮件头校验） ----
+        # ---- Step 6: 分数融合（工具 + LLM + 邮件头校验） ----
+        self.emit_thinking("第七步：融合多维度分数，生成最终技术检测指标。", callback)
+        self.emit_sub_step("解析工具返回的发件人可信度、URL 风险分、信誉分、附件风险分、行为异常分", "running", callback)
+
         # 发件人分数：从工具结果解析
         sender_trust = self._parse_score(sender_result.output, "可信度")
         llm_sender = float(llm_result.get("sender_score", 0.5))
@@ -164,6 +190,13 @@ class DetectorAgent(BaseAgent):
         sender_score = max(0, min(1, (sender_score * 0.8) + (1 - header_risk / 100) * 0.2))
         url_score = max(0, min(1, (url_score * 0.85) + (1 - url_risk / 100) * 0.15))
 
+        self.emit_sub_step(
+            f"分数融合完成：发件人可信度 {sender_score:.2f}，URL 安全分 {url_score:.2f}，"
+            f"邮件头风险 {header_risk:.0f}/100，附件风险 {attachment_risk:.0f}/100，行为异常 {behavior_risk:.0f}/100",
+            "done",
+            callback,
+        )
+
         # 增强内容标记
         content_flags = list(set(llm_result.get("content_flags", [])))
         content_flags.extend(self._build_content_flags(email, all_urls, url_risk, header_risk))
@@ -176,6 +209,8 @@ class DetectorAgent(BaseAgent):
         if any(hit.get("severity") in {"high", "critical"} for hit in kb_hits):
             content_flags.append("kb_high_risk_hit")
         content_flags = list(dict.fromkeys(content_flags))
+
+        self.emit_sub_step(f"生成内容标记：{', '.join(content_flags) or '无'}", "done", callback)
 
         kb_summary = ""
         if kb_hits:
@@ -201,6 +236,12 @@ class DetectorAgent(BaseAgent):
             explanation=llm_result.get("explanation", ""),
         )
 
+        self.emit_sub_step(
+            f"多维关联检测完成：发现 {len(content_flags)} 个内容标记，命中 {len(kb_hits)} 条知识库规则",
+            "done",
+            callback,
+        )
+
         return {"detection": detection}
 
     def _fallback_detection_result(self, email, sender_result, url_tool_results, pattern_result, semantic_result) -> dict:
@@ -214,13 +255,16 @@ class DetectorAgent(BaseAgent):
         content_flags = self._build_content_flags(email, email.urls, url_risk, header_risk)
 
         if "免费邮箱" in sender_result.output or header_risk >= 40:
-            sender_analysis = "发件人可信度下降：存在免费邮箱或邮件头校验异常。"
+            sender_analysis = (
+                "发件人可信度下降：工具检测到免费邮箱或邮件头校验（SPF/DKIM/DMARC）存在异常，"
+                "说明邮件身份真实性不足。"
+            )
         else:
-            sender_analysis = "发件人域名未发现明显仿冒，但仍建议进一步校验。"
+            sender_analysis = "发件人域名未发现明显仿冒，但建议结合语义意图进一步校验。"
 
         url_analysis = (
-            f"URL 校验结果显示风险分 {url_risk}/100，"
-            f"规则配置已将该邮件标记为需要进一步人工复核。"
+            f"URL 校验结果显示风险分 {url_risk:.0f}/100，"
+            f"规则引擎已识别出可疑链接特征，建议将该邮件标记为需要人工复核。"
         )
 
         return {
@@ -229,7 +273,10 @@ class DetectorAgent(BaseAgent):
             "url_score": max(0, min(1, 1 - url_risk / 100)),
             "url_analysis": url_analysis,
             "content_flags": content_flags,
-            "explanation": "LLM不可用时使用规则引擎进行安全兜底判定，重点关注发件人可信度、URL异常、邮件头校验和附件风险。",
+            "explanation": (
+                "LLM 不可用时使用规则引擎进行安全兜底判定。重点关注："
+                "发件人可信度、URL 异常结构、邮件头校验状态、附件风险以及行为异常。"
+            ),
         }
 
     def _header_risk_score(self, headers: dict) -> float:

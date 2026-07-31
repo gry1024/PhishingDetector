@@ -75,33 +75,59 @@ class RiskAgent(BaseAgent):
         )
 
         # ---- Step 1: 规则引擎预评分 ----
-        self.emit_thinking("📏 规则引擎预评分中...\n", callback)
+        self.emit_thinking("第一步：基于语义意图与多维检测特征，进行规则引擎快速预评分。", callback)
+        self.emit_sub_step(
+            "收集语义意图、话术类型、发件人可信度、URL 安全分、附件风险、行为异常、内容标记等输入",
+            "running",
+            callback,
+        )
         rule_score = self._rule_risk_score(semantic, detection)
-        self.emit_thinking(f"   规则预评分结果：{rule_score}/100\n", callback)
+        self.emit_sub_step(
+            f"规则预评分计算完成：语义意图权重 + 话术数量 + 技术特征风险 = {rule_score}/100",
+            "done",
+            callback,
+        )
 
         # ---- Step 2: ATT&CK 映射 ----
-        self.emit_thinking("🗺️ 映射 MITRE ATT&CK 攻击技术...\n", callback)
+        self.emit_thinking("第二步：将检测到的攻击特征映射到 MITRE ATT&CK 框架，形成标准化威胁语言。", callback)
+        self.emit_sub_step(
+            f"汇总语义话术 ({len(semantic.persuasion_techniques)} 个) 与内容标记 ({len(detection.content_flags)} 个) 进行 ATT&CK 映射",
+            "running",
+            callback,
+        )
         all_flags = (
             semantic.persuasion_techniques +
             detection.content_flags
         )
         attack_result = self.call_tool("map_attack_techniques", all_flags, callback=callback)
+        self.emit_sub_step(f"ATT&CK 映射结果：{attack_result.output}", "done", callback)
 
         # ---- Step 3: LLM 综合研判（带规则兜底） ----
         self.emit_thinking(
-            "⚖️ 综合前两步结果，正在由 LLM 进行最终风险研判...\n"
-            "   研判维度：语义意图 × 检测特征 × ATT&CK 映射 × 规则评分\n",
+            "第三步：综合语义意图、技术检测特征、ATT&CK 映射和规则评分，调用 LLM 进行最终风险研判。",
+            callback,
+        )
+        self.emit_sub_step(
+            "构建研判提示：包含邮件概要、语义分析、多维检测结果、规则预评分",
+            "running",
             callback,
         )
         user_prompt = self._build_prompt(email, semantic, detection, rule_score)
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
+            self.emit_sub_step(
+                f"LLM 研判完成：风险分 {llm_result.get('risk_score', '-')}/100，等级 {llm_result.get('risk_level', '-')}",
+                "done",
+                callback,
+            )
         except Exception as e:
-            self.emit_thinking(f"⚠️ LLM 调用失败: {str(e)[:180]}\n", callback)
-            self.emit_thinking("⚠️ 启用规则化风险研判...\n", callback)
+            self.emit_thinking("⚠️ LLM 不可用，已启用规则化风险研判。", callback)
+            self.emit_sub_step(f"规则兜底接管：直接采用规则预评分作为最终风险（原因：{str(e)[:80]}）", "done", callback)
             llm_result = self._fallback_llm_result(rule_score, semantic, detection)
 
         # ---- Step 4: 分数融合 ----
+        self.emit_thinking("第四步：融合规则评分与 LLM 研判评分，输出最终风险等级。", callback)
+        self.emit_sub_step("计算 LLM 评分与规则评分的加权平均值，并检测双轨一致性", "running", callback)
         llm_score = int(llm_result.get("risk_score", 50))
         final_score = round(llm_score * 0.6 + rule_score * 0.4)
         final_score = max(0, min(100, final_score))
@@ -110,7 +136,9 @@ class RiskAgent(BaseAgent):
         consistency_warning = ""
         if score_gap >= 25:
             consistency_warning = "规则评分与LLM评分差异较大，建议人工复核关键证据。"
-            self.emit_thinking(f"⚠️ 规则/LLM 分差 {score_gap}，建议人工复核。\n", callback)
+            self.emit_sub_step(f"⚠️ 规则/LLM 分差 {score_gap}，双轨结果不一致，建议人工复核", "done", callback)
+        else:
+            self.emit_sub_step(f"双轨一致性良好：分差 {score_gap}，最终风险分 {final_score}/100（{risk_level}）", "done", callback)
 
         # 合并 ATT&CK 技术（LLM + 工具）
         llm_techniques = llm_result.get("attack_techniques", [])
@@ -131,6 +159,12 @@ class RiskAgent(BaseAgent):
             explanation=llm_result.get("explanation", ""),
         )
 
+        self.emit_sub_step(
+            f"风险研判完成：最终风险等级 {risk_level}，攻击技术 {', '.join(all_techniques) or '无'}",
+            "done",
+            callback,
+        )
+
         return {
             "risk": risk,
             "is_phishing": final_score >= 60,
@@ -144,7 +178,12 @@ class RiskAgent(BaseAgent):
             "risk_score": score,
             "risk_level": risk_level,
             "attack_techniques": ["T1566", "T1598"],
-            "explanation": "LLM不可用时采用规则引擎兜底进行风险研判，聚焦语义意图、URL可信度以及邮件头校验异常。",
+            "explanation": (
+                "LLM 不可用时采用规则引擎兜底进行风险研判。"
+                f"综合语义意图（{semantic.intent}）、发件人可信度（{detection.sender_score:.2f}）、"
+                f"URL 安全（{detection.url_score:.2f}）以及内容标记（{', '.join(detection.content_flags) or '无'}），"
+                f"最终判定为 {risk_level}（{score}/100）。"
+            ),
         }
 
     def _rule_risk_score(self, semantic: SemanticResult, detection: DetectionResult) -> int:
