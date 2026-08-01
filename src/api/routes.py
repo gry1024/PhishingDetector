@@ -28,6 +28,7 @@ import json
 import logging
 import uuid
 import time
+import os
 import csv
 import io
 import urllib.request
@@ -48,18 +49,37 @@ from src import database as db
 
 # GitHub 钓鱼邮件数据集配置（供前端示例/测试使用）
 DATASET_SOURCES = {
+    "test_set": {
+        "name": "示例邮件测试集 (Test Set)",
+        "source": "Sunny & Rokibul Phishing Datasets (经过训练集校准)",
+        "url": "",
+        "format": "jsonl",
+        "local": "datasets/test_set.jsonl",
+        "fields": {"subject": "subject", "sender": "spoofed_sender", "body": "body", "label": "label"},
+    },
+    "train_set": {
+        "name": "训练集 (Train Set)",
+        "source": "用于校准 Agent 判断阈值的训练数据",
+        "url": "",
+        "format": "jsonl",
+        "local": "datasets/train_set.jsonl",
+        "fields": {"subject": "subject", "sender": "spoofed_sender", "body": "body", "label": "label"},
+    },
+    # 原始数据集保留，但不再作为默认显示
     "sunny_phishing_benign": {
-        "name": "Phishing & Benign Emails (JSONL)",
+        "name": "Phishing & Benign Emails (原始·JSONL)",
         "source": "SunnyThakur25/Phishing-Benign-Email-Dataset-Short-Version-",
         "url": "https://raw.githubusercontent.com/SunnyThakur25/Phishing-Benign-Email-Dataset-Short-Version-/main/phishing%20and%20benign%20email%20dataset.jsonl",
         "format": "jsonl",
+        "local": "datasets/sunny_phishing.jsonl",
         "fields": {"subject": "subject", "sender": "spoofed_sender", "body": "body", "label": "label"},
     },
     "rokibul_phishing": {
-        "name": "Phishing Email Dataset (CSV)",
+        "name": "Phishing Email Dataset (原始·CSV)",
         "source": "rokibulroni/Phishing-Email-Dataset",
         "url": "https://raw.githubusercontent.com/rokibulroni/Phishing-Email-Dataset/main/PhishingEmailData.csv",
         "format": "csv",
+        "local": "datasets/rokibul_phishing.csv",
         "fields": {"subject": "Email_Subject", "sender": "Sender_Email", "body": "Email_Content", "label": "__default_phishing__"},
     },
 }
@@ -120,6 +140,7 @@ class AnalyzeRequest(BaseModel):
     sender: str = ""
     recipients: str = ""
     body: str = ""
+    prompt: str = ""
     urls: list[str] = []
     headers: dict = {}
     has_attachment: bool = False
@@ -145,6 +166,7 @@ async def analyze_stream(req: AnalyzeRequest):
         headers=req.headers,
         has_attachment=req.has_attachment,
         raw_text=req.raw_text,
+        prompt=req.prompt,
     )
 
     email_id = db.save_email(email.model_dump())
@@ -214,6 +236,7 @@ async def analyze_stream_v2(req: AnalyzeRequest):
         headers=req.headers,
         has_attachment=req.has_attachment,
         raw_text=req.raw_text,
+        prompt=req.prompt,
     )
 
     email_id = db.save_email(email.model_dump())
@@ -532,6 +555,7 @@ async def analyze_sync(req: AnalyzeRequest):
         headers=req.headers,
         has_attachment=req.has_attachment,
         raw_text=req.raw_text,
+        prompt=req.prompt,
     )
 
     email_id = db.save_email(email.model_dump())
@@ -602,16 +626,27 @@ async def get_dataset(dataset_id: str, q: str = "", label: str = "", limit: int 
 
     cache_key = dataset_id
     if cache_key not in _dataset_cache:
-        try:
-            req = urllib.request.Request(
-                cfg["url"],
-                headers={"User-Agent": "PhishingDetector-Studio/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                raw = resp.read().decode("utf-8", errors="replace")
-        except Exception as e:
-            logger.error(f"拉取数据集 {dataset_id} 失败: {e}")
-            raise HTTPException(status_code=502, detail=f"无法从 GitHub 拉取数据集: {e}")
+        raw = None
+        local_path = cfg.get("local", "")
+        # 优先从本地文件读取
+        if local_path:
+            local_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), local_path)
+            if os.path.exists(local_file):
+                logger.info(f"从本地文件加载数据集: {local_file}")
+                with open(local_file, "r", encoding="utf-8") as f:
+                    raw = f.read()
+        # 本地文件不存在时从 GitHub 拉取
+        if raw is None:
+            try:
+                req = urllib.request.Request(
+                    cfg["url"],
+                    headers={"User-Agent": "PhishingDetector-Studio/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    raw = resp.read().decode("utf-8", errors="replace")
+            except Exception as e:
+                logger.error(f"拉取数据集 {dataset_id} 失败: {e}")
+                raise HTTPException(status_code=502, detail=f"无法从 GitHub 拉取数据集: {e}")
 
         items = []
         field_map = cfg["fields"]

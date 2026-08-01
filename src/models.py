@@ -24,6 +24,7 @@ class EmailInput(BaseModel):
     headers: dict = Field(default_factory=dict, description="邮件原始头部信息")
     has_attachment: bool = Field(default=False, description="是否包含附件")
     raw_text: str = Field(default="", description="原始完整邮件文本（用于直接粘贴场景）")
+    prompt: str = Field(default="", description="用户补充提示词/指令")
 
 
 class SemanticResult(BaseModel):

@@ -23,6 +23,7 @@
 
 import json
 import logging
+import re
 from typing import Callable, Optional
 
 from src.agents.base import BaseAgent, EventCallback
@@ -39,6 +40,7 @@ from src.models import (
     ResponseResult, EvidenceItem, WorkflowState,
 )
 from src import database as db
+from src.tools import TRUSTED_DOMAINS
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,8 @@ ORCHESTRATOR_SYSTEM_PROMPT = """你是钓鱼邮件智能检测系统的主编排
 - 多维关联检测：从 URL、附件、行为异常等技术维度交叉验证
 - 风险研判：融合所有检测结果，综合评估风险等级并映射 ATT&CK 框架
 - 响应处置：根据风险等级制定精准的处置策略和安全建议
+
+注意：当邮件包含 URL、可疑发件人域名、或命中紧急/验证/冻结/转账等高危话术时，请务必调用“威胁情报关联”Agent，以便检索公开情报并映射 ATT&CK。
 
 请先用自己的语言详细描述你的多假设推理过程（400-600字），包括：
 - 邮件初步印象和第一直觉
@@ -175,6 +179,9 @@ class OrchestratorAgent(BaseAgent):
             # 用户指定了步骤，尊重用户选择（但保证逻辑依赖）
             agents_to_call = self._ensure_dependencies(selected_steps)
 
+        # 编排器自行判断：可疑邮件必须调用威胁情报关联
+        agents_to_call = self._ensure_threat_intel_for_suspicious(email, agents_to_call)
+
         # ---- Phase 2: 依次调用子 Agent ----
         self._phase2_call_sub_agents(email, state, agents_to_call, callback)
 
@@ -251,7 +258,7 @@ class OrchestratorAgent(BaseAgent):
             f"收到一封邮件，让我先仔细阅读内容，然后从多个角度审视它的风险。\n"
             f"邮件主题：{email.subject or '(无主题)'}\n"
             f"发件人：{email.sender or '(未知)'}\n"
-            f"正文摘要：{(email.body[:250] or '(空)')}...",
+            f"正文摘要：{(email.body[:2000] or '(空)')}",
             callback,
         )
 
@@ -328,6 +335,25 @@ class OrchestratorAgent(BaseAgent):
 
         # 规则兜底策略
         return self._fallback_strategy(email, initial_observations, hypotheses)
+
+    def _ensure_threat_intel_for_suspicious(self, email: EmailInput, agents_to_call: list[str]) -> list[str]:
+        """
+        编排器后处理：始终纳入威胁情报关联 Agent，使其主动联网检索公开情报。
+        即便邮件看起来正常，也通过联网检索做一次交叉验证，保证每次检测都有公开情报佐证。
+        """
+        if "threat_intel" in agents_to_call:
+            return agents_to_call
+
+        # 在 detector 之前插入 threat_intel，让技术检测能参考情报结果
+        if "detector" in agents_to_call:
+            idx = agents_to_call.index("detector")
+        elif "semantic" in agents_to_call:
+            idx = agents_to_call.index("semantic") + 1
+        else:
+            idx = len(agents_to_call)
+        agents_to_call.insert(idx, "threat_intel")
+        logger.info("编排器已纳入威胁情报关联 Agent，将主动联网检索公开情报")
+        return agents_to_call
 
     def _quick_observe(self, email: EmailInput) -> str:
         """快速观察邮件的显性特征"""
@@ -420,15 +446,15 @@ class OrchestratorAgent(BaseAgent):
             legitimate_reason = "存在可能性：发件人可能是公司内部的安全提醒系统，紧急性有合理依据"
             uncertain_reason = "部分特征同时符合钓鱼和正常邮件的解释，需要技术维度验证"
         elif no_risk_signals:
-            phishing_conf = 0.15
-            legitimate_conf = 0.60
-            uncertain_conf = 0.25
+            phishing_conf = 0.10
+            legitimate_conf = 0.70
+            uncertain_conf = 0.20
             phishing_reason = "虽然未发现显性风险，但钓鱼邮件可能伪装良好，需后续深度分析排除"
             legitimate_reason = "邮件特征看起来正常，没有常见的钓鱼信号"
             uncertain_reason = "缺少足够证据做出确定判断，需要更多技术层面的信息"
         else:
-            phishing_conf = 0.40
-            legitimate_conf = 0.30
+            phishing_conf = 0.35
+            legitimate_conf = 0.35
             uncertain_conf = 0.30
             phishing_reason = "存在部分可疑特征，但不够充分，需要进一步验证"
             legitimate_reason = "某些特征可能是正常商业邮件的常见做法"
@@ -504,7 +530,7 @@ class OrchestratorAgent(BaseAgent):
             "请分析以下邮件，进行多假设推理并制定检测策略：",
             f"主题: {email.subject or '(无)'}",
             f"发件人: {email.sender or '(未知)'}",
-            f"正文: {(email.body[:600] or '(空)')}",
+            f"正文: {(email.body[:4000] or '(空)')}",
         ]
         if email.urls:
             parts.append(f"URL: {', '.join(email.urls[:5])}")
@@ -512,6 +538,8 @@ class OrchestratorAgent(BaseAgent):
             parts.append("⚠️ 包含附件")
         if isinstance(email.headers, dict) and email.headers:
             parts.append(f"邮件头: SPF={email.headers.get('spf','?')}, DKIM={email.headers.get('dkim','?')}, DMARC={email.headers.get('dmarc','?')}")
+        if email.prompt:
+            parts.append(f"\n用户补充提示/指令: {email.prompt}")
         parts.append(f"\n初步观察: {observations}")
         parts.append("\n请特别关注：发件人域名可信度、邮件头认证状态、URL 安全性、社会工程话术模式。")
         return "\n".join(parts)
