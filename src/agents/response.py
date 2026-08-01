@@ -155,7 +155,7 @@ class ResponseAgent(BaseAgent):
 
         if email.subject: parts.append(f"\n邮件主题: {email.subject}")
         if email.sender: parts.append(f"发件人: {email.sender}")
-        if email.body: parts.append(f"正文摘要: {email.body[:300]}")
+        if email.body: parts.append(f"正文摘要: {email.body[:2000]}")
 
         parts.append(f"\n意图: {semantic.intent} | 话术: {', '.join(semantic.persuasion_techniques)}")
         parts.append(f"发件人可信度: {detection.sender_score:.2f} | URL安全: {detection.url_score:.2f}")

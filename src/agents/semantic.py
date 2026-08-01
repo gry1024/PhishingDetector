@@ -154,11 +154,12 @@ class SemanticAgent(BaseAgent):
                 "暂无典型钓鱼特征，采用安全放行兜底。"
             )
         else:
+            # 有 URL 但无强信号 → 降低可疑概率，视为低风险
             intent = "suspicious"
-            confidence = 0.7
+            confidence = 0.55
             explanation = (
-                "规则兜底判定：未命中强钓鱼话术，但正文中提取到外部链接，"
-                "无法完全排除风险，继续采用审慎的可疑判定。"
+                "规则兜底判定：正文含 URL 但未命中强钓鱼话术，倾向判定为非钓鱼，"
+                "保持审慎将置信度设为 55% 以待进一步验证。"
             )
 
         return {
@@ -171,7 +172,10 @@ class SemanticAgent(BaseAgent):
     def _build_prompt(self, email: EmailInput) -> str:
         """构造 LLM 分析提示"""
         if email.raw_text:
-            return f"请分析以下邮件的意图：\n\n{email.raw_text}"
+            base = f"请分析以下邮件的意图：\n\n{email.raw_text}"
+            if email.prompt:
+                base += f"\n\n用户补充提示/指令: {email.prompt}"
+            return base
 
         parts = []
         if email.subject:
@@ -184,5 +188,7 @@ class SemanticAgent(BaseAgent):
             parts.append(f"URL: {', '.join(email.urls)}")
         if email.has_attachment:
             parts.append("⚠️ 包含附件")
+        if email.prompt:
+            parts.append(f"用户补充提示/指令: {email.prompt}")
 
         return f"请分析以下邮件的意图：\n\n" + "\n".join(parts)

@@ -12,12 +12,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #000;
+      --bg: #05050a;
       --text: #fff;
       --text-soft: rgba(255,255,255,0.86);
       --text-muted: rgba(255,255,255,0.64);
       --radius-full: 9999px;
       --radius-card: 24px;
+      --glass-blur: 26px;
+      --glass-sat: 150%;
     }
 
     * { box-sizing: border-box; }
@@ -42,6 +44,7 @@
       box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
       position: relative;
       overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .liquid-glass::before {
@@ -63,14 +66,20 @@
       pointer-events: none;
     }
 
-    .liquid-glass-strong {
+    .liquid-glass:hover {
       background: rgba(255,255,255,0.03);
+    }
+
+    .liquid-glass-strong {
+      background: rgba(255,255,255,0.01);
+      background-blend-mode: luminosity;
       backdrop-filter: blur(50px);
       -webkit-backdrop-filter: blur(50px);
       border: none;
       box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
       position: relative;
       overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .liquid-glass-strong::before {
@@ -92,14 +101,53 @@
       pointer-events: none;
     }
 
+    .liquid-glass-strong:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
     .section {
       position: relative;
       min-height: 100vh;
-      background: #000;
+      background: transparent;
       isolation: isolate;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+
+    /* Aurora flowing-light background */
+    .aurora-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: none;
+      background: radial-gradient(ellipse at 20% 20%, rgba(37,99,235,0.22) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 30%, rgba(217,119,6,0.18) 0%, transparent 45%),
+                  radial-gradient(ellipse at 40% 80%, rgba(99,102,241,0.16) 0%, transparent 48%),
+                  radial-gradient(ellipse at 70% 70%, rgba(245,158,11,0.12) 0%, transparent 42%),
+                  var(--bg);
+      overflow: hidden;
+    }
+    .aurora-bg::before,
+    .aurora-bg::after {
+      content: "";
+      position: absolute;
+      inset: -50%;
+      background: radial-gradient(ellipse 60% 30% at 30% 40%, rgba(59,130,246,0.28), transparent 55%),
+                  radial-gradient(ellipse 50% 25% at 70% 60%, rgba(245,158,11,0.24), transparent 55%);
+      filter: blur(60px);
+      animation: aurora-drift 24s ease-in-out infinite alternate;
+      mix-blend-mode: screen;
+    }
+    .aurora-bg::after {
+      animation-duration: 32s;
+      animation-direction: alternate-reverse;
+      transform: rotate(180deg);
+      opacity: 0.7;
+    }
+    @keyframes aurora-drift {
+      0% { transform: translate(-4%, -4%) rotate(0deg); }
+      100% { transform: translate(4%, 4%) rotate(8deg); }
     }
 
     .section video {
@@ -354,10 +402,146 @@
       .nav-center { display: none; }
     }
 
+    /* ===== Modal ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal-container {
+      position: relative;
+      width: 100%;
+      max-width: 860px;
+      max-height: 84vh;
+      overflow-y: auto;
+      border-radius: var(--radius-card);
+      padding: 34px 38px;
+      color: var(--text);
+      animation: modalIn 0.35s ease;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: background 0.15s;
+      z-index: 5;
+    }
+
+    .modal-close:hover { background: rgba(255,255,255,0.16); }
+
+    .modal-title {
+      font-family: "Instrument Serif", "Noto Serif SC", serif;
+      font-style: italic;
+      font-size: 38px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      margin-bottom: 10px;
+    }
+
+    .modal-subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 620px;
+      margin-bottom: 26px;
+    }
+
+    .modal-section {
+      margin-bottom: 24px;
+    }
+
+    .modal-section h3 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.56);
+      margin-bottom: 10px;
+    }
+
+    .modal-section p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-soft);
+      margin-bottom: 8px;
+    }
+
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .capability-card {
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .capability-card h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .capability-card p {
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .tech-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .tech-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-soft);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
     @media (max-width: 768px) {
-      .navbar { padding: 0 16px; }
-      .hero { padding-left: 16px; padding-right: 16px; }
-      .partners .row { gap: 16px; }
+      .modal-container { padding: 26px 22px; }
+      .modal-title { font-size: 30px; }
     }
   </style>
 </head>
@@ -365,18 +549,21 @@
   <header class="navbar">
     <div class="nav-logo liquid-glass">P</div>
     <nav class="nav-center liquid-glass" aria-label="导航">
-      <a class="active" href="#hero">首页</a>
-      <a href="#hero">检测引擎</a>
-      <a href="#hero">知识库</a>
-      <a href="#hero">报告中心</a>
-      <a href="#hero">关于</a>
+      <a class="active" href="/landing">首页</a>
+      <a href="/studio">检测引擎</a>
+      <a href="/studio">知识库</a>
+      <a href="/studio">报告中心</a>
+      <a href="javascript:void(0)" onclick="openModal('about')">关于</a>
       <a href="/studio" class="nav-cta">开始检测 <span aria-hidden="true">↗</span></a>
     </nav>
     <div class="nav-spacer"></div>
   </header>
 
   <section class="section" id="hero">
-    <video id="heroVideo" class="hero-video" autoPlay muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_080021_d598092b-c4c2-4e53-8e46-94cf9064cd50.mp4"></video>
+    <!-- Looping video background (大气泡/宇宙, matches reference page). To rollback: hide this <video> and set .aurora-bg display:block -->
+    <video id="heroVideo" class="hero-video" autoPlay loop muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_080021_d598092b-c4c2-4e53-8e46-94cf9064cd50.mp4"></video>
+    <!-- Old aurora background (hidden); remove display:none to rollback -->
+    <div class="aurora-bg"></div>
     <div class="section-inner">
       <div class="hero">
         <div class="hero-badge liquid-glass fade-item" data-delay="0.35">
@@ -392,14 +579,14 @@
 
         <div class="actions fade-item" data-delay="1.1">
           <a href="/studio" class="start-btn liquid-glass-strong">开始检测 <span aria-hidden="true">↗</span></a>
-          <a href="/studio" class="text-link">查看核心能力 <span aria-hidden="true">▶</span></a>
+          <a href="javascript:void(0)" class="text-link" onclick="openModal('capabilities')">查看核心能力 <span aria-hidden="true">▶</span></a>
         </div>
 
         <div class="hero-cards fade-item" data-delay="1.25">
           <div class="hero-card liquid-glass">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
-            <h3>2.4s</h3>
-            <p>在常规样本下，首个结构化风险信号可在数秒内反馈。</p>
+            <h3>7+</h3>
+            <p>Orchestrator 编排 7 个专业子 Agent 协同推理，检测全程通过 SSE 实时推送到前端，每一步证据透明可见。</p>
           </div>
           <div class="hero-card liquid-glass">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18"></path><path d="M12 3a15 15 0 0 0 0 18"></path></svg>
@@ -422,65 +609,109 @@
     </div>
   </section>
 
+  <!-- About Modal -->
+  <div class="modal-overlay" id="aboutModal" onclick="if(event.target === this) closeModal('about')">
+    <div class="modal-container liquid-glass-strong">
+      <button class="modal-close" onclick="closeModal('about')" aria-label="关闭">×</button>
+      <h2 class="modal-title">关于 PhishingDetector</h2>
+      <p class="modal-subtitle">面向企业邮箱场景的 AI 钓鱼邮件检测编排系统，让每一封可疑邮件的研判过程都透明、可追溯、可解释。</p>
+
+      <div class="modal-section">
+        <h3>项目背景</h3>
+        <p>传统邮件安全网关依赖黑名单与规则，难以应对快速演变的社工话术、AI 生成内容和零日钓鱼域名。PhishingDetector 通过多 Agent 协同推理，将发件人画像、邮件头取证、语义意图、URL/附件技术检测、威胁情报关联与风险融合串联成一条可执行的证据链，最终给出定量评分与可落地的处置建议。</p>
+      </div>
+
+      <div class="modal-section">
+        <h3>技术栈</h3>
+        <div class="tech-list">
+          <span class="tech-pill">FastAPI</span>
+          <span class="tech-pill">Uvicorn</span>
+          <span class="tech-pill">Server-Sent Events</span>
+          <span class="tech-pill">OpenAI-Compatible LLM</span>
+          <span class="tech-pill">Pydantic</span>
+          <span class="tech-pill">SQLite</span>
+          <span class="tech-pill">纯前端 SSE 渲染</span>
+          <span class="tech-pill">自注册工具集</span>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>设计理念</h3>
+        <p><strong>透明：</strong>用户不仅能看到最终风险分，还能看到每个 Agent 的推理、每一步子步骤与证据。</p>
+        <p><strong>鲁棒：</strong>当 LLM 不可用时，内置规则兜底机制仍可完成基础检测，保证服务可用性。</p>
+        <p><strong>可扩展：</strong>工具通过装饰器自注册，新增 Agent 或工具无需改动编排器核心逻辑。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capabilities Modal -->
+  <div class="modal-overlay" id="capabilitiesModal" onclick="if(event.target === this) closeModal('capabilities')">
+    <div class="modal-container liquid-glass-strong">
+      <button class="modal-close" onclick="closeModal('capabilities')" aria-label="关闭">×</button>
+      <h2 class="modal-title">核心能力</h2>
+      <p class="modal-subtitle">Orchestrator 驱动的 7 个专业子 Agent 协同工作，覆盖从发件人到响应建议的完整检测链路。</p>
+
+      <div class="modal-section">
+        <div class="capability-grid">
+          <div class="capability-card liquid-glass">
+            <h4>🕵️ 发件人画像</h4>
+            <p>分析发件人域名信誉、Display Name 冒充、历史出现频率与组织一致性，识别伪造身份。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>🔍 邮件头取证</h4>
+            <p>提取 SPF、DKIM、DMARC 等认证结果，检测路由异常、时间戳伪造与邮件转发痕迹。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>🧠 语义意图</h4>
+            <p>理解邮件主题与正文的社会工程话术，识别 urgency、权威冒充、奖励诱导等意图。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>🛰️ 威胁情报关联</h4>
+            <p>自动提取 IOC，匹配已知钓鱼模式，必要时联网检索公开情报，并映射到 MITRE ATT&CK。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>🛡️ 技术检测</h4>
+            <p>静态分析 URL、域名、附件名与行为异常，发现 IP 直链、短链、可疑 TLD 等技术指标。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>⚖️ 风险融合</h4>
+            <p>综合多维度证据，通过加权算法给出 0-100 的量化风险分，并解释关键证据。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>📝 响应建议</h4>
+            <p>根据风险等级生成可执行建议：隔离、深度研判、员工提醒、自动报告等。</p>
+          </div>
+          <div class="capability-card liquid-glass">
+            <h4>📡 实时推送</h4>
+            <p>基于 SSE 的流式输出，Agent 调用、子步骤、工具结果即时呈现在前端，无需轮询。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>检测证据链</h3>
+        <p>每封邮件进入系统后，Orchestrator 首先进行多假设推理与策略规划，随后依次调用相关子 Agent。每个 Agent 在 LLM 推理与本地规则之间自动选择，并将结果以结构化事件流推送到前端。最终报告聚合所有证据、评分与 ATT&CK 映射，支持一键导出。</p>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const FADE_MS = 500;
-    const FADE_OUT_LEAD = 0.55;
-
     function attachFadingVideo(video) {
-      let rafId = 0;
-      let fadeToken = 0;
-      let fadingOut = false;
-
-      function getOpacity() {
-        const raw = parseFloat(video.style.opacity || "0");
-        return Number.isFinite(raw) ? raw : 0;
-      }
-
-      function fadeTo(target, duration) {
-        fadeToken += 1;
-        const token = fadeToken;
-        const start = performance.now();
-        const from = getOpacity();
-        cancelAnimationFrame(rafId);
-
-        function tick(now) {
-          if (token !== fadeToken) return;
-          const progress = Math.min((now - start) / duration, 1);
-          video.style.opacity = String(from + (target - from) * progress);
-          if (progress < 1) rafId = requestAnimationFrame(tick);
-        }
-
-        rafId = requestAnimationFrame(tick);
-      }
-
-      function onLoadedData() {
-        video.style.opacity = "0";
+      if (!video) return;
+      video.style.opacity = "0";
+      video.style.transition = "opacity 0.6s ease";
+      var revealed = false;
+      function reveal() {
+        if (revealed) return;
+        revealed = true;
         video.play().catch(() => {});
-        fadeTo(1, FADE_MS);
+        requestAnimationFrame(() => { video.style.opacity = "1"; });
       }
-
-      function onTimeUpdate() {
-        const remaining = video.duration - video.currentTime;
-        if (!fadingOut && remaining <= FADE_OUT_LEAD && remaining > 0) {
-          fadingOut = true;
-          fadeTo(0, FADE_MS);
-        }
-      }
-
-      function onEnded() {
-        video.style.opacity = "0";
-        setTimeout(() => {
-          video.currentTime = 0;
-          video.play().catch(() => {});
-          fadingOut = false;
-          fadeTo(1, FADE_MS);
-        }, 100);
-      }
-
-      video.loop = false;
-      video.addEventListener("loadeddata", onLoadedData);
-      video.addEventListener("timeupdate", onTimeUpdate);
-      video.addEventListener("ended", onEnded);
+      video.addEventListener("loadeddata", reveal, { once: true });
+      video.addEventListener("canplay", reveal, { once: true });
+      video.addEventListener("canplaythrough", reveal, { once: true });
+      // Fallback: show video after 2.5s regardless
+      setTimeout(reveal, 2500);
     }
 
     function animateTitle() {
@@ -512,9 +743,43 @@
       });
     }
 
-    attachFadingVideo(document.getElementById("heroVideo"));
+    function openModal(id) {
+      document.getElementById(id + "Modal").classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(id) {
+      document.getElementById(id + "Modal").classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeModal("about");
+        closeModal("capabilities");
+      }
+    });
+
+    const heroVid = document.getElementById("heroVideo");
+    if (heroVid) attachFadingVideo(heroVid);
     animateTitle();
     revealFadeItems();
+
+    // ===== Slide-out animation when navigating to /studio =====
+    document.addEventListener("click", function(e) {
+      var link = e.target.closest("a[href]");
+      if (!link) return;
+      var href = link.getAttribute("href") || "";
+      if (href === "/studio" || href.indexOf("/studio") === 0) {
+        e.preventDefault();
+        document.body.style.transition = "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease";
+        document.body.style.transform = "translateY(-30px) scale(0.98)";
+        document.body.style.opacity = "0";
+        setTimeout(function() {
+          window.location.href = href;
+        }, 450);
+      }
+    });
   </script>
 </body>
 </html>

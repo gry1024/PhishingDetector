@@ -20,6 +20,22 @@ from src.models import (
     EmailInput, SemanticResult, DetectionResult, RiskResult,
 )
 from src.tools import get_tools_for_agent
+import json
+import os
+
+# ── 加载校准参数（由 scripts/split_and_calibrate.py 生成）──
+_calibration_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "datasets", "calibration.json",
+)
+_calibration = {}
+try:
+    with open(_calibration_path, "r", encoding="utf-8") as f:
+        _calibration = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    pass
+
+CALIBRATED_THRESHOLD = _calibration.get("best_threshold", 35)
 
 
 SYSTEM_PROMPT = """你是网络安全风险研判专家。综合语义分析和多维检测结果，做出最终风险判定。
@@ -187,26 +203,60 @@ class RiskAgent(BaseAgent):
         }
 
     def _rule_risk_score(self, semantic: SemanticResult, detection: DetectionResult) -> int:
-        """规则引擎快速预评分"""
+        """规则引擎快速预评分（已降低误报率）"""
         score = 0
+        # 意图判定：仅高置信度钓鱼/可疑才给高分
         if semantic.intent == "phishing":
-            score += 40
+            conf = getattr(semantic, "confidence", 0.5)
+            score += 35 if conf >= 0.65 else 22
         elif semantic.intent == "suspicious":
-            score += 20
-        score += min(len(semantic.persuasion_techniques) * 5, 20)
-        score += int((1 - detection.sender_score) * 20)
-        score += int((1 - detection.url_score) * 15)
-        score += int(detection.attachment_score * 15)
-        score += int(detection.behavior_score * 15)
-        score += min(len(detection.content_flags) * 3, 15)
-        return min(score, 100)
+            score += 12
+        # 话术数量得分上限降至 15
+        score += min(len(semantic.persuasion_techniques) * 4, 15)
+        # 发件人可信度惩罚 — 仅不可信时才扣分
+        if detection.sender_score < 0.5:
+            score += int((1 - detection.sender_score) * 18)
+        # URL 安全惩罚
+        if detection.url_score < 0.6:
+            score += int((1 - detection.url_score) * 12)
+        # 附件风险
+        score += int(detection.attachment_score * 12)
+        # 行为异常
+        score += int(detection.behavior_score * 10)
+        # 内容标记
+        score += min(len(detection.content_flags) * 3, 12)
+
+        # 良性偏移：当邮件看起来正常时减分
+        benign_signals = 0
+        if detection.sender_score >= 0.75:
+            benign_signals += 1
+        if detection.url_score >= 0.75:
+            benign_signals += 1
+        if detection.attachment_score < 0.2:
+            benign_signals += 1
+        if detection.behavior_score < 0.3:
+            benign_signals += 1
+        if len(detection.content_flags) == 0:
+            benign_signals += 1
+        # 多良性信号时大幅降分
+        if benign_signals >= 4:
+            score = max(0, score - 18)
+        elif benign_signals >= 3:
+            score = max(0, score - 10)
+        elif benign_signals >= 2:
+            score = max(0, score - 4)
+
+        return max(0, min(score, 100))
 
     def _score_to_level(self, score: int) -> str:
-        """分数 → 风险等级"""
+        """分数 → 风险等级（使用训练集校准阈值）"""
+        # 校准阈值用于 safe/low 边界；更高阈值保持不变
+        safe_boundary = max(10, CALIBRATED_THRESHOLD - 3)
+        low_boundary = max(20, CALIBRATED_THRESHOLD + 5)
         if score >= 81: return "critical"
         if score >= 61: return "high"
         if score >= 41: return "medium"
-        if score >= 21: return "low"
+        if score >= low_boundary: return "low"
         return "safe"
 
     def _build_prompt(self, email, semantic, detection, rule_score) -> str:
@@ -215,7 +265,7 @@ class RiskAgent(BaseAgent):
         if email.subject: parts.append(f"主题: {email.subject}")
         if email.sender: parts.append(f"发件人: {email.sender}")
         if email.body:
-            body = email.body[:800] + ("..." if len(email.body) > 800 else "")
+            body = email.body[:2000] + ("..." if len(email.body) > 2000 else "")
             parts.append(f"正文: {body}")
 
         parts.append(f"\n--- 语义分析 ---")

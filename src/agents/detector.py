@@ -336,6 +336,8 @@ class DetectorAgent(BaseAgent):
             parts.append(f"正文:\n{email.body}")
         if urls:
             parts.append(f"URL列表: {', '.join(urls)}")
+        if email.prompt:
+            parts.append(f"用户补充提示/指令: {email.prompt}")
 
         if semantic:
             parts.append(f"\n[语义分析结果] 意图:{semantic.intent} 话术:{','.join(semantic.persuasion_techniques)}")
