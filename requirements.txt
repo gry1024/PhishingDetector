@@ -4,6 +4,7 @@ uvicorn[standard]>=0.30.0
 
 # LLM
 openai>=1.50.0
+httpx<0.28
 
 # 数据处理
 pandas>=2.0.0
