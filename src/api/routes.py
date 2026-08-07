@@ -729,9 +729,17 @@ async def get_pipeline():
 
 
 @router.get("/kb/entries")
-async def list_kb_entries(limit: int = 50):
+async def list_kb_entries(limit: int = 50, category: str = None):
     """获取知识库条目列表"""
-    return db.list_kb_entries(limit=limit)
+    if category is None:
+        return db.list_kb_entries(limit=limit)
+    return db.list_kb_entries(limit=limit, category=category)
+
+
+@router.get("/kb/categories")
+async def list_kb_categories():
+    """获取知识库分类统计"""
+    return db.list_kb_categories()
 
 
 @router.get("/kb/search")
@@ -741,6 +749,15 @@ async def search_kb(q: str, limit: int = 5):
     if not query:
         return []
     return db.search_kb(query, limit=limit)
+
+
+@router.get("/kb/entries/{entry_id}")
+async def get_kb_entry(entry_id: int):
+    """获取单个知识库条目"""
+    entry = db.get_kb_entry(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="KB entry not found")
+    return entry
 
 
 @router.get("/health/llm")
