@@ -12,10 +12,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
   <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js"></script>
   <style>
-    /* 港铁宋体 (GangTie SongTi) — bundled in project for cross-platform consistency */
+    /* 思源宋体 (Noto Serif SC) — bundled in project for cross-platform consistency */
     @font-face {
-      font-family: 'GangTieSongTi';
-      src: url('/static/fonts/GangTieSongTi.ttf') format('truetype');
+      font-family: 'NotoSerifSC';
+      src: url('/static/fonts/NotoSerifSC.ttf') format('truetype-variations');
       font-weight: 100 900;
       font-style: normal;
       font-display: swap;
@@ -43,10 +43,10 @@
       --topbar-h: 60px;
       --page-max: 1200px;
 
-      /* Font stacks — GangTieSongTi (港铁宋体) as primary CJK serif */
-      --font-serif: 'GangTieSongTi', 'Noto Serif SC', 'SimSun', '宋体', 'STSong', serif;
+      /* Font stacks — NotoSerifSC (思源宋体) as primary CJK serif */
+      --font-serif: 'NotoSerifSC', 'Noto Serif SC', 'SimSun', '宋体', 'STSong', serif;
       --font-sans: 'Inter', 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      --font-display: 'Cormorant Garamond', 'GangTieSongTi', 'Noto Serif SC', serif;
+      --font-display: 'Cormorant Garamond', 'NotoSerifSC', 'Noto Serif SC', serif;
     }
 
     *, *::before, *::after {
@@ -251,7 +251,7 @@
 
     .hero-subtitle-cn {
       margin-top: 14px;
-      font-family: 'GangTieSongTi', 'Noto Serif SC', 'SimSun', serif !important;
+      font-family: 'NotoSerifSC', 'Noto Serif SC', 'SimSun', serif !important;
       font-size: clamp(18px, 2.4vw, 26px);
       line-height: 1.4;
       font-weight: 500;
