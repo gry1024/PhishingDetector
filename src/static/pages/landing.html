@@ -6,11 +6,21 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>PhishingDetector | 封面页</title>
+  <title>CyberOrion | 跨域协同自主闭环网络安全超级智能体</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.82/build/spline-viewer.js"></script>
   <style>
+    /* 思源宋体 (Noto Serif SC) — bundled in project for cross-platform consistency */
+    @font-face {
+      font-family: 'NotoSerifSC';
+      src: url('/static/fonts/NotoSerifSC.ttf') format('truetype-variations');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       --bg: #0a0a0a;
       --bg-elev: #111112;
@@ -24,6 +34,7 @@
       --btn-bg: #f5f5f5;
       --btn-text: #0a0a0a;
       --green: #4ade80;
+      --blue: #60a5fa;
       --radius: 10px;
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -31,6 +42,11 @@
       --radius-pill: 999px;
       --topbar-h: 60px;
       --page-max: 1200px;
+
+      /* Font stacks — NotoSerifSC (思源宋体) as primary CJK serif */
+      --font-serif: 'NotoSerifSC', 'Noto Serif SC', 'SimSun', '宋体', 'STSong', serif;
+      --font-sans: 'Inter', 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --font-display: 'Cormorant Garamond', 'NotoSerifSC', 'Noto Serif SC', serif;
     }
 
     *, *::before, *::after {
@@ -43,26 +59,20 @@
       min-height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: "Inter", -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-family: var(--font-sans);
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     body {
       padding-top: var(--topbar-h);
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font: inherit; }
 
-    button,
-    input,
-    textarea,
-    select {
-      font: inherit;
-    }
-
+    /* ====== TOPBAR ====== */
     .topbar {
       position: fixed;
       inset: 0 0 auto 0;
@@ -74,34 +84,39 @@
       gap: 16px;
       padding: 0 20px;
       background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
     }
 
     .brand {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
       min-width: 0;
       flex-shrink: 0;
     }
 
     .brand-mark {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: var(--radius-sm);
-      background: var(--btn-bg);
-      color: var(--btn-text);
+      background: linear-gradient(135deg, rgba(96,165,250,0.15), rgba(74,222,128,0.15));
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.9);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
-      font-weight: 800;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
       letter-spacing: -0.02em;
       flex-shrink: 0;
     }
 
     .brand-name {
-      font-size: 14px;
+      font-family: var(--font-display);
+      font-size: 17px;
       font-weight: 600;
       letter-spacing: 0.01em;
       white-space: nowrap;
@@ -110,12 +125,14 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
       min-width: 0;
     }
 
     .nav-links a {
-      font-size: 13.5px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
       color: var(--text-2);
       padding: 8px 12px;
       border-radius: var(--radius-sm);
@@ -123,29 +140,19 @@
       transition: background-color 0.15s ease, color 0.15s ease;
     }
 
-    .nav-links a:hover {
-      background: var(--bg-hover);
-      color: var(--text);
-    }
-
-    .nav-links a.active {
-      color: var(--text);
-      background: var(--bg-active);
-    }
+    .nav-links a:hover { background: var(--bg-hover); color: var(--text); }
+    .nav-links a.active { color: var(--text); background: var(--bg-active); }
 
     .nav-links a.btn-primary {
       color: var(--btn-text);
       background: var(--btn-bg);
-      font-weight: 700;
+      font-weight: 600;
       padding: 8px 14px;
       margin-left: 6px;
     }
+    .nav-links a.btn-primary:hover { background: #e8e8e8; color: var(--btn-text); }
 
-    .nav-links a.btn-primary:hover {
-      background: #e8e8e8;
-      color: var(--btn-text);
-    }
-
+    /* ====== PAGE / HERO ====== */
     .page {
       min-height: calc(100vh - var(--topbar-h));
       display: flex;
@@ -153,14 +160,38 @@
     }
 
     .hero {
+      position: relative;
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 56px 20px 28px;
+      padding: 48px 20px 32px;
+      overflow: hidden;
+      isolation: isolate;
     }
 
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: #141414;
+      overflow: hidden;
+    }
+    .hero-bg spline-viewer {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35) 100%);
+      pointer-events: none;
+    }
     .hero-inner {
+      position: relative;
+      z-index: 2;
       width: min(100%, var(--page-max));
       display: flex;
       flex-direction: column;
@@ -171,25 +202,28 @@
     .reveal {
       opacity: 0;
       transform: translateY(16px);
-      transition: opacity 0.55s ease, transform 0.55s ease;
+      transition: opacity 0.6s ease, transform 0.6s ease;
     }
+    .reveal.in { opacity: 1; transform: translateY(0); }
 
-    .reveal.in {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
+    /* ====== HERO BADGE ====== */
     .hero-badge {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 7px 12px;
+      gap: 8px;
+      padding: 6px 14px 6px 12px;
       border-radius: var(--radius-pill);
-      border: 1px solid var(--border);
-      color: var(--text-2);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: rgba(255,255,255,0.68);
+      font-family: var(--font-sans);
       font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
       line-height: 1;
-      margin-bottom: 26px;
+      margin-bottom: 24px;
     }
 
     .badge-dot {
@@ -197,130 +231,214 @@
       height: 6px;
       border-radius: 50%;
       background: var(--green);
+      box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
       flex-shrink: 0;
     }
 
+    /* ====== HERO TITLE (Serif) ====== */
     .hero-title {
-      max-width: 980px;
-      font-size: clamp(40px, 6.4vw, 68px);
-      line-height: 1.08;
-      letter-spacing: -0.035em;
-      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: clamp(44px, 8vw, 88px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      font-weight: 600;
+      text-shadow: 0 2px 28px rgba(0,0,0,0.5);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.82) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .hero-subtitle {
-      max-width: 640px;
-      margin-top: 18px;
-      font-size: 16px;
-      line-height: 1.75;
-      color: var(--text-2);
+    .hero-subtitle-cn {
+      margin-top: 14px;
+      font-family: 'NotoSerifSC', 'Noto Serif SC', 'SimSun', serif !important;
+      font-size: clamp(18px, 2.4vw, 26px);
+      line-height: 1.4;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: rgba(255,255,255,0.88);
+      text-shadow: 0 1px 16px rgba(0,0,0,0.45);
     }
 
-    .hero-actions {
+    .hero-desc {
+      max-width: 540px;
+      margin-top: 16px;
+      font-family: var(--font-sans);
+      font-size: clamp(13px, 1.3vw, 15px);
+      line-height: 1.7;
+      font-weight: 400;
+      color: rgba(255,255,255,0.52);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.3);
+    }
+
+    /* ====== SUB-PROJECT CARDS ====== */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      width: min(100%, 760px);
+      margin-top: 32px;
+    }
+
+    .project-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 22px 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(17,17,18,0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      text-align: left;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      opacity: 0.7;
+    }
+
+    .project-card.phishing::before {
+      background: linear-gradient(90deg, var(--green), rgba(74,222,128,0.2));
+    }
+
+    .project-card.arena::before {
+      background: linear-gradient(90deg, var(--blue), rgba(96,165,250,0.2));
+    }
+
+    .project-card:hover {
+      border-color: rgba(255,255,255,0.16);
+      background: rgba(23,23,24,0.65);
+      transform: translateY(-2px);
+    }
+
+    .project-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 28px;
+      justify-content: space-between;
+      margin-bottom: 14px;
     }
 
-    .btn {
+    .project-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      min-height: 42px;
-      padding: 0 16px;
-      border-radius: var(--radius);
-      border: 1px solid transparent;
-      font-size: 14px;
-      font-weight: 700;
-      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      flex-shrink: 0;
     }
 
-    .btn-primary {
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      border-color: var(--btn-bg);
+    .project-card.phishing .project-icon {
+      background: rgba(74,222,128,0.1);
+      border: 1px solid rgba(74,222,128,0.2);
     }
 
-    .nav-links a.btn-primary {
-      color: var(--btn-text);
+    .project-card.arena .project-icon {
+      background: rgba(96,165,250,0.1);
+      border: 1px solid rgba(96,165,250,0.2);
     }
 
-    .btn-primary:hover {
-      background: #e8e8e8;
-      color: var(--btn-text);
+    .project-icon svg { width: 18px; height: 18px; }
+
+    .project-status {
+      font-family: var(--font-sans);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
     }
 
-    .btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border-color: var(--border-strong);
+    .project-card.phishing .project-status {
+      color: var(--green);
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.15);
     }
 
-    .btn-ghost:hover {
-      background: var(--bg-hover);
-      border-color: var(--border);
+    .project-card.arena .project-status {
+      color: var(--blue);
+      background: rgba(96,165,250,0.08);
+      border: 1px solid rgba(96,165,250,0.15);
     }
 
-    .stats {
-      width: min(100%, 920px);
-      margin-top: 28px;
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      background: var(--bg-elev);
-    }
-
-    .stat {
-      padding: 18px 18px 16px;
-      text-align: left;
-      min-height: 118px;
-    }
-
-    .stat + .stat {
-      border-left: 1px solid var(--border);
-    }
-
-    .stat-value {
-      font-size: 26px;
-      line-height: 1;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 10px;
-    }
-
-    .stat-desc {
-      font-size: 12px;
-      line-height: 1.65;
-      color: var(--text-2);
-    }
-
-    .dimensions {
-      margin-top: 18px;
-      font-size: 13px;
-      color: var(--text-2);
-      line-height: 1.6;
+    .project-title {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.3;
       letter-spacing: 0.01em;
+      color: rgba(255,255,255,0.95);
+      margin-bottom: 6px;
     }
 
-    .dimensions span + span::before {
-      content: " · ";
-      color: var(--text-3);
+    .project-desc {
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 16px;
+      flex: 1;
     }
 
+    .project-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 16px;
+    }
+
+    .project-tag {
+      font-family: var(--font-sans);
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.42);
+      white-space: nowrap;
+    }
+
+    .project-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: gap 0.2s ease;
+    }
+
+    .project-card.phishing .project-cta { color: var(--green); }
+    .project-card.arena .project-cta { color: var(--blue); }
+
+    .project-card:hover .project-cta { gap: 10px; }
+
+    /* ====== FOOTER ====== */
     .site-footer {
       border-top: 1px solid var(--border);
       color: var(--text-3);
-      font-size: 12px;
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
       text-align: center;
-      padding: 12px 16px;
+      padding: 14px 16px;
     }
 
+    .site-footer .footer-serif {
+      font-family: var(--font-serif);
+      font-weight: 500;
+    }
+
+    /* ====== MODAL ====== */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -331,10 +449,7 @@
       padding: 20px;
       background: rgba(0, 0, 0, 0.6);
     }
-
-    .modal-overlay.open {
-      display: flex;
-    }
+    .modal-overlay.open { display: flex; }
 
     .modal-panel {
       position: relative;
@@ -350,10 +465,8 @@
 
     .modal-close {
       position: absolute;
-      top: 14px;
-      right: 14px;
-      width: 32px;
-      height: 32px;
+      top: 14px; right: 14px;
+      width: 32px; height: 32px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border);
       background: transparent;
@@ -361,33 +474,30 @@
       cursor: pointer;
       line-height: 1;
     }
-
-    .modal-close:hover {
-      background: var(--bg-hover);
-      color: var(--text);
-    }
+    .modal-close:hover { background: var(--bg-hover); color: var(--text); }
 
     .modal-title {
-      font-size: 32px;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      font-weight: 700;
+      font-family: var(--font-serif);
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+      font-weight: 600;
       margin-bottom: 10px;
     }
 
     .modal-subtitle {
-      font-size: 15px;
+      font-family: var(--font-sans);
+      font-size: 14.5px;
       line-height: 1.7;
       color: var(--text-2);
       max-width: 640px;
       margin-bottom: 26px;
     }
 
-    .modal-section {
-      margin-top: 24px;
-    }
+    .modal-section { margin-top: 24px; }
 
     .modal-section-title {
+      font-family: var(--font-sans);
       font-size: 12px;
       line-height: 1.2;
       color: var(--text-3);
@@ -397,16 +507,13 @@
     }
 
     .modal-copy {
+      font-family: var(--font-sans);
       font-size: 14px;
       line-height: 1.75;
       color: var(--text-2);
     }
 
-    .tech-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    .tech-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
     .tech-pill {
       display: inline-flex;
@@ -416,6 +523,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-pill);
       color: var(--text-2);
+      font-family: var(--font-sans);
       font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
@@ -435,267 +543,183 @@
       padding: 16px 0;
       border-top: 1px solid var(--border);
     }
-
-    .capability-item:first-child {
-      border-top: 0;
-    }
+    .capability-item:first-child { border-top: 0; }
 
     .capability-index {
-      font-size: 12px;
+      font-family: var(--font-display);
+      font-size: 14px;
       color: var(--text-3);
-      letter-spacing: 0.08em;
-      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-weight: 600;
       line-height: 1.5;
       padding-top: 2px;
     }
 
     .capability-title {
-      font-size: 14px;
-      font-weight: 700;
+      font-family: var(--font-serif);
+      font-size: 15px;
+      font-weight: 600;
       line-height: 1.5;
       margin-bottom: 4px;
     }
 
     .capability-desc {
+      font-family: var(--font-sans);
       font-size: 13px;
       line-height: 1.7;
       color: var(--text-2);
     }
 
+    /* ====== RESPONSIVE ====== */
     @media (max-width: 900px) {
-      .nav-links a.nav-link {
-        display: none;
-      }
-
-      .hero {
-        padding-top: 44px;
-      }
-
-      .stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .stat:nth-child(3),
-      .stat:nth-child(4) {
-        border-top: 1px solid var(--border);
-      }
-
-      .stat:nth-child(odd) {
-        border-left: 0;
-      }
-
-      .stat:nth-child(even) {
-        border-left: 1px solid var(--border);
-      }
+      .nav-links a.nav-link { display: none; }
+      .hero { padding-top: 40px; }
+      .project-grid { grid-template-columns: 1fr; max-width: 420px; }
     }
 
     @media (max-width: 640px) {
-      .topbar {
-        padding: 0 14px;
-      }
-
-      .brand-name {
-        font-size: 13px;
-      }
-
-      .hero {
-        padding-inline: 14px;
-      }
-
-      .hero-title {
-        font-size: clamp(34px, 11vw, 44px);
-      }
-
-      .hero-subtitle {
-        font-size: 15px;
-      }
-
-      .stats {
-        grid-template-columns: 1fr;
-      }
-
-      .stat + .stat {
-        border-left: 0;
-        border-top: 1px solid var(--border);
-      }
-
-      .modal-panel {
-        padding: 24px 20px;
-      }
-
-      .modal-title {
-        font-size: 26px;
-      }
-
-      .capability-item {
-        grid-template-columns: 34px minmax(0, 1fr);
-        gap: 10px;
-      }
+      .topbar { padding: 0 14px; }
+      .brand-name { font-size: 15px; }
+      .hero { padding-inline: 14px; }
+      .hero-badge { font-size: 11px; margin-bottom: 20px; }
+      .hero-title { font-size: clamp(36px, 12vw, 52px); }
+      .hero-subtitle-cn { font-size: 17px; margin-top: 12px; }
+      .hero-desc { font-size: 13px; }
+      .project-grid { margin-top: 26px; }
+      .project-card { padding: 20px 18px 16px; }
+      .project-title { font-size: 17px; }
+      .project-desc { font-size: 12px; }
+      .modal-panel { padding: 24px 20px; }
+      .modal-title { font-size: 24px; }
+      .capability-item { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
     }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/landing" aria-label="PhishingDetector 首页">
-      <div class="brand-mark">P</div>
-      <div class="brand-name">PhishingDetector</div>
+    <a class="brand" href="/landing" aria-label="CyberOrion 首页">
+      <div class="brand-mark">C</div>
+      <div class="brand-name">CyberOrion</div>
     </a>
 
     <nav class="nav-links" aria-label="主导航">
       <a class="nav-link active" href="/landing">首页</a>
-      <a class="nav-link" href="/studio">检测引擎</a>
+      <a class="nav-link" href="/studio">钓鱼检测</a>
       <a class="nav-link" href="/knowledge">知识库</a>
-      <a class="nav-link" href="/studio">报告中心</a>
+      <a class="nav-link" href="https://github.com/gry1024/cyberorion" target="_blank" rel="noopener">GitHub</a>
       <a class="nav-link" href="javascript:void(0)" onclick="openModal('about')">关于</a>
-      <a class="btn btn-primary" href="/studio">开始检测 <span aria-hidden="true">→</span></a>
+      <a class="btn btn-primary" href="/studio">进入工作台 <span aria-hidden="true">→</span></a>
     </nav>
   </header>
 
   <main class="page">
     <section class="hero">
+      <div class="hero-bg" aria-hidden="true">
+        <spline-viewer url="https://prod.spline.design/Slk6b8kz3LRlKiyk/scene.splinecode"></spline-viewer>
+      </div>
+      <div class="hero-overlay" aria-hidden="true"></div>
       <div class="hero-inner">
         <div class="hero-badge reveal" data-delay="0">
           <span class="badge-dot" aria-hidden="true"></span>
-          <span>多 Agent 协同检测 · 过程实时可见</span>
+          <span>跨域协同 · 自主闭环 · 超级智能体</span>
         </div>
 
-        <h1 class="hero-title reveal" data-delay="0.08">让每一封邮件，都值得信任。</h1>
+        <h1 class="hero-title reveal" data-delay="0.08">CyberOrion</h1>
 
-        <p class="hero-subtitle reveal" data-delay="0.18">AI 驱动的钓鱼邮件检测引擎，<br>/ 为邮箱筑起第一道、也是最坚固的一道防线。</p>
+        <p class="hero-subtitle-cn reveal" data-delay="0.16">跨域协同自主闭环网络安全超级智能体</p>
 
-        <div class="hero-actions reveal" data-delay="0.28">
-          <a class="btn btn-primary" href="/studio">开始检测 <span aria-hidden="true">→</span></a>
-          <button class="btn btn-ghost" type="button" onclick="openModal('capabilities')">查看核心能力</button>
+        <p class="hero-desc reveal" data-delay="0.24">统一智能体架构，覆盖钓鱼邮件检测与红蓝对抗多域安全场景，每个子域自主推理、自主闭环。</p>
+
+        <div class="project-grid reveal" data-delay="0.34">
+          <!-- Sub-project 1: Phishing Detection -->
+          <a class="project-card phishing" href="/studio">
+            <div class="project-header">
+              <div class="project-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </div>
+              <span class="project-status">已上线</span>
+            </div>
+            <div class="project-title">钓鱼邮件检测引擎</div>
+            <div class="project-desc">多 Agent 协同编排，7+ 子 Agent 分工排查，SSE 实时推送每步推理与证据，过程透明可追溯。</div>
+            <div class="project-tags">
+              <span class="project-tag">7+ Agent</span>
+              <span class="project-tag">SSE 流式</span>
+              <span class="project-tag">ATT&amp;CK 映射</span>
+            </div>
+            <span class="project-cta">进入检测引擎 <span aria-hidden="true">→</span></span>
+          </a>
+
+          <!-- Sub-project 2: Red-Blue Arena -->
+          <a class="project-card arena" href="https://github.com/gry1024/cyberorion" target="_blank" rel="noopener">
+            <div class="project-header">
+              <div class="project-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="rgba(96,165,250,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+                  <path d="M13 19l6-6"/>
+                  <path d="M16 16l4 4"/>
+                  <path d="M19 21l2-2"/>
+                </svg>
+              </div>
+              <span class="project-status">GitHub</span>
+            </div>
+            <div class="project-title">红蓝对抗平台</div>
+            <div class="project-desc">红方 Agent 自主渗透 Docker 靶场，蓝方 SOC 团队信息隔离防守，服务端裁判客观评分，可复现可审计。</div>
+            <div class="project-tags">
+              <span class="project-tag">红蓝对抗</span>
+              <span class="project-tag">客观评分</span>
+              <span class="project-tag">知识库 RAG</span>
+            </div>
+            <span class="project-cta">查看项目 <span aria-hidden="true">→</span></span>
+          </a>
         </div>
-
-        <div class="stats reveal" data-delay="0.38" aria-label="产品数据条">
-          <div class="stat">
-            <div class="stat-value">7+</div>
-            <div class="stat-desc">专业子 Agent 分工排查，由编排器统一调度</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value">6+</div>
-            <div class="stat-desc">语义、行为、URL、头部认证、威胁情报与风险融合证据</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value">9</div>
-            <div class="stat-desc">个检测维度，从发件人核查到处置建议</div>
-          </div>
-          <div class="stat">
-            <div class="stat-value">SSE</div>
-            <div class="stat-desc">检测过程实时推送，每步依据都能看到</div>
-          </div>
-        </div>
-
-        <div class="dimensions reveal" data-delay="0.48">域名检测 · 语义意图 · 关联分析 · 风险研判 · ATT&CK 映射</div>
       </div>
     </section>
 
-    <footer class="site-footer reveal" data-delay="0.58">PhishingDetector · AI 钓鱼邮件检测平台</footer>
+    <footer class="site-footer reveal" data-delay="0.48">
+      <span class="footer-serif">CyberOrion</span> · 跨域协同自主闭环网络安全超级智能体
+    </footer>
   </main>
 
+  <!-- About Modal -->
   <div class="modal-overlay" id="aboutModal" onclick="if (event.target === this) closeModal('about')">
     <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
       <button class="modal-close" type="button" onclick="closeModal('about')" aria-label="关闭">×</button>
-      <h2 class="modal-title" id="aboutTitle">关于 PhishingDetector</h2>
-      <p class="modal-subtitle">面向企业邮箱场景的 AI 钓鱼邮件检测编排系统，让每一封可疑邮件的研判过程都透明、可追溯、可解释。</p>
+      <h2 class="modal-title" id="aboutTitle">关于 CyberOrion</h2>
+      <p class="modal-subtitle">跨域协同自主闭环网络安全超级智能体——统一智能体架构覆盖多域安全场景，每个子域自主推理、自主闭环。</p>
 
       <div class="modal-section">
-        <div class="modal-section-title">项目背景</div>
-        <p class="modal-copy">传统邮件安全网关依赖黑名单与规则，难以应对快速演变的社工话术、AI 生成内容和零日钓鱼域名。PhishingDetector 通过多 Agent 协同推理，将发件人画像、邮件头取证、语义意图、URL/附件技术检测、威胁情报关联与风险融合串联成一条可执行的证据链，最终给出定量评分与可落地的处置建议。</p>
+        <div class="modal-section-title">项目愿景</div>
+        <p class="modal-copy">传统安全工具各自为战，检测与响应割裂。CyberOrion 以统一的智能体编排架构，将钓鱼邮件检测、红蓝对抗、威胁情报关联等安全子域串联为跨域协同的闭环体系。每个子域由专业 Agent 团队自主推理、自主决策，编排器统一调度，最终给出可解释、可追溯的安全研判。</p>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">子项目</div>
+        <p class="modal-copy"><strong>钓鱼邮件检测引擎：</strong>多 Agent 协同编排，覆盖发件人画像、邮件头取证、语义意图、URL/附件检测、威胁情报关联与风险融合，SSE 实时推送全过程。</p>
+        <p class="modal-copy" style="margin-top:10px;"><strong>红蓝对抗平台：</strong>红方 Agent 自主渗透 Docker 靶场，蓝方 SOC 团队信息隔离防守，服务端裁判客观评分（TP/FP/FN/检测率/MTTD），可复现可审计的 LLM 攻防。</p>
       </div>
 
       <div class="modal-section">
         <div class="modal-section-title">技术栈</div>
         <div class="tech-list">
           <span class="tech-pill">FastAPI</span>
-          <span class="tech-pill">Uvicorn</span>
           <span class="tech-pill">Server-Sent Events</span>
           <span class="tech-pill">OpenAI-Compatible LLM</span>
-          <span class="tech-pill">Pydantic</span>
-          <span class="tech-pill">SQLite</span>
-          <span class="tech-pill">纯前端 SSE 渲染</span>
+          <span class="tech-pill">Docker 靶场</span>
+          <span class="tech-pill">CAI Framework</span>
+          <span class="tech-pill">知识库 RAG</span>
+          <span class="tech-pill">ATT&amp;CK 映射</span>
           <span class="tech-pill">自注册工具集</span>
         </div>
       </div>
 
       <div class="modal-section">
         <div class="modal-section-title">设计理念</div>
-        <p class="modal-copy"><strong>透明：</strong>用户不仅能看到最终风险分，还能看到每个 Agent 的推理、每一步子步骤与证据。</p>
-        <p class="modal-copy"><strong>鲁棒：</strong>当 LLM 不可用时，内置规则兜底机制仍可完成基础检测，保证服务可用性。</p>
-        <p class="modal-copy"><strong>可扩展：</strong>工具通过装饰器自注册，新增 Agent 或工具无需改动编排器核心逻辑。</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="capabilitiesModal" onclick="if (event.target === this) closeModal('capabilities')">
-    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="capabilitiesTitle">
-      <button class="modal-close" type="button" onclick="closeModal('capabilities')" aria-label="关闭">×</button>
-      <h2 class="modal-title" id="capabilitiesTitle">核心能力</h2>
-      <p class="modal-subtitle">Orchestrator 驱动的 7 个专业子 Agent 协同工作，覆盖从发件人到响应建议的完整检测链路。</p>
-
-      <div class="capability-list">
-        <div class="capability-item">
-          <div class="capability-index">01</div>
-          <div>
-            <div class="capability-title">发件人画像</div>
-            <div class="capability-desc">分析发件人域名信誉、Display Name 冒充、历史出现频率与组织一致性，识别伪造身份。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">02</div>
-          <div>
-            <div class="capability-title">邮件头取证</div>
-            <div class="capability-desc">提取 SPF、DKIM、DMARC 等认证结果，检测路由异常、时间戳伪造与邮件转发痕迹。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">03</div>
-          <div>
-            <div class="capability-title">语义意图</div>
-            <div class="capability-desc">理解邮件主题与正文的社会工程话术，识别 urgency、权威冒充、奖励诱导等意图。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">04</div>
-          <div>
-            <div class="capability-title">威胁情报关联</div>
-            <div class="capability-desc">自动提取 IOC，匹配已知钓鱼模式，必要时联网检索公开情报，并映射到 MITRE ATT&CK。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">05</div>
-          <div>
-            <div class="capability-title">技术检测</div>
-            <div class="capability-desc">静态分析 URL、域名、附件名与行为异常，发现 IP 直链、短链、可疑 TLD 等技术指标。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">06</div>
-          <div>
-            <div class="capability-title">风险融合</div>
-            <div class="capability-desc">综合多维度证据，通过加权算法给出 0-100 的量化风险分，并解释关键证据。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">07</div>
-          <div>
-            <div class="capability-title">响应建议</div>
-            <div class="capability-desc">根据风险等级生成可执行建议：隔离、深度研判、员工提醒、自动报告等。</div>
-          </div>
-        </div>
-        <div class="capability-item">
-          <div class="capability-index">08</div>
-          <div>
-            <div class="capability-title">实时推送</div>
-            <div class="capability-desc">基于 SSE 的流式输出，Agent 调用、子步骤、工具结果即时呈现在前端，无需轮询。</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-section">
-        <div class="modal-section-title">检测证据链</div>
-        <p class="modal-copy">每封邮件进入系统后，Orchestrator 首先进行多假设推理与策略规划，随后依次调用相关子 Agent。每个 Agent 在 LLM 推理与本地规则之间自动选择，并将结果以结构化事件流推送到前端。最终报告聚合所有证据、评分与 ATT&CK 映射，支持一键导出。</p>
+        <p class="modal-copy"><strong>跨域协同：</strong>不同安全子域的 Agent 共享编排层与知识库，证据跨域流通。</p>
+        <p class="modal-copy" style="margin-top:8px;"><strong>自主闭环：</strong>从检测到处置，Agent 自主推理决策，减少人工干预。</p>
+        <p class="modal-copy" style="margin-top:8px;"><strong>透明可审计：</strong>每一步推理、工具调用、证据都可追溯，过程实时可见。</p>
       </div>
     </div>
   </div>
@@ -730,7 +754,6 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeModal("about");
-        closeModal("capabilities");
       }
     });
 
