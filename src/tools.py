@@ -326,6 +326,12 @@ def analyze_attachment_risk(text: str) -> ToolResult:
         ("payment", "付款单据"),
         ("statement", "对账单"),
         ("receipt", "收据"),
+        # 中文财务词：覆盖 BEC/发票类附件钓鱼话术（此前纯英文词表存在盲区）
+        ("发票", "付款单据"),
+        ("付款", "付款单据"),
+        ("单据", "付款单据"),
+        ("对账", "对账单"),
+        ("收据", "收据"),
     ]
     hits = []
     risk_score = 0

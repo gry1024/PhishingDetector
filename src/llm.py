@@ -6,19 +6,41 @@ LLM 客户端模块
 使用 OpenAI SDK 兼容模式，支持同步和流式调用。
 """
 
+import contextvars
 import json
 import logging
 from typing import Generator
 
 from openai import OpenAI
+import requests
 
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
+# 显式 LLM 禁用开关（ContextVar，按线程/上下文隔离）：
+# 批量评测等纯规则场景使用，不影响其他并发请求/线程的 LLM 可用性
+_llm_disabled: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "llm_disabled", default=False
+)
+
+
+def set_llm_disabled(disabled: bool = True) -> contextvars.Token:
+    """在当前上下文中显式禁用/恢复 LLM，返回 token 供 reset_llm_disabled 复位。"""
+    return _llm_disabled.set(disabled)
+
+
+def reset_llm_disabled(token: contextvars.Token) -> None:
+    """按 token 复位 LLM 禁用状态。"""
+    _llm_disabled.reset(token)
+
 
 class LLMUnavailableError(RuntimeError):
     """LLM 服务不可用时的兜底异常类型。"""
+
+
+class EmbeddingUnavailableError(RuntimeError):
+    """知识库向量嵌入不可用时抛出。"""
 
 
 class LLMClient:
@@ -212,8 +234,85 @@ def get_llm() -> LLMClient:
 
 def is_llm_available() -> bool:
     """检查 LLM 是否可用（不抛异常）。"""
+    if _llm_disabled.get():
+        return False
     try:
         get_llm()
         return True
     except LLMUnavailableError:
         return False
+
+
+def embed(texts: list[str], emb_type: str = "db") -> list[list[float]]:
+    """调用 MiniMax 原生 embeddings 接口，返回向量列表。"""
+    if not texts:
+        return []
+
+    if emb_type not in {"db", "query"}:
+        raise EmbeddingUnavailableError(f"不支持的 embedding type: {emb_type}")
+
+    if not settings.embedding_model:
+        raise EmbeddingUnavailableError("EMBEDDING_MODEL 未配置")
+    if not settings.minimax_group_id:
+        raise EmbeddingUnavailableError("MINIMAX_GROUP_ID 未配置")
+    if not settings.minimax_api_key:
+        raise EmbeddingUnavailableError("MINIMAX_API_KEY 未配置")
+    if not settings.minimax_base_url:
+        raise EmbeddingUnavailableError("MINIMAX_BASE_URL 未配置")
+
+    endpoint = settings.minimax_base_url.rstrip("/") + "/embeddings"
+    payload = {
+        "model": settings.embedding_model,
+        "texts": texts,
+        "type": emb_type,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.minimax_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            endpoint,
+            params={"GroupId": settings.minimax_group_id},
+            json=payload,
+            headers=headers,
+            timeout=60,
+        )
+        response.raise_for_status()
+        body = response.json()
+    except requests.RequestException as exc:
+        logger.error(f"Embedding 请求失败: {exc}")
+        raise EmbeddingUnavailableError(str(exc)) from exc
+    except ValueError as exc:
+        logger.error(f"Embedding 响应解析失败: {exc}")
+        raise EmbeddingUnavailableError("embedding 服务返回非 JSON 响应") from exc
+
+    base_resp = body.get("base_resp") or {}
+    status_code = base_resp.get("status_code")
+    if status_code != 0:
+        status_msg = base_resp.get("status_msg") or "embedding 服务业务失败"
+        raise EmbeddingUnavailableError(str(status_msg))
+
+    vectors_raw = body.get("vectors")
+    if not isinstance(vectors_raw, list):
+        raise EmbeddingUnavailableError("embedding 服务返回结构异常")
+
+    vectors: list[list[float]] = []
+    for vector_raw in vectors_raw:
+        if not isinstance(vector_raw, list):
+            raise EmbeddingUnavailableError("embedding 向量格式异常")
+        try:
+            vector = [float(value) for value in vector_raw]
+        except (TypeError, ValueError) as exc:
+            raise EmbeddingUnavailableError("embedding 向量格式异常") from exc
+        if len(vector) != settings.embedding_dim:
+            raise EmbeddingUnavailableError(
+                f"embedding 维度异常: 期望 {settings.embedding_dim}，实际 {len(vector)}"
+            )
+        vectors.append(vector)
+
+    if len(vectors) != len(texts):
+        raise EmbeddingUnavailableError("embedding 返回向量数量与输入不一致")
+
+    return vectors

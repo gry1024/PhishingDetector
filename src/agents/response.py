@@ -35,7 +35,8 @@ SYSTEM_PROMPT = """你是安全运营响应专家。根据风险评估结果生�
     "alert_message": "告警消息（简明扼要说明威胁）",
     "trace_report": "溯源分析摘要（攻击手法推测、可能目标）",
     "recommendation": "给用户的具体安全建议"
-}"""
+}
+输出要求：直接输出裸 JSON，不要用 markdown 代码围栏（```）包裹；alert_message、trace_report、recommendation 各不超过 200 字，确保 JSON 完整结束。"""
 
 
 class ResponseAgent(BaseAgent):
@@ -99,9 +100,10 @@ class ResponseAgent(BaseAgent):
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
             self.emit_sub_step("LLM 生成处置报告完成，提取 action、alert_message、trace_report、recommendation", "done", callback)
         except Exception as e:
-            self.emit_thinking("⚠️ LLM 不可用，已启用规则化响应兜底。", callback)
-            self.emit_sub_step(f"规则兜底接管：按风险等级匹配默认处置策略（原因：{str(e)[:80]}）", "done", callback)
+            fallback_reason = self.emit_llm_fallback(e, callback)
+            self.emit_sub_step(f"规则兜底接管：按风险等级匹配默认处置策略（{fallback_reason}）", "done", callback)
             llm_result = self._fallback_response_result(risk)
+            llm_result["fallback_reason"] = fallback_reason
 
         # 强制执行策略映射（安全底线）
         action = llm_result.get("action", "alert")
@@ -113,6 +115,7 @@ class ResponseAgent(BaseAgent):
             alert_message=llm_result.get("alert_message", ""),
             trace_report=llm_result.get("trace_report", ""),
             recommendation=llm_result.get("recommendation", ""),
+            fallback_reason=llm_result.get("fallback_reason", ""),
         )
 
         self.emit_sub_step(

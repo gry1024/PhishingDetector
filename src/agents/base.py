@@ -24,6 +24,83 @@ from src.tools import ToolResult
 EventCallback = Callable[[dict], None]
 
 
+def _repair_truncated_json(raw: str) -> list[str]:
+    """对被 max_tokens 截断的 JSON 构造机械修复候选（只截断与补全，不猜测内容）。
+
+    候选 1：补全未闭合的字符串与括号（保留被截断的尾部字符串字段）；
+    候选 2：截到根对象第一层最近一个完整字段边界（丢弃不完整尾字段）再补全。
+    无法构造候选时返回空列表。
+    """
+    s = (raw or "").strip()
+    start = s.find("{")
+    if start < 0:
+        return []
+    s = s[start:]
+    closers = {"{": "}", "[": "]"}
+
+    def _scan(text: str):
+        in_str = False
+        escaped = False
+        stack = []
+        for ch in text:
+            if in_str:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch in "{[":
+                stack.append(ch)
+            elif ch in "}]" and stack:
+                stack.pop()
+        return in_str, stack
+
+    def _close(text: str, in_str: bool, stack: list) -> str:
+        suffix = '"' if in_str else ""
+        suffix += "".join(closers[c] for c in reversed(stack))
+        return text + suffix
+
+    candidates = []
+
+    # 候选 1：直接补全未闭合结构
+    in_str, stack = _scan(s)
+    if in_str or stack:
+        candidates.append(_close(s, in_str, stack))
+
+    # 候选 2：截到根对象第一层最近一个完整字段（逗号）边界再补全
+    in_str = False
+    escaped = False
+    depth = 0
+    last_field_comma = -1
+    for i, ch in enumerate(s):
+        if in_str:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch in "{[":
+            depth += 1
+        elif ch in "}]":
+            depth -= 1
+        elif ch == "," and depth == 1:
+            last_field_comma = i
+    if last_field_comma > 0:
+        truncated = s[:last_field_comma]
+        in_str2, stack2 = _scan(truncated)
+        candidates.append(_close(truncated, in_str2, stack2))
+
+    return candidates
+
+
 class BaseAgent(ABC):
     """
     Agent 抽象基类
@@ -80,6 +157,31 @@ class BaseAgent(ABC):
         self.logger.info(f"工具调用: {result.tool_name} → {result.output[:100]}")
         return result
 
+    def emit_tool_finished(
+        self,
+        tool_name: str,
+        input_summary: str,
+        output: str,
+        duration_ms: int,
+        callback: EventCallback = None,
+    ):
+        """推送结构化工具完成事件（与 call_tool 的事件同构）。
+
+        用于未注册进工具表的内部调用（如 KB 混合检索），
+        让前端能以结构化方式感知这类关键子步骤。
+        """
+        if callback:
+            callback({
+                "type": "tool_call",
+                "data": {
+                    "agent": self.name,
+                    "tool": tool_name,
+                    "input": input_summary,
+                    "output": output,
+                    "duration_ms": duration_ms,
+                }
+            })
+
     def emit_thinking(self, text: str, callback: EventCallback = None):
         """推送思考过程到前端"""
         if callback:
@@ -104,6 +206,25 @@ class BaseAgent(ABC):
                 "data": {"agent": self.name, "chunk": text}
             })
 
+    def emit_llm_fallback(self, error: Exception, callback: EventCallback = None) -> str:
+        """推送规则兜底事件并返回兜底原因（结构化，供前端徽章与 strict 模式判定）。
+
+        原因枚举：
+        - unavailable: LLM 连接/鉴权/超时失败（真不可用）
+        - parse_error: LLM 有响应但 JSON 解析最终失败
+        """
+        reason = "parse_error" if isinstance(error, ValueError) else "unavailable"
+        if reason == "parse_error":
+            message = "LLM 输出解析失败，已启用规则化研判"
+        else:
+            message = f"LLM 不可用（{type(error).__name__}），已启用规则化研判"
+        if callback:
+            callback({
+                "type": "llm_fallback",
+                "data": {"agent": self.name, "fallback_reason": reason, "message": message},
+            })
+        return reason
+
     def chat_json(
         self,
         system_prompt: str,
@@ -116,6 +237,7 @@ class BaseAgent(ABC):
         使用 chat_stream() 获取逐 token 的实时输出：
         - <<<JSON>>> 分隔符之前的自然语言分析 → 实时推送到前端（真实逐字效果）
         - 分隔符之后的 JSON → 累积解析，不推送到前端
+        - 模型未输出分隔符时 → 用全量文本走解析链（裸 JSON/围栏/内嵌对象均可被识别）
 
         这样 token 从 API 一个个返回，前端看到的是真正的逐字输出，
         而非全部拿到后再假装打字。后端自然阻塞到流结束才返回，
@@ -128,6 +250,9 @@ class BaseAgent(ABC):
         self.emit_thinking("⏳ 正在调用 LLM 深度分析...\n", callback)
 
         json_buffer = ""
+        # 全量输出累积：模型未输出分隔符时用全文走解析链，
+        # 否则 json_buffer 只剩 pending 末尾几个字符，必然解析失败误入规则兜底
+        text_buffer = ""
         in_json = False
         delimiter = "<<<JSON>>>"
         # pending 缓存未发射的文本，防止分隔符被拆分到多个 token 中
@@ -147,6 +272,7 @@ class BaseAgent(ABC):
                     before = pending[:idx]
                     if before:
                         self.emit_llm_chunk(before, callback)
+                        text_buffer += before
                     json_buffer = pending[idx + len(delimiter):]
                     in_json = True
                     pending = ""
@@ -155,6 +281,7 @@ class BaseAgent(ABC):
                     safe = pending[:-len(delimiter)]
                     if safe:
                         self.emit_llm_chunk(safe, callback)
+                        text_buffer += safe
                     pending = pending[-len(delimiter):]
 
             # 流结束后处理剩余 pending
@@ -165,14 +292,11 @@ class BaseAgent(ABC):
                     if before:
                         self.emit_llm_chunk(before, callback)
                     json_buffer = pending[idx + len(delimiter):]
-                elif pending.strip().startswith("{"):
-                    # 没有分隔符但输出看起来是 JSON — 不发射，直接解析
-                    json_buffer = pending
                 else:
-                    # 没有分隔符，输出是纯文本 — 发射并尝试从全文提取 JSON
+                    # 模型未输出分隔符：全量文本（叙事+可能内嵌的 JSON）交给解析链
                     if pending:
                         self.emit_llm_chunk(pending, callback)
-                    json_buffer = pending
+                    json_buffer = text_buffer + pending
 
         except Exception as e:
             err_text = str(e).lower()
@@ -319,6 +443,21 @@ class BaseAgent(ABC):
         except Exception:
             pass
 
+        # 4) 截断修复：输出被 max_tokens 截断时的机械修复（不猜测内容）
+        for repaired in _repair_truncated_json(json_str):
+            try:
+                parsed = _attempt_parse(repaired)
+                self.emit_thinking("✅ LLM 结构化解析成功（截断修复）\n", callback)
+                return parsed
+            except Exception:
+                continue
+
+        # 全部失败：留痕（环节名 + 原始输出前 300 字符）后走规则兜底
+        self.logger.warning(
+            "LLM JSON 解析最终失败（环节: %s），原始输出前300字符: %s",
+            self.name,
+            json_str[:300],
+        )
         raise ValueError(f"LLM JSON 解析失败: {json_str[:300]}")
 
     def _extract_analysis_text(self, result: dict) -> str:

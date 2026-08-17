@@ -21,10 +21,13 @@ PhishingDetector/ # 项目根目录（FastAPI + 多 Agent 钓鱼检测）
 │  ├─ KIMI_STYLE_DEMO_USER_GUIDE.md # 演示使用说明
 │  └─ TEAM_SYNC.md # 团队协作同步记录
 ├─ scripts/ # 辅助脚本（数据、快速测试、API 推送）
+│  ├─ acceptance_kb_validation.py # KB 种子/重建验收脚本
 │  ├─ download_datasets.py # 下载示例数据集脚本
 │  ├─ push_via_api.py # 通过 API 推送测试请求
 │  ├─ quick_test.py # 快速验证脚本
-│  └─ run_test.py # main.py --test 入口调用脚本
+│  ├─ run_test.py # main.py --test 入口调用脚本
+│  ├─ smoke_minimax_embed.py # MiniMax 嵌入接口冒烟脚本
+│  └─ tmp_full_regression_check.py # 需服务运行的回归脚本（一次性诊断）
 ├─ src/ # 主业务代码
 │  ├─ __init__.py # 包初始化
 │  ├─ config.py # 全局配置与环境变量读取
@@ -52,27 +55,30 @@ PhishingDetector/ # 项目根目录（FastAPI + 多 Agent 钓鱼检测）
 │  ├─ static/ # 静态资源
 │  │  └─ pages/ # 前端页面
 │  │     ├─ landing.html # 封面页（入口与能力介绍）
-│  │     └─ studio.html # Studio 检测页（SSE 实时渲染）
+│  │     ├─ studio.html # Studio 检测页（SSE 实时渲染）
+│  │     └─ knowledge.html # 知识库浏览与检索页
 │  └─ workflow/ # 工作流封装层
 │     ├─ __init__.py # 包初始化
 │     └─ graph.py # run_analysis 入口与 AGENT_PIPELINE 元数据
 ├─ tests/ # 自动化测试
 │  ├─ __init__.py # 测试包初始化
 │  ├─ test_attachment_behavior_analysis.py # 附件/行为异常证据测试
-│  ├─ test_cluster_execution_mode.py # cluster 模式并行性测试（待确认是否仍适配当前架构）
+│  ├─ test_cluster_execution_mode.py # execution_mode 兼容性测试（Orchestrator 串行等价性）
 │  ├─ test_evidence_fusion.py # 证据融合结构与权重测试
 │  ├─ test_health_llm.py # LLM 健康检查 API 测试
 │  ├─ test_kb_search.py # 知识库检索命中测试
 │  ├─ test_rule_fallback.py # LLM 失败兜底与标记测试
-│  ├─ test_selected_steps.py # selected_steps 执行控制测试（待确认是否仍适配当前事件类型）
+│  ├─ test_selected_steps.py # selected_steps 执行控制测试（新事件协议）
 │  └─ test_url_reputation.py # URL 信誉证据测试
 ├─ .env # 本地运行环境变量（敏感）
 ├─ .env.example # 环境变量模板
 ├─ .gitignore # Git 忽略配置
+├─ AGENTS.md # AI 编码代理项目指南
 ├─ main.py # 启动入口（init_db + uvicorn）
 ├─ phishing_detector.db # SQLite 数据库文件
 ├─ README.md # 项目说明
 ├─ requirements.txt # Python 依赖清单
+├─ verify_rag_embedding.py # RAG 嵌入质量专项验收脚本
 └─ TECH.md # 技术方案文档
 ```
 
@@ -255,7 +261,16 @@ CREATE TABLE IF NOT EXISTS kb_entries (
     recommendation TEXT NOT NULL DEFAULT '',
     enabled INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    summary TEXT DEFAULT '',
+    tags TEXT DEFAULT '[]',
+    iocs TEXT DEFAULT '[]',
+    attack_techniques TEXT DEFAULT '[]',
+    detection_points TEXT DEFAULT '[]',
+    sample_email TEXT DEFAULT '',
+    related TEXT DEFAULT '[]',
+    embedding TEXT DEFAULT '',
+    embedding_model TEXT DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_kb_category ON kb_entries(category);
@@ -263,11 +278,15 @@ CREATE INDEX IF NOT EXISTS idx_kb_severity ON kb_entries(severity);
 CREATE INDEX IF NOT EXISTS idx_kb_enabled ON kb_entries(enabled);
 ```
 
+旧库通过 `_ensure_kb_schema` 轻量迁移（PRAGMA table_info + ALTER TABLE）逐列补齐，幂等。
+`embedding_model` 记录向量来源，格式 "模型名:维度"（如 `embo-01:1536`）。
+
 ### 4.2 公开函数签名与职责
 - get_connection() -> sqlite3.Connection
   - 创建 SQLite 连接并设置 PRAGMA（DELETE journal + NORMAL synchronous）。
 - init_db()
-  - 初始化三张表与索引，并执行 KB 种子填充。
+  - 初始化三张表与索引，执行 KB 种子填充，随后按需补齐知识库向量
+    （embed_kb_entries；嵌入服务未配置/失败只记 warning 跳过，不阻断启动）。
 - save_email(email_data: dict) -> int
   - 写入 emails，返回 email_id。
 - save_report(email_id: int, report_data: dict) -> int
@@ -276,68 +295,81 @@ CREATE INDEX IF NOT EXISTS idx_kb_enabled ON kb_entries(enabled);
   - 按 created_at 倒序返回邮件列表。
 - get_recent_reports(limit: int = 50) -> list[dict]
   - 关联 emails 返回报告列表（含 subject/sender/body）。
+- delete_report(report_id: int) -> bool
+  - 删除指定 reports 行（email 行保留），返回是否实际删除。
 - get_email_by_id(email_id: int) -> Optional[dict]
   - 根据 id 查询单封邮件。
 - get_stats() -> dict
   - 返回 total_emails, total_reports, phishing_detected, safe_emails, avg_risk_score。
-- list_kb_entries(limit: int = 100) -> list[dict]
-  - 返回知识库条目并解析 keywords JSON。
+- list_kb_entries(limit: int = 100, category: str = None) -> list[dict]
+  - 返回知识库条目并解析 JSON 字段，可按 category 过滤。
+- get_kb_entry(entry_id: int) -> Optional[dict]
+  - 根据 id 返回单条完整知识库条目（解析 JSON 字段）。
+- list_kb_categories() -> list[dict]
+  - 返回分类统计列表（id/name/count）。
 - search_kb(text: str, limit: int = 5) -> list[dict]
   - 关键词轻量匹配检索并返回带分命中列表。
+- embed_kb_entries(limit: int | None = None) -> int
+  - 为 enabled=1 且无向量（或 embedding_model 与当前配置不一致）的条目生成向量并写回；
+    未配置 EMBEDDING_MODEL 或调用失败时只记 warning 返回 0，不生成任何替代向量。
+- vector_search_kb(query: str, limit: int = 10) -> list[dict]
+  - 向量语义检索（score < 35 丢弃），嵌入不可用抛 EmbeddingUnavailableError。
+- hybrid_search_kb(text: str, limit: int = 5) -> list[dict]
+  - 关键词 + 向量双路融合检索，向量路失败静默退化为纯关键词结果。
 
 内部函数（非公开）
+- _ensure_kb_schema(conn)
+  - 为已有 kb_entries 表逐列补齐新增列（含 embedding_model），幂等。
 - _seed_kb_entries(conn)
-  - 在 kb_entries 为空时写入默认种子。
+  - 内置种子 + data/kb_expansion.json 扩展包，按 title 幂等插入/更新。
 
 ### 4.3 知识库字段与种子来源
 kb_entries 字段
-- id, title, category, severity, keywords, content, recommendation, enabled, created_at, updated_at
+- 基础：id, title, category, severity, keywords, content, recommendation, enabled, created_at, updated_at
+- 扩展：summary, tags, iocs, attack_techniques, detection_points, sample_email, related
+- 向量：embedding（JSON 数组文本）, embedding_model（"模型名:维度" 标记，如 embo-01:1536）
 
 种子来源
-- 来自 src/database.py 中常量 KB_SEED_ENTRIES（硬编码 4 条）。
+- 内置：src/database.py 中常量 KB_SEED_ENTRIES（38 条精编）。
+- 扩展：data/kb_expansion.json 外部扩展包（45 条，文件缺失/格式错误时告警跳过）。
+- 合计 83 条启用条目（标题无重叠）；播种按 title 幂等（存在则更新、不存在则插入）。
 - 不是外部同步源，也不是迁移脚本注入。
 
-### 4.4 search_kb 匹配算法（逐步解释）
-函数：search_kb(text: str, limit: int = 5)
+### 4.4 知识库混合检索算法（关键词 + 向量语义）
 
-1) 预处理
-- query_text = (text or "").lower().strip()
-- 若为空，直接返回 []。
+当前检索通道拆分为三层：
 
-2) 拉取候选
-- SQL 读取 enabled = 1 的全部 kb_entries。
+1) 关键词主通道：search_kb(text, limit=5)
+- 保持原有签名与打分公式，作为稳定兜底路径。
+- 打分仍为关键词命中 + token 命中 + severity bonus（封顶 100）。
 
-3) 准备评分参数
-- severity_bonus = {critical:15, high:10, medium:6, low:3}
-- tokens = 使用正则按非字母数字中文分割 query_text，再过滤长度 >= 2。
+2) 向量语义通道：vector_search_kb(query, limit=10)
+- 先调用 embed([query], emb_type="query") 生成查询向量
+  （MiniMax 双塔算法：知识库条目写入用 "db"，检索查询用 "query"）。
+- 与缓存中的条目向量逐条计算 cosine，相似度映射为 0~100 分。
+- 过滤阈值：score < 35 直接丢弃噪声候选。
+- 返回字段：id/title/category/severity/summary/vector_score。
 
-4) 遍历每条 KB
-- 解析 keywords JSON 并 lowercase。
-- matched = []
-  - 对每个 kw，若 kw in query_text，则加入 matched。
-- 兜底 token 匹配：
-  - title/content 均 lowercase。
-  - token_hits = [tok for tok in tokens if tok in title or tok in content]
+3) 融合通道：hybrid_search_kb(text, limit=5)
+- 关键词路：hits_kw = search_kb(text, limit=10)。
+- 向量路：hits_vec = vector_search_kb(text, limit=10)。
+- 按 id 合并，融合分：fused_score = 0.4 * kw_score + 0.6 * vector_score。
+- 输出在 search_kb 原字段基础上新增：
+  - kw_score
+  - vector_score
+  - fused_score
+  - match_type（keyword / semantic / hybrid）
+- 向量路失败时静默退化为纯关键词结果，不中断主流程。
 
-5) 过滤规则
-- 若 matched 和 token_hits 都为空，则该条目跳过。
+向量写入规则（embed_kb_entries，由 init_db 自动调用）：
+- 仅处理无向量或 embedding_model 标记与当前配置不一致的条目，幂等；
+  切换嵌入模型/维度后自动全量重算。
+- 嵌入服务未配置（EMBEDDING_MODEL / MINIMAX_GROUP_ID 缺失）或调用失败时
+  只记 warning 跳过，不写入任何替代向量（严禁本地伪嵌入）。
 
-6) 打分规则
-- 基础分：score = min(len(matched) * 18 + len(token_hits) * 6, 80)
-- 严重度加成：score += severity_bonus[severity]
-- 封顶：score = min(score, 100)
-
-7) 输出结构
-- 每条命中输出：id, title, category, severity, score,
-  matched_keywords(去重后最多 8 个), content, recommendation。
-
-8) 排序与截断
-- 按 score 倒序排序。
-- 返回前 limit 条。
-
-结论：
-- 算法是词匹配加权，不是向量语义检索。
-- 匹配命中来自两路：keywords 直接命中 + title/content token 命中。
+设计结论：
+- 关键词是稳定主通道，向量是增强通道。
+- 任何 embedding 故障不应影响检测链路可用性。
 
 ---
 
@@ -403,6 +435,12 @@ data: {
 - 参数: limit(int, 默认 50)
 - 返回: 最近报告数组（含关联邮件主题与发件人）。
 
+5b) DELETE /api/reports/{report_id}
+- 参数: report_id(path, 数字)
+- 行为: 删除指定 reports 行（email 行保留，不影响 emails 统计）。
+- 返回: {"deleted": <id>}；不存在 404；非数字参数 400。
+- 注意: 当前无鉴权，仅适合本地开发，部署前需加保护。
+
 6) GET /api/stats
 - 参数: 无
 - 返回示例:
@@ -420,7 +458,7 @@ data: {
 
 7) GET /api/datasets
 - 参数: 无
-- 返回: 数据集元数据列表（id/name/source/format）。
+- 返回: 数据集元数据列表（id/name/source/format/total/label_distribution/available）。
 
 8) GET /api/datasets/{dataset_id}
 - 参数: dataset_id(path), q(query), label(query), limit(query, 默认50)
@@ -435,6 +473,25 @@ data: {
   ]
 }
 ```
+- 错误: 数据文件缺失/源站异常/解析失败一律返回结构化 503
+  （{"detail": "数据集文件缺失，请先运行 scripts/download_datasets.py..."}）。
+
+8b) POST /api/eval/run
+- 参数: {"dataset_id", "label"(可选), "limit"(默认20, 上限400), "use_llm"(默认false), "skip_web_search"(默认true)}
+- 行为: 启动异步批量评测（后台线程逐条 run_analysis）；
+  use_llm=false 时经 ContextVar 在本线程显式禁用 LLM（非拔 key），
+  不影响并发的正常检测请求；skip_web_search=true 时 threat_intel 跳过联网检索
+  （单样本耗时约 96s → 约 2s）；单条样本失败记 error 继续。
+- 返回: {"job_id", "total", "use_llm", "skip_web_search"}
+
+8c) GET /api/eval/{job_id}
+- 返回: {"status": "running/done/failed", "started_at", "config",
+  "progress": {"done", "total", "current_subject"},
+  "result": {"total","tp","fp","fn","tn","precision","recall","f1",
+    "use_llm","skip_web_search","elapsed_sec","details":[...]},
+  "error": ""}
+- 基线留档: docs/BASELINE_EVAL_RULE_ONLY_2026-08-18.md
+  （test_set v1 全量 400 条纯规则评测）
 
 ### 5.4 管线与知识库
 
@@ -443,16 +500,28 @@ data: {
 - 返回: AGENT_PIPELINE 列表。
 
 10) GET /api/kb/entries
-- 参数: limit(int, 默认50)
+- 参数: limit(int, 默认50), category(query, 可选按分类过滤)
 - 返回: kb_entries 列表。
 
-11) GET /api/kb/search
-- 参数: q(query, 必填语义上), limit(query, 默认5)
-- 返回: search_kb 命中数组。
+11) GET /api/kb/categories
+- 参数: 无
+- 返回: 知识库分类统计列表（id/name/count）。
+
+12) GET /api/kb/search
+- 参数: q(query, 必填语义上), limit(query, 默认5), mode(query, keyword|hybrid, 默认 keyword)
+- 返回: mode=keyword 时 search_kb 命中数组（与历史结构完全一致）；
+  mode=hybrid 时 {"degraded": bool, "results": hybrid_search_kb 命中数组}
+  （每条含 match_type/kw_score/vector_score/fused_score）。
+- 降级: 向量服务不可用（未配置 EMBEDDING_MODEL 或嵌入失败）时
+  degraded=true 且静默退化为关键词结果，不报错。
+
+13) GET /api/kb/entries/{entry_id}
+- 参数: entry_id(path)
+- 返回: 单条完整知识库条目（JSON 字段已解析）；不存在返回 404。
 
 ### 5.5 健康检查
 
-12) GET /api/health/llm
+14) GET /api/health/llm
 - 参数: probe(bool, 默认 true)
 - 返回示例:
 ```json
@@ -508,6 +577,9 @@ data: {
 
 8) tool_finished
 - payload: tool, input, output, duration_ms
+- 备注: KB 混合检索（hybrid_search_kb/search_kb）不经工具注册表，
+  由 BaseAgent.emit_tool_finished 以同构事件补发（detector 双路检索、
+  threat_intel 交叉验证两个调用点），前端据此点亮"RAG检索" ticker 项。
 
 9) data_flow
 - payload: from, to, data
@@ -526,7 +598,7 @@ data: {
 - payload: email_id, report_id, result
 
 14) llm_failed
-- payload: message, strict_llm
+- payload: message, fallback_reason(unavailable/parse_error), strict_llm
 
 15) run_failed
 - payload: message
@@ -565,7 +637,11 @@ data: {
 ### 7.4 threat_intel（威胁情报关联）
 - key: threat_intel
 - name: 威胁情报关联
-- 职责: IOC 模式匹配、威胁话术匹配、ATT&CK 映射、KB 命中、联网检索公开情报。
+- 职责: IOC 模式匹配、威胁话术匹配、ATT&CK 映射（聚合出口保序去重）、
+  KB 命中（hybrid_search_kb 混合检索，向量不可用静默退化为关键词）、联网检索公开情报。
+- skip_web_search: analyze 支持该参数（run_analysis 透传），为 True 时跳过全部
+  联网检索（DuckDuckGo），子步骤注明"已跳过联网检索"，其余环节照常；
+  评测场景默认开启以提速（约 96s/样本 → 约 2s/样本）。
 - 输入: EmailInput。
 - 输出: { threat_intel: ThreatIntelResult }
 
@@ -609,18 +685,47 @@ data: {
   - 检测输入交互（subject/sender/body/prompt）。
   - 发起检测流请求并实时渲染事件。
   - 展示历史会话、风险总览、证据权重、最近报告。
-  - 数据集样本选择与填充。
+  - 数据集样本浏览（标签过滤/搜索/分页 50 条/详情展开）与批量评测。
+  - 批量评测面板：进度条 + 当前样本 + 已耗时/预计剩余、断线恢复
+    （job 存 localStorage，重开弹窗自动恢复轮询）、全局评测徽标
+    （右上角，弹窗关闭也可见）、结果区四指标卡片（P/R/F1/Accuracy）+
+    2×2 混淆矩阵表 + 配置行 + FP/FN 误判列表（过滤/展开/回填检测台）。
+  - KB 命中面板：match_type 徽章 + 双路分数（融合/词/向量）+ 混合检索说明行。
+  - LLM 状态徽章：规则兜底时按 fallback_reason 显示（解析失败/LLM 不可用）。
+  - 历史对话管理：清空（二次确认）、自动裁剪保留最近 50 条、单条删除。
+  - 最近报告删除（常显 ×，二次确认）。
 
 - 调用后端接口:
   - POST /api/v2/runs/stream
-  - GET /api/datasets/{dataset_id}
+  - GET /api/datasets、GET /api/datasets/{dataset_id}
+  - POST /api/eval/run、GET /api/eval/{job_id}
   - GET /api/health/llm?probe=true
-  - GET /api/reports?limit=5
-  - GET /api/reports?limit=50
+  - GET /api/reports?limit=5、GET /api/reports?limit=50
+  - DELETE /api/reports/{report_id}
 
 - localStorage 键:
   - phishing_detector_conversations
-    - 保存 conversations 数组（id/title/sender/body/bodyPreview/timestamp/report/events/hasResult）。
+    - 保存 conversations 数组（id/title/sender/body/bodyPreview/timestamp/report/events/hasResult/eventsTruncated），
+      单会话事件上限 500 条，会话总数仅保留最近 50 条。
+  - phishing_detector_eval_job
+    - 进行中的评测 job 断线恢复信息（job_id/dataset_id/saved_at），done/failed 后清除。
+
+### 8.3 knowledge.html
+- 职责:
+  - 知识库浏览（分类筛选、统计概览）与检索页。
+  - 检索走关键词 + 向量语义混合（/api/kb/search?mode=hybrid），
+    展示 match_type 徽章（语义/关键词+语义/关键词）与双路分数
+    （融合/词/向量），向量服务降级时提示"已降级为关键词检索"。
+  - 展示条目详情弹窗（含 sample_email 样例邮件）。
+  - studio.html 的 KB 命中面板可点击跳转到本页对应条目。
+- 调用后端接口:
+  - GET /api/kb/entries?limit=500（初始化）
+  - GET /api/kb/categories（初始化）
+  - GET /api/kb/entries?category=...（分类浏览）
+  - GET /api/kb/search?q=...&limit=20&mode=hybrid（混合检索）
+  - GET /api/kb/entries/{id}（条目详情）
+- localStorage:
+  - 未使用。
 
 ---
 
@@ -632,6 +737,11 @@ data: {
 - llm: LLMConfig
 - api: APIConfig
 - db: DatabaseConfig
+- minimax_api_key: str（嵌入服务鉴权复用）
+- minimax_base_url: str
+- minimax_group_id: str（MiniMax 嵌入接口必填 GroupId）
+- embedding_model: str（空 = 嵌入功能关闭）
+- embedding_dim: int（默认 1536）
 - data_dir: str
 - log_level: str
 
@@ -651,7 +761,8 @@ data: {
 - temperature
   - 环境变量: 当前代码未读取独立 env（使用代码默认 0.1）
 - max_tokens
-  - 环境变量: 当前代码未读取独立 env（使用代码默认 2048）
+  - 环境变量: LLM_MAX_TOKENS
+  - 默认: 4096（2048 曾被长解释字段顶满导致 JSON 截断误入规则兜底）
 
 ### 9.3 APIConfig
 - host
@@ -674,6 +785,21 @@ data: {
   - 环境变量: LOG_LEVEL
   - 默认: INFO
 
+### 9.6 嵌入配置（知识库向量，MiniMax 原生接口）
+- embedding_model
+  - 环境变量: EMBEDDING_MODEL
+  - 默认: 空（未配置则嵌入关闭，检索走纯关键词通道）；MiniMax 填 embo-01
+- embedding_dim
+  - 环境变量: EMBEDDING_DIM
+  - 默认: 1536（须与嵌入模型实际维度一致）
+- minimax_group_id
+  - 环境变量: MINIMAX_GROUP_ID
+  - 默认: 空（用户中心 → 基本信息查询；嵌入接口 URL 形如 {base_url}/embeddings?GroupId=xxx）
+- minimax_api_key / minimax_base_url
+  - 环境变量: MINIMAX_API_KEY / MINIMAX_BASE_URL
+  - 与聊天 LLM 配置共用；嵌入请求体为 {"model","texts","type":"db"|"query"}，
+    响应取 vectors[]，base_resp.status_code != 0 视为业务失败
+
 脱敏说明：
 - 文档不记录任何真实密钥。
 - 健康接口中仅返回掩码字段 api_key_masked。
@@ -687,13 +813,18 @@ data: {
   - 附件样本应产生 possible_attachment_scam 标记。
   - 行为异常应生成 behavior_anomaly 证据。
   - 附件欺诈样本不应降级为 safe。
+- 现状说明:
+  - test_attachment_invoice_sample_should_not_fall_back_to_safe 历史 FAIL（2026-08 根因已定位，
+    详见文末"已知待办"）：发票附件样本规则兜底得分 25，低于 safe/low 边界 40 被判 safe。
 
 ### test_cluster_execution_mode.py
 - 覆盖点:
-  - 验证 cluster 模式应比 serial 更快（通过 mock slow stub）。
+  - cluster 模式按 Orchestrator 串行执行（agent_call → agent_result 严格交替）。
+  - cluster 与 serial 模式产生一致的子 Agent 调用序列与最终结论。
 - 现状说明:
-  - 当前 run_analysis 已切换 Orchestrator 架构，execution_mode 在 graph.py 注释写明“Orchestrator 模式下始终串行”。
-  - 此测试与当前实现可能不一致，待确认是否仍启用。
+  - 已按 Orchestrator 新事件协议重写（2026-08）；execution_mode 保留仅为接口兼容。
+  - 子 Agent 经 patch.dict(OrchestratorAgent.SUB_AGENTS, ...) 打桩——直接 patch
+    模块级类名无效，SUB_AGENTS 在类定义时已捕获原始类对象。
 
 ### test_evidence_fusion.py
 - 覆盖点:
@@ -718,10 +849,11 @@ data: {
 
 ### test_selected_steps.py
 - 覆盖点:
-  - selected_steps 执行控制与依赖补齐（response 前自动补 risk）。
+  - selected_steps 只运行选中步骤（断言 agent_call 序列与 report 结构）。
+  - 依赖自动补齐：response 前插入 risk、risk 前插入 detector；threat_intel 强制纳入。
 - 现状说明:
-  - 用例依赖 agent_start/thinking(agent=系统) 等事件格式。
-  - 当前 orchestrator 回调事件类型已调整为 agent_call/agent_result 等，测试是否通过待确认。
+  - 已按 Orchestrator 新事件协议（agent_call/agent_result）重写（2026-08），
+    打桩方式同 test_cluster_execution_mode.py。
 
 ### test_url_reputation.py
 - 覆盖点:
@@ -737,16 +869,19 @@ data: {
 - 后端 callback 映射一旦改字段（如 step_id、channel、result_summary），前端会静默渲染异常。
 
 2) 测试与实现存在演化漂移风险
-- cluster/selected_steps 的部分测试用例仍基于旧执行模型或旧事件名。
+- cluster/selected_steps 两个测试已按 Orchestrator 新事件协议重写（2026-08）。
+- 给 Orchestrator 子 Agent 打桩必须 patch.dict(OrchestratorAgent.SUB_AGENTS, ...)；
+  patch 模块级类名无效（SUB_AGENTS 在类定义时已捕获原始类对象），
+  否则真实子 Agent（含 threat_intel 联网检索）会被静默调用。
 - 新增编排逻辑后，若不同步更新测试，CI 可能出现“设计通过、测试失败”的分裂。
 
 3) Agent 输出结构非统一 Pydantic
 - sender_profiler/header_forensics/threat_intel 使用自定义类，semantic/detection/risk/response 用 Pydantic。
 - 聚合层大量 getattr + dict 混用，字段更名时容易漏改。
 
-4) search_kb 为关键词匹配，语义泛化有限
-- 当前非向量检索，依赖 token 与关键词命中。
-- 新增场景若措辞变化大，召回率会明显波动。
+4) search_kb 为关键词匹配，语义泛化有限（已解决）
+- 已新增 vector_search_kb + hybrid_search_kb 双路融合检索。
+- 向量路失效时自动回退关键词通道，兼顾召回与稳定性。
 
 5) 联网检索路径不稳定
 - threat_intel.web_search 依赖 DuckDuckGo 多端点与页面解析。
@@ -756,6 +891,20 @@ data: {
 
 ## 待确认项汇总
 
-1) test_cluster_execution_mode.py、test_selected_steps.py 是否已按 Orchestrator 新事件协议更新。
-2) backup 文件（src/agents/*副本.py）是否仍需保留在主分支。
-3) pandas/requests/datasets 在生产主路径中的必要性边界（当前看更偏脚本与辅助能力）。
+1) backup 文件（src/agents/*副本.py）是否仍需保留在主分支。
+
+---
+
+## 已知待办
+
+1) test_attachment_behavior_analysis.py:56 FAIL —— 已修复（2026-08，方案 A）：
+   - src/tools.py analyze_attachment_risk 可疑词表补中文财务词（发票/付款/单据/对账/收据）；
+   - src/agents/detector.py 无 URL 时最终 url_score 固定为中性 0.5
+     （LLM 兜底返回值同步改为 0.5，保证语义一致）；
+   - 影响说明：无 URL 邮件 url 维度从满分改为中性 0.5，预期 low 级占比上升
+     （实测 5 封正常无 URL 邮件样本：规则分 0-1 → 7，等级全部维持 safe，上移 0/5）；
+   - src/agents/risk.py safe_boundary 死代码已加 TODO 注释标记，留待单独任务清理
+     （本次未删除、未调整任何阈值与打分公式）。
+2) （下一轮候选）“无 URL”独立置信度标注：若未来正常邮件 safe→low 上移比例偏高，
+   正确修法是为“无 URL”增加独立置信度标注（与“已验证安全”区分开），
+   而不是继续调整 safe/low 边界。

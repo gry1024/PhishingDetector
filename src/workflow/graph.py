@@ -51,16 +51,18 @@ def run_analysis(
     callback: Callable[[dict], None] = None,
     selected_steps: Optional[list[str]] = None,
     execution_mode: str = "serial",
+    skip_web_search: bool = False,
 ):
     """
     执行完整的邮件检测工作流（Orchestrator 模式）
-    
+
     Args:
         email: 待分析的邮件
         callback: 事件回调函数
         selected_steps: 用户选择的子 Agent 步骤（可选）
         execution_mode: 执行模式（serial/cluster，Orchestrator 模式下始终串行）
-    
+        skip_web_search: 为 True 时 threat_intel 跳过全部联网检索（评测场景提速）
+
     Returns:
         完整的分析报告字典
     """
@@ -71,6 +73,7 @@ def run_analysis(
             email,
             callback=callback,
             selected_steps=selected_steps,
+            skip_web_search=skip_web_search,
         )
     except Exception as e:
         logger.error(f"编排器执行失败: {e}", exc_info=True)

@@ -8,18 +8,27 @@
 import sqlite3
 import json
 import logging
+import os
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 from src.config import settings
+from src.llm import embed, EmbeddingUnavailableError, LLMUnavailableError
 
 logger = logging.getLogger(__name__)
 
 # 数据库文件路径（使用绝对路径，避免 WAL 模式下相对路径权限问题）
 DB_PATH = Path(settings.data_dir).resolve().parent / "phishing_detector.db"
 KB_EXPANSION_PATH = Path(settings.data_dir).resolve() / "kb_expansion.json"
+KB_EMBEDDING_MODEL = settings.embedding_model
+KB_EMBEDDING_DIM = settings.embedding_dim
+KB_VECTOR_SCORE_THRESHOLD = 35
+_KB_VECTOR_CACHE: dict[int, list[float]] = {}
+_KB_VECTOR_CACHE_LOADED = False
 
 
 def _kb(
@@ -108,7 +117,7 @@ KB_SEED_ENTRIES = [
         title="凭证收集诱导页面",
         category="攻击手法",
         severity="high",
-        keywords=["login", "signin", "password", "verify", "account", "m365", "microsoft 365"],
+        keywords=["login", "signin", "password", "verify", "account", "m365", "microsoft 365", "重新认证", "账户冻结"],
         summary="伪造登录页套取账号口令与验证码",
         content="出现账号验证、密码更新、重新登录等行为引导，通常对应凭证窃取场景。攻击者会构造接近真实品牌的登录界面，先收集账号密码，再通过中间页套取 MFA 验证码或会话。此类攻击往往与短链、仿冒域名和紧急话术组合出现。",
         recommendation="若伴随可疑域名或异常端口，应直接升级为高风险处置；强制用户从官方门户重新发起登录。",
@@ -927,9 +936,11 @@ def init_db():
     """
     初始化数据库表结构
 
-    创建 emails 表（存储待分析邮件）和
-    reports 表（存储分析报告）。
-    可安全重复调用（IF NOT EXISTS）。
+    创建 emails 表（存储待分析邮件）、
+    reports 表（存储分析报告）和 kb_entries 表（知识库），
+    并执行 KB 种子填充与知识库向量按需补齐。
+    可安全重复调用（IF NOT EXISTS / 按 title 幂等）；
+    嵌入服务不可用时向量补齐自动跳过，不影响主流程。
     """
     conn = get_connection()
     try:
@@ -986,7 +997,9 @@ def init_db():
                 attack_techniques TEXT DEFAULT '[]',
                 detection_points TEXT DEFAULT '[]',
                 sample_email TEXT DEFAULT '',
-                related TEXT DEFAULT '[]'
+                related TEXT DEFAULT '[]',
+                embedding TEXT DEFAULT '',
+                embedding_model TEXT DEFAULT ''
             );
 
             CREATE INDEX IF NOT EXISTS idx_kb_category ON kb_entries(category);
@@ -1001,6 +1014,14 @@ def init_db():
         logger.info(f"数据库初始化完成: {DB_PATH}")
     finally:
         conn.close()
+
+    # 播种完成后按需补齐知识库向量；嵌入服务未配置/失败只告警，不阻断启动
+    try:
+        embedded = embed_kb_entries()
+        if embedded:
+            logger.info(f"知识库向量已生成/更新 {embedded} 条（{KB_EMBEDDING_MODEL}）")
+    except Exception as exc:
+        logger.warning(f"知识库向量生成跳过（检索回退纯关键词通道）: {exc}")
 
 
 def _ensure_kb_schema(conn: sqlite3.Connection):
@@ -1017,6 +1038,8 @@ def _ensure_kb_schema(conn: sqlite3.Connection):
         ("detection_points", "TEXT DEFAULT '[]'"),
         ("sample_email", "TEXT DEFAULT ''"),
         ("related", "TEXT DEFAULT '[]'"),
+        ("embedding", "TEXT DEFAULT ''"),
+        ("embedding_model", "TEXT DEFAULT ''"),
     ]
     for col_name, col_def in required:
         if col_name not in columns:
@@ -1306,6 +1329,21 @@ def get_recent_reports(limit: int = 50) -> list[dict]:
         conn.close()
 
 
+def delete_report(report_id: int) -> bool:
+    """删除指定报告（仅 reports 行，email 行保留，不影响 emails 统计）。
+
+    Returns:
+        是否实际删除（不存在时返回 False）
+    """
+    conn = get_connection()
+    try:
+        cursor = conn.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
 def get_email_by_id(email_id: int) -> Optional[dict]:
     """根据 ID 获取单封邮件"""
     conn = get_connection()
@@ -1355,6 +1393,358 @@ def _json_load_object(raw: str) -> dict:
         return parsed if isinstance(parsed, dict) else {}
     except Exception:
         return {}
+
+
+def _json_load_vector(raw: str) -> list[float]:
+    try:
+        parsed = json.loads(raw or "[]")
+    except Exception:
+        return []
+    if not isinstance(parsed, list):
+        return []
+
+    vector = []
+    for value in parsed:
+        try:
+            vector.append(float(value))
+        except (TypeError, ValueError):
+            return []
+    if KB_EMBEDDING_DIM > 0 and len(vector) != KB_EMBEDDING_DIM:
+        return []
+    return vector
+
+
+def _embedding_text_from_kb_row(item: dict) -> str:
+    fields = [
+        item.get("title") or "",
+        item.get("category") or "",
+        item.get("severity") or "",
+        item.get("summary") or "",
+        item.get("content") or "",
+        item.get("recommendation") or "",
+    ]
+
+    for field in ("keywords", "tags", "iocs", "attack_techniques", "detection_points"):
+        values = _json_load_array(item.get(field) or "[]")
+        if values:
+            fields.append(" ".join(str(v) for v in values if v))
+
+    return "\n".join(part for part in fields if part)[:6000]
+
+
+def _embed(texts: list[str], emb_type: str = "db") -> list[list[float]]:
+    if not texts:
+        return []
+    return embed(texts, emb_type=emb_type)
+
+
+def _load_kb_vectors() -> dict[int, list[float]]:
+    """把 enabled=1 条目的 (id, embedding) 载入模块级内存缓存。"""
+    global _KB_VECTOR_CACHE_LOADED
+    if _KB_VECTOR_CACHE_LOADED:
+        return _KB_VECTOR_CACHE
+
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT id, embedding
+               FROM kb_entries
+               WHERE enabled = 1
+                 AND embedding IS NOT NULL
+                 AND TRIM(embedding) <> ''"""
+        ).fetchall()
+    except sqlite3.OperationalError:
+        _KB_VECTOR_CACHE.clear()
+        _KB_VECTOR_CACHE_LOADED = True
+        conn.close()
+        return _KB_VECTOR_CACHE
+    finally:
+        conn.close()
+
+    cache: dict[int, list[float]] = {}
+    for row in rows:
+        entry_id = int(row[0])
+        vector = _json_load_vector(row[1])
+        if vector:
+            cache[entry_id] = vector
+
+    _KB_VECTOR_CACHE.clear()
+    _KB_VECTOR_CACHE.update(cache)
+    _KB_VECTOR_CACHE_LOADED = True
+    return _KB_VECTOR_CACHE
+
+
+def _invalidate_kb_vector_cache():
+    global _KB_VECTOR_CACHE_LOADED
+    _KB_VECTOR_CACHE.clear()
+    _KB_VECTOR_CACHE_LOADED = False
+
+
+def embed_kb_entries(limit: int | None = None) -> int:
+    """为知识库条目生成 embedding 并写回数据库。
+
+    仅处理尚无向量、或 embedding_model 标记与当前配置（模型名:维度）
+    不一致的条目，可安全重复调用（幂等）；切换嵌入模型后自动全量重算。
+    嵌入服务未配置或调用失败时只记 warning 并跳过，不生成任何替代向量，
+    检索自动回退纯关键词通道。
+    """
+    if not KB_EMBEDDING_MODEL:
+        logger.warning("EMBEDDING_MODEL 未配置，跳过知识库向量生成（检索走纯关键词通道）")
+        return 0
+
+    model_tag = f"{KB_EMBEDDING_MODEL}:{KB_EMBEDDING_DIM}"
+    conn = get_connection()
+    try:
+        sql = (
+            """SELECT id, title, category, severity, keywords, summary, content, recommendation,
+                      tags, iocs, attack_techniques, detection_points
+               FROM kb_entries
+               WHERE enabled = 1
+                 AND (embedding IS NULL OR TRIM(embedding) = ''
+                      OR embedding_model IS NULL OR embedding_model <> ?)
+               ORDER BY id ASC"""
+        )
+        params: list = [model_tag]
+        if limit is not None and limit > 0:
+            sql += " LIMIT ?"
+            params.append(limit)
+
+        rows = conn.execute(sql, tuple(params)).fetchall()
+        if not rows:
+            return 0
+
+        # 分批调用嵌入接口，避免单请求文本过多被服务端拒绝
+        batch_size = 32
+        updated = 0
+        for start in range(0, len(rows), batch_size):
+            batch = rows[start : start + batch_size]
+            ids = [int(row["id"]) for row in batch]
+            payloads = [_embedding_text_from_kb_row(dict(row)) for row in batch]
+
+            try:
+                vectors = _embed(payloads, "db")
+            except EmbeddingUnavailableError as exc:
+                logger.warning(f"知识库向量生成失败，跳过剩余批次（检索回退纯关键词通道）: {exc}")
+                break
+            if len(vectors) != len(ids):
+                logger.warning("知识库向量数量与输入不一致，跳过剩余批次")
+                break
+
+            for entry_id, vector in zip(ids, vectors):
+                if not vector:
+                    continue
+                conn.execute(
+                    "UPDATE kb_entries SET embedding = ?, embedding_model = ?, updated_at = ? WHERE id = ?",
+                    (
+                        json.dumps(vector, ensure_ascii=False),
+                        f"{KB_EMBEDDING_MODEL}:{len(vector)}",
+                        datetime.now().isoformat(),
+                        entry_id,
+                    ),
+                )
+                updated += 1
+            conn.commit()
+
+        if updated:
+            _invalidate_kb_vector_cache()
+        return updated
+    finally:
+        conn.close()
+
+
+def _cosine(a, b) -> float:
+    """numpy 计算余弦相似度，任一零向量时返回 0。"""
+    va = np.asarray(a, dtype=float)
+    vb = np.asarray(b, dtype=float)
+    if va.size == 0 or vb.size == 0:
+        return 0.0
+    if va.shape != vb.shape:
+        return 0.0
+
+    na = np.linalg.norm(va)
+    nb = np.linalg.norm(vb)
+    if na == 0.0 or nb == 0.0:
+        return 0.0
+
+    return float(np.dot(va, vb) / (na * nb))
+
+
+def vector_search_kb(query: str, limit: int = 10) -> list[dict]:
+    """向量语义检索（仅返回向量路结果）。"""
+    query_text = (query or "").strip()
+    if not query_text:
+        return []
+
+    try:
+        vectors = _load_kb_vectors()
+        if not vectors:
+            return []
+
+        if not KB_EMBEDDING_MODEL:
+            raise EmbeddingUnavailableError("EMBEDDING_MODEL 未配置")
+
+        query_embedding = _embed([query_text], "query")
+        if not query_embedding or not query_embedding[0]:
+            return []
+        query_vector = query_embedding[0]
+    except EmbeddingUnavailableError:
+        raise
+    except Exception as exc:
+        raise EmbeddingUnavailableError(str(exc)) from exc
+
+    scored = []
+    for entry_id, entry_vector in vectors.items():
+        sim = _cosine(query_vector, entry_vector)
+        score = max(0, round(sim * 100))
+        if score < KB_VECTOR_SCORE_THRESHOLD:
+            continue
+        scored.append((entry_id, score))
+
+    if not scored:
+        return []
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top_scored = scored[: max(limit, 1)]
+    ids = [entry_id for entry_id, _ in top_scored]
+    score_map = {entry_id: score for entry_id, score in top_scored}
+
+    placeholders = ",".join("?" for _ in ids)
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            f"""SELECT id, title, category, severity, summary
+                FROM kb_entries
+                WHERE enabled = 1 AND id IN ({placeholders})""",
+            tuple(ids),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+
+    meta_map = {int(row["id"]): dict(row) for row in rows}
+    result = []
+    for entry_id in ids:
+        meta = meta_map.get(entry_id)
+        if not meta:
+            continue
+        result.append(
+            {
+                "id": entry_id,
+                "title": meta.get("title") or "",
+                "category": meta.get("category") or "",
+                "severity": meta.get("severity") or "medium",
+                "summary": meta.get("summary") or "",
+                "vector_score": score_map.get(entry_id, 0),
+            }
+        )
+    return result
+
+
+def _fetch_kb_details_by_ids(ids: list[int]) -> dict[int, dict]:
+    if not ids:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids)
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            f"""SELECT id, title, category, severity, keywords, content, recommendation,
+                       summary, tags, attack_techniques
+                FROM kb_entries
+                WHERE enabled = 1 AND id IN ({placeholders})""",
+            tuple(ids),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+
+    details: dict[int, dict] = {}
+    for row in rows:
+        item = dict(row)
+        details[int(item["id"])] = {
+            "id": int(item["id"]),
+            "title": item.get("title") or "",
+            "category": item.get("category") or "",
+            "severity": item.get("severity") or "medium",
+            "score": 0,
+            "matched_keywords": [],
+            "content": item.get("content") or "",
+            "recommendation": item.get("recommendation") or "",
+            "summary": item.get("summary") or "",
+            "tags": _json_load_array(item.get("tags") or "[]"),
+            "attack_techniques": _json_load_array(item.get("attack_techniques") or "[]"),
+        }
+    return details
+
+
+def hybrid_search_kb(text: str, limit: int = 5) -> list[dict]:
+    """关键词 + 向量语义双路混合检索。"""
+    query_text = (text or "").strip()
+    if not query_text:
+        return []
+
+    hits_kw = search_kb(query_text, limit=10)
+
+    try:
+        hits_vec = vector_search_kb(query_text, limit=10)
+    except (EmbeddingUnavailableError, LLMUnavailableError, Exception):
+        hits_vec = []
+
+    if not hits_vec:
+        degraded = []
+        for item in hits_kw[: max(limit, 0)]:
+            row = dict(item)
+            row["kw_score"] = int(item.get("score", 0))
+            row["vector_score"] = 0
+            row["fused_score"] = row["kw_score"]
+            row["match_type"] = "keyword"
+            degraded.append(row)
+        return degraded
+
+    merged: dict[int, dict] = {}
+    for item in hits_kw:
+        row = dict(item)
+        row["kw_score"] = int(item.get("score", 0))
+        row["vector_score"] = 0
+        merged[int(item["id"])] = row
+
+    missing_ids = [int(item["id"]) for item in hits_vec if int(item["id"]) not in merged]
+    detail_map = _fetch_kb_details_by_ids(missing_ids)
+
+    for item in hits_vec:
+        entry_id = int(item["id"])
+        vector_score = int(item.get("vector_score", 0))
+        if entry_id not in merged:
+            row = detail_map.get(entry_id)
+            if not row:
+                continue
+            row["kw_score"] = 0
+            row["vector_score"] = vector_score
+            merged[entry_id] = row
+        else:
+            merged[entry_id]["vector_score"] = vector_score
+
+    fused = []
+    for row in merged.values():
+        kw_score = int(row.get("kw_score", 0))
+        vector_score = int(row.get("vector_score", 0))
+        fused_score = round(0.4 * kw_score + 0.6 * vector_score)
+
+        if kw_score > 0 and vector_score > 0:
+            match_type = "hybrid"
+        elif vector_score > 0:
+            match_type = "semantic"
+        else:
+            match_type = "keyword"
+
+        row["fused_score"] = fused_score
+        row["match_type"] = match_type
+        fused.append(row)
+
+    fused.sort(key=lambda x: (x.get("fused_score", 0), x.get("vector_score", 0), x.get("kw_score", 0)), reverse=True)
+    return fused[: max(limit, 0)]
 
 
 def _parse_kb_row(item: dict) -> dict:

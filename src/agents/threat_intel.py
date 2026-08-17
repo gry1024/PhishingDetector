@@ -9,6 +9,7 @@
 """
 
 import re
+import time
 import logging
 
 from src.agents.base import BaseAgent, EventCallback
@@ -124,65 +125,70 @@ class ThreatIntelAgent(BaseAgent):
         web_threat_types = []
         web_evidence = []
         web_findings = []
-        query = self._build_search_query(email)
-        self.emit_sub_step(f"正在检索网页（{query[:60]}）......", "running", callback)
-        try:
-            search_result = self.call_tool("web_search", query, 5, callback=callback)
-            web_search_summary = search_result.output
-            web_results = getattr(search_result, "extra", {}).get("results", [])
-            # 提取联网情报威胁指标，实际影响最终威胁评分
-            threat_indicators = getattr(search_result, "extra", {}).get("threat_indicators", {})
-            web_threat_score = threat_indicators.get("score", 0)
-            web_threat_types = threat_indicators.get("matched_types", [])
-            web_evidence = threat_indicators.get("evidence", [])
-            # 提取深度威胁情报发现
-            threat_intel_data = getattr(search_result, "extra", {}).get("threat_intel", {})
-            web_findings = threat_intel_data.get("findings", [])
-            page_contents = getattr(search_result, "extra", {}).get("page_contents", [])
+        if kwargs.get("skip_web_search"):
+            # 评测等场景显式跳过联网检索（提速），其余环节照常
+            self.emit_sub_step("已跳过联网检索（skip_web_search 开启）", "done", callback)
+            web_search_summary = "已跳过联网检索"
+        else:
+            query = self._build_search_query(email)
+            self.emit_sub_step(f"正在检索网页（{query[:60]}）......", "running", callback)
+            try:
+                search_result = self.call_tool("web_search", query, 5, callback=callback)
+                web_search_summary = search_result.output
+                web_results = getattr(search_result, "extra", {}).get("results", [])
+                # 提取联网情报威胁指标，实际影响最终威胁评分
+                threat_indicators = getattr(search_result, "extra", {}).get("threat_indicators", {})
+                web_threat_score = threat_indicators.get("score", 0)
+                web_threat_types = threat_indicators.get("matched_types", [])
+                web_evidence = threat_indicators.get("evidence", [])
+                # 提取深度威胁情报发现
+                threat_intel_data = getattr(search_result, "extra", {}).get("threat_intel", {})
+                web_findings = threat_intel_data.get("findings", [])
+                page_contents = getattr(search_result, "extra", {}).get("page_contents", [])
 
-            # 逐条推送检索到的网页名称，让用户看到 Agent 正在检索哪些公开情报源
-            if web_results:
-                for r in web_results:
-                    title = (r.get("title", "") or "无标题").strip()
-                    self.emit_sub_step(f"正在检索网页（{title[:70]}）......", "running", callback)
+                # 逐条推送检索到的网页名称，让用户看到 Agent 正在检索哪些公开情报源
+                if web_results:
+                    for r in web_results:
+                        title = (r.get("title", "") or "无标题").strip()
+                        self.emit_sub_step(f"正在检索网页（{title[:70]}）......", "running", callback)
 
-                # 推送深度抓取的网页正文信息
-                if page_contents:
-                    for pc in page_contents:
-                        title = (pc.get("title", "") or "无标题").strip()
-                        preview = (pc.get("content_preview", "") or "")[:120]
+                    # 推送深度抓取的网页正文信息
+                    if page_contents:
+                        for pc in page_contents:
+                            title = (pc.get("title", "") or "无标题").strip()
+                            preview = (pc.get("content_preview", "") or "")[:120]
+                            self.emit_sub_step(
+                                f"已抓取网页正文（{title[:50]}）：{preview}......",
+                                "running", callback,
+                            )
+
+                    # 推送威胁情报发现
+                    if web_findings:
+                        for finding in web_findings[:3]:
+                            self.emit_sub_step(f"威胁情报发现：{finding[:120]}", "running", callback)
+
+                    if web_threat_score > 0:
+                        evidence_str = ""
+                        if web_evidence:
+                            evidence_str = f"（证据：{'; '.join(web_evidence[:3])}）"
                         self.emit_sub_step(
-                            f"已抓取网页正文（{title[:50]}）：{preview}......",
-                            "running", callback,
+                            f"联网情报分析：命中 {len(web_threat_types)} 类威胁信号（{', '.join(web_threat_types)}），"
+                            f"深度抓取 {len(page_contents)} 个网页，联网情报风险分 +{web_threat_score}{evidence_str}",
+                            "done", callback,
                         )
-
-                # 推送威胁情报发现
-                if web_findings:
-                    for finding in web_findings[:3]:
-                        self.emit_sub_step(f"威胁情报发现：{finding[:120]}", "running", callback)
-
-                if web_threat_score > 0:
-                    evidence_str = ""
-                    if web_evidence:
-                        evidence_str = f"（证据：{'; '.join(web_evidence[:3])}）"
-                    self.emit_sub_step(
-                        f"联网情报分析：命中 {len(web_threat_types)} 类威胁信号（{', '.join(web_threat_types)}），"
-                        f"深度抓取 {len(page_contents)} 个网页，联网情报风险分 +{web_threat_score}{evidence_str}",
-                        "done", callback,
-                    )
+                    else:
+                        self.emit_sub_step(
+                            f"联网情报检索完成，共检索 {len(web_results)} 个公开网页，深度抓取 {len(page_contents)} 个网页正文，未发现明显威胁信号",
+                            "done", callback,
+                        )
                 else:
                     self.emit_sub_step(
-                        f"联网情报检索完成，共检索 {len(web_results)} 个公开网页，深度抓取 {len(page_contents)} 个网页正文，未发现明显威胁信号",
+                        "联网检索未获取到公开结果，已退回本地规则与知识库分析",
                         "done", callback,
                     )
-            else:
-                self.emit_sub_step(
-                    "联网检索未获取到公开结果，已退回本地规则与知识库分析",
-                    "done", callback,
-                )
-        except Exception as e:
-            self.emit_sub_step(f"联网搜索未成功：{str(e)[:100]}，继续本地分析", "done", callback)
-            web_search_summary = f"联网搜索失败：{str(e)[:100]}"
+            except Exception as e:
+                self.emit_sub_step(f"联网搜索未成功：{str(e)[:100]}，继续本地分析", "done", callback)
+                web_search_summary = f"联网搜索失败：{str(e)[:100]}"
 
         # 2. 话术模式匹配
         matched_patterns = set()
@@ -213,19 +219,33 @@ class ThreatIntelAgent(BaseAgent):
             if ioc_type in self.ATTACK_TECHNIQUES:
                 attack_techniques.append(self.ATTACK_TECHNIQUES[ioc_type])
 
-        result.attack_techniques = attack_techniques
+        # 聚合出口保序去重：多个话术/IOC 类型可映射到同一 ATT&CK 技术，避免重复项
+        result.attack_techniques = list(dict.fromkeys(attack_techniques))
         if attack_techniques:
             self.emit_sub_step(
                 f"映射到 {len(attack_techniques)} 个 ATT&CK 技战术",
                 callback=callback,
             )
 
-        # 4. 知识库交叉验证
+        # 4. 知识库交叉验证（混合检索：向量不可用时静默退化为纯关键词结果）
+        kb_start = time.time()
         try:
-            kb_results = db.search_kb(text_to_scan[:200], limit=5)
+            kb_results = db.hybrid_search_kb(text_to_scan[:200], limit=5)
             result.kb_hits = kb_results if isinstance(kb_results, list) else []
         except Exception:
             result.kb_hits = []
+        # 结构化工具事件：让前端感知 RAG 检索发生（与注册工具事件同构）
+        kb_semantic_hits = sum(
+            1 for h in result.kb_hits
+            if isinstance(h, dict) and h.get("match_type") in {"semantic", "hybrid"}
+        )
+        self.emit_tool_finished(
+            "hybrid_search_kb",
+            f"交叉验证（{len(text_to_scan[:200])} 字符）",
+            f"命中 {len(result.kb_hits)} 条（含语义 {kb_semantic_hits} 条）",
+            int((time.time() - kb_start) * 1000),
+            callback,
+        )
 
         if result.kb_hits:
             self.emit_sub_step(

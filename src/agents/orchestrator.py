@@ -82,7 +82,8 @@ ORCHESTRATOR_SYSTEM_PROMPT = """你是钓鱼邮件智能检测系统的主编排
     "expected_risk_direction": "你对风险方向的预判",
     "agents_to_call": ["sender_profiler", "header_forensics", "semantic", "threat_intel", "detector", "risk", "response"],
     "preliminary_opinion": "你的初步看法和置信度"
-}"""
+}
+输出要求：直接输出裸 JSON，不要用 markdown 代码围栏（```）包裹；strategy、reasoning、preliminary_opinion 等文本字段各不超过 200 字，确保 JSON 完整结束。"""
 
 
 class OrchestratorAgent(BaseAgent):
@@ -158,14 +159,18 @@ class OrchestratorAgent(BaseAgent):
         email: EmailInput,
         callback: EventCallback = None,
         selected_steps: Optional[list[str]] = None,
+        skip_web_search: bool = False,
         **kwargs,
     ) -> dict:
         """
         主编排分析流程
-        
+
         Phase 1: Orchestrator 思考 — 用 LLM 分析邮件，形成策略
         Phase 2: 依次调用子 Agent — 真正的函数调用，内嵌在叙事中
         Phase 3: 综合结果生成报告
+
+        skip_web_search: 为 True 时 threat_intel 跳过联网检索（评测提速），
+        仅透传给子 Agent，不改变编排逻辑。
         """
         state = WorkflowState(email=email)
 
@@ -183,7 +188,7 @@ class OrchestratorAgent(BaseAgent):
         agents_to_call = self._ensure_threat_intel_for_suspicious(email, agents_to_call)
 
         # ---- Phase 2: 依次调用子 Agent ----
-        self._phase2_call_sub_agents(email, state, agents_to_call, callback)
+        self._phase2_call_sub_agents(email, state, agents_to_call, callback, skip_web_search=skip_web_search)
 
         # ---- Phase 3: 综合生成报告 ----
         report = self._phase3_generate_report(email, state, strategy, callback)
@@ -323,8 +328,9 @@ class OrchestratorAgent(BaseAgent):
                     )
                 return strategy
             except Exception as e:
+                self.emit_llm_fallback(e, callback)
                 self.emit_orchestrator_thinking(
-                    f"⚠️ LLM 策略思考不可用，采用规则推理策略。（原因：{str(e)[:80]}）",
+                    "采用规则推理策略制定检测计划（全流程检测 + 多假设校准）。",
                     callback,
                 )
         else:
@@ -574,6 +580,7 @@ class OrchestratorAgent(BaseAgent):
         state: WorkflowState,
         agents_to_call: list[str],
         callback: EventCallback,
+        skip_web_search: bool = False,
     ):
         """
         Phase 2: 依次调用子 Agent
@@ -607,6 +614,7 @@ class OrchestratorAgent(BaseAgent):
                     semantic_result=state.semantic,
                     detection_result=state.detection,
                     risk_result=state.risk,
+                    skip_web_search=skip_web_search,
                 )
 
                 # 更新工作流状态
@@ -829,6 +837,11 @@ class OrchestratorAgent(BaseAgent):
                 "threat_patterns": getattr(state.threat_intel_result, "threat_patterns", []),
                 "threat_score": getattr(state.threat_intel_result, "threat_score", 0),
                 "attack_techniques": getattr(state.threat_intel_result, "attack_techniques", []),
+                # KB 交叉验证中含语义/混合命中的条数（供前端展示"含语义命中 N 条"）
+                "kb_semantic_hits": sum(
+                    1 for h in (getattr(state.threat_intel_result, "kb_hits", []) or [])
+                    if isinstance(h, dict) and h.get("match_type") in {"semantic", "hybrid"}
+                ),
             } if hasattr(state, "threat_intel_result") else {},
             "detector": lambda: {
                 "sender_score": state.detection.sender_score if state.detection else 0.5,
@@ -932,6 +945,7 @@ class OrchestratorAgent(BaseAgent):
                 "confidence": state.semantic.confidence,
                 "persuasion_techniques": state.semantic.persuasion_techniques,
                 "explanation": state.semantic.explanation,
+                "fallback_reason": getattr(state.semantic, "fallback_reason", ""),
             } if state.semantic else {},
             "threat_intel": {
                 "ioc_count": getattr(state.threat_intel_result, "ioc_count", 0),
@@ -956,22 +970,26 @@ class OrchestratorAgent(BaseAgent):
                 "kb_hits": state.detection.kb_hits,
                 "kb_summary": state.detection.kb_summary,
                 "explanation": state.detection.explanation,
+                "fallback_reason": getattr(state.detection, "fallback_reason", ""),
             } if state.detection else {},
             "risk": {
                 "risk_score": state.risk.risk_score,
                 "risk_level": state.risk.risk_level,
                 "rule_score": state.risk.rule_score,
                 "llm_score": state.risk.llm_score,
+                "llm_participated": state.risk.llm_participated,
                 "score_gap": state.risk.score_gap,
                 "consistency_warning": state.risk.consistency_warning,
                 "attack_techniques": state.risk.attack_techniques,
                 "explanation": state.risk.explanation,
+                "fallback_reason": getattr(state.risk, "fallback_reason", ""),
             } if state.risk else {},
             "response": {
                 "action": state.response.action,
                 "alert_message": state.response.alert_message,
                 "trace_report": state.response.trace_report,
                 "recommendation": state.response.recommendation,
+                "fallback_reason": getattr(state.response, "fallback_reason", ""),
             } if state.response else {},
             "evidence_items": [
                 item.model_dump(mode="json") for item in state.evidence_items

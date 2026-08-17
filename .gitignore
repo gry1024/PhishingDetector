@@ -22,6 +22,12 @@ data/processed/*.csv
 data/processed/*.json
 data/processed/*.parquet
 
+# 真实邮件数据集（批次5接入，体量大且为派生文件，统一不进 git）
+data/raw/*.zip
+data/raw/trec06c/
+data/raw/*.jsonl
+datasets/
+
 # Database
 *.db
 *.db-journal
