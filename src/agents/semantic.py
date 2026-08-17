@@ -40,7 +40,8 @@ SYSTEM_PROMPT = """你是一个钓鱼邮件语义分析专家。你的核心能�
     "persuasion_techniques": ["话术类型列表"],
     "explanation": "详细分析推理过程",
     "confidence": 0.0到1.0
-}"""
+}
+输出要求：直接输出裸 JSON，不要用 markdown 代码围栏（```）包裹；explanation 不超过 200 字，确保 JSON 完整结束。"""
 
 
 class SemanticAgent(BaseAgent):
@@ -86,15 +87,17 @@ class SemanticAgent(BaseAgent):
             result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
             self.emit_sub_step("LLM 返回结构化结果，解析意图、话术、置信度", "done", callback)
         except Exception as e:
-            self.emit_thinking("⚠️ LLM 不可用，已启用规则兜底语义分析。", callback)
-            self.emit_sub_step(f"规则兜底接管：基于预扫描命中模式生成语义判定（原因：{str(e)[:80]}）", "done", callback)
+            fallback_reason = self.emit_llm_fallback(e, callback)
+            self.emit_sub_step(f"规则兜底接管：基于预扫描命中模式生成语义判定（{fallback_reason}）", "done", callback)
             result = self._fallback_semantic_result(email, pattern_result, url_result)
+            result["fallback_reason"] = fallback_reason
 
         semantic = SemanticResult(
             intent=result.get("intent", "suspicious"),
             persuasion_techniques=result.get("persuasion_techniques", []),
             explanation=result.get("explanation", ""),
             confidence=float(result.get("confidence", 0.5)),
+            fallback_reason=result.get("fallback_reason", ""),
         )
 
         self.emit_sub_step(

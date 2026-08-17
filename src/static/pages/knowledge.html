@@ -427,6 +427,14 @@
     .risk-medium { border-color: rgba(251,191,36,0.4); color: #fcd34d; background: rgba(251,191,36,0.12); }
     .risk-low, .risk-safe { border-color: rgba(74,222,128,0.4); color: #86efac; background: rgba(74,222,128,0.12); }
     .risk-unknown { border-color: var(--border); color: var(--text-2); background: rgba(255,255,255,0.04); }
+    .risk-hybrid { border-color: rgba(255,255,255,0.75); color: #f8fafc; background: rgba(255,255,255,0.08); }
+
+    .kb-score {
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 400;
+      align-self: center;
+    }
 
     .tech-pill {
       display: inline-flex;
@@ -801,6 +809,8 @@
       categories: [],
       selectedCategory: "__all__",
       searchKeyword: "",
+      // 混合检索降级标记：向量服务不可用时为 true，搜索 meta 行据此提示
+      searchDegraded: false,
       debounceTimer: null,
       retryAction: null,
       isBootstrapped: false,
@@ -917,6 +927,22 @@
       return "risk-unknown";
     }
 
+    function matchTypeLabel(matchType) {
+      const key = String(matchType || "").toLowerCase();
+      if (key === "semantic") return "语义";
+      if (key === "hybrid") return "关键词+语义";
+      if (key === "keyword") return "关键词";
+      return "";
+    }
+
+    function matchTypeClass(matchType) {
+      const key = String(matchType || "").toLowerCase();
+      if (key === "semantic") return "risk-low";
+      if (key === "hybrid") return "risk-hybrid";
+      if (key === "keyword") return "risk-unknown";
+      return "";
+    }
+
     function renderCategoryList() {
       const total = state.allEntries.length;
       const list = [{ id: "__all__", name: "全部", count: total }].concat(state.categories || []);
@@ -952,7 +978,14 @@
     }
 
     function renderSearchMeta(count) {
-      els.searchMeta.textContent = "共 " + count + " 条结果";
+      if (state.searchKeyword) {
+        // 搜索态：点明检索方式；降级时明确提示
+        els.searchMeta.textContent = state.searchDegraded
+          ? "共 " + count + " 条结果 · 向量服务不可用，已降级为关键词检索"
+          : "共 " + count + " 条结果 · 关键词 + 向量语义混合检索";
+      } else {
+        els.searchMeta.textContent = "共 " + count + " 条结果";
+      }
     }
 
     function renderCards(entries) {
@@ -971,11 +1004,19 @@
       els.cards.innerHTML = state.currentEntries.map((item) => {
         const techniques = Array.isArray(item.attack_techniques) ? item.attack_techniques.slice(0, 4) : [];
         const summary = item.summary || item.content || "";
+        const matchLabel = matchTypeLabel(item.match_type);
+        const matchClass = matchTypeClass(item.match_type);
+        // 混合检索命中：徽章旁展示双路分数（融合 / 关键词 / 向量）
+        const scoreLine = (item.fused_score !== undefined && item.fused_score !== null)
+          ? '<span class="kb-score">融合 ' + Number(item.fused_score) + ' · 词 ' + Number(item.kw_score || 0) + ' · 向量 ' + Number(item.vector_score || 0) + '</span>'
+          : "";
         return ''
           + '<article class="card" data-id="' + Number(item.id || 0) + '">'
           + '  <div class="card-row-1">'
           + '    <span class="card-category">' + escapeHtml(item.category || "未分类") + '</span>'
           + '    <span class="risk-badge ' + severityClass(item.severity) + '">' + escapeHtml(item.severity || "unknown") + '</span>'
+          +      (matchLabel ? '<span class="risk-badge ' + matchClass + '">' + escapeHtml(matchLabel) + '</span>' : '')
+          +      scoreLine
           +      techniques.map((tech) => '<span class="tech-pill">' + escapeHtml(tech) + '</span>').join("")
           + '  </div>'
           + '  <h3 class="card-title">' + escapeHtml(item.title || "无标题") + '</h3>'
@@ -1016,8 +1057,12 @@
       hideGlobalError();
       renderLoading("搜索中...");
       try {
-        const path = "/api/kb/search?q=" + encodeURIComponent(keyword) + "&limit=20";
-        const entries = await apiGet(path);
+        // mode=hybrid：关键词 + 向量语义混合检索；向量不可用由后端静默降级
+        const path = "/api/kb/search?q=" + encodeURIComponent(keyword) + "&limit=20&mode=hybrid";
+        const data = await apiGet(path);
+        // 兼容旧结构（纯数组）：hybrid 返回 {degraded, results}
+        const entries = Array.isArray(data) ? data : (data.results || []);
+        state.searchDegraded = Array.isArray(data) ? false : Boolean(data.degraded);
         renderCards(entries);
       } catch (error) {
         showGlobalError("搜索接口请求失败，请检查服务后重试。", async () => {

@@ -22,7 +22,8 @@ class LLMConfig(BaseModel):
     base_url: str = "https://api.minimax.chat/v1"
     model: str = "MiniMax-Text-01"
     temperature: float = 0.1  # 检测任务需要低温度保证一致性
-    max_tokens: int = 2048
+    # 默认 4096：2048 曾被长解释字段顶满，JSON 尾部被截断导致解析失败误入规则兜底
+    max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "4096"))
 
     def model_post_init(self, __context):
         if self.provider == "qwen":
@@ -54,6 +55,11 @@ class Settings(BaseModel):
     llm: LLMConfig = LLMConfig()
     api: APIConfig = APIConfig()
     db: DatabaseConfig = DatabaseConfig()
+    minimax_api_key: str = os.getenv("MINIMAX_API_KEY", "")
+    minimax_base_url: str = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
+    minimax_group_id: str = os.getenv("MINIMAX_GROUP_ID", "")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "")
+    embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "1536"))
     data_dir: str = os.getenv("DATA_DIR", str(ROOT_DIR / "data"))
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
