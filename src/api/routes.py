@@ -769,7 +769,7 @@ class EvalRunRequest(BaseModel):
     dataset_id: str
     label: str = ""
     limit: int = 20
-    use_llm: bool = False
+    use_llm: bool = True
     # 评测默认跳过联网检索（threat_intel 的 DuckDuckGo 检索是单样本耗时大头）
     skip_web_search: bool = True
 
