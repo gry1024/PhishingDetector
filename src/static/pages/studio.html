@@ -9,237 +9,168 @@
 <title>PhishingDetector Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0d0d0d;
-  --surface: #111111;
-  --panel: #161616;
-  --text: #e5e5e5;
-  --muted: #737373;
-  --border-soft: rgba(255, 255, 255, 0.06);
-  --border: rgba(255, 255, 255, 0.1);
-  --button-bg: #ffffff;
-  --button-text: #000000;
-  --green: #17c964;
-  --accent: #3b82f6;
-  --radius: 18px;
-  --radius-sm: 12px;
-  --radius-full: 999px;
-  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --bg: #0a0a0a;
+  --bg-elev: #111112;
+  --bg-hover: #171718;
+  --bg-active: #1d1d1f;
+  --border: rgba(255,255,255,0.09);
+  --border-strong: rgba(255,255,255,0.16);
+  --text: #f5f5f5;
+  --text-2: rgba(255,255,255,0.64);
+  --text-3: rgba(255,255,255,0.40);
+  --btn-bg: #f5f5f5;
+  --btn-text: #0a0a0a;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
   --header-h: 56px;
+  --muted: rgba(255,255,255,0.64);
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
 }
 
-/* Liquid Glass */
-.liquid-glass {
-  background: rgba(255,255,255,0.01);
-  background-blend-mode: luminosity;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: none;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
-  position: relative;
-  overflow: hidden;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
-.liquid-glass::before {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.45) 0%,
-    rgba(255,255,255,0.15) 20%,
-    rgba(255,255,255,0) 40%,
-    rgba(255,255,255,0) 60%,
-    rgba(255,255,255,0.15) 80%,
-    rgba(255,255,255,0.45) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.liquid-glass-strong {
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
-  position: relative;
-  overflow: hidden;
-}
-.liquid-glass-strong::before {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: inherit;
-  padding: 1.4px;
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.5) 0%,
-    rgba(255,255,255,0.2) 20%,
-    rgba(255,255,255,0) 40%,
-    rgba(255,255,255,0) 60%,
-    rgba(255,255,255,0.2) 80%,
-    rgba(255,255,255,0.5) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
   overflow: hidden;
-  font-family: "Barlow", "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: var(--text);
   background: var(--bg);
-  letter-spacing: -0.01em;
-}
-
-body {
-  position: relative;
-}
-
-.studio-bg {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
-  opacity: 0;
-}
-
-.studio-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: rgba(0,0,0,0.82);
-}
-
-button, input, textarea {
-  font-family: inherit;
-  letter-spacing: inherit;
   color: var(--text);
+  font-family: "Inter", -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ===== Top Header ===== */
+button, input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .topbar {
-  height: 56px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-full);
-  background: rgba(10,10,10,0.38);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  height: var(--header-h);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 22px;
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  z-index: 20;
+  gap: 20px;
+  padding: 0 16px;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-right: auto;
+  min-width: 260px;
 }
 
 .brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--button-bg);
-  color: var(--button-text);
-  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .brand-text {
-  font-family: "Instrument Serif", "Noto Serif SC", serif;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
-  font-style: italic;
-  letter-spacing: -0.06em;
-  color: var(--text);
+  letter-spacing: 0.01em;
 }
 
 .brand-beta {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.06);
-  color: var(--muted);
-}
-
-.topbar-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 13px;
-  color: var(--muted);
-  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 2px 7px;
 }
 
 .top-nav {
   display: none;
   align-items: center;
-  gap: 8px;
-  padding: 6px;
-  border-radius: var(--radius-full);
+  gap: 6px;
 }
 
-.top-nav-link {
+.top-nav-link,
+.top-nav-cta {
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
   font-size: 13px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.9);
-  padding: 8px 12px;
-  white-space: nowrap;
-  text-decoration: none;
 }
 
-.top-nav a {
-  text-decoration: none;
+.top-nav-link:hover,
+.top-nav-cta:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 .top-nav-link.active {
-  color: #fff;
-  background: rgba(255,255,255,0.12);
-  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text);
 }
 
 .top-nav-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: var(--radius-full);
-  background: #fff;
-  color: #000;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-weight: 600;
 }
+
+.topbar-meta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.layout-toggles {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+.icon-btn.active { background: var(--btn-bg); color: var(--btn-text); border-color: var(--btn-bg); }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-soft);
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
+  color: var(--text-2);
 }
 
 .status-dot {
@@ -249,117 +180,159 @@ button, input, textarea {
   background: var(--green);
 }
 
-.status-dot.running { background: #f5a623; animation: pulse 1.2s infinite; }
-.status-dot.failed { background: #ef4444; }
+.status-dot.running { background: var(--amber); animation: pulse 1.2s infinite; }
+.status-dot.failed { background: var(--red); }
 
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-/* ===== App Shell ===== */
-.app-shell {
-  display: flex;
-  height: calc(100vh - 88px);
-  margin-top: 88px;
-  overflow: hidden;
-  position: relative;
-  z-index: 10;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
-/* ===== Left Sidebar ===== */
+.app-shell {
+  display: flex;
+  height: calc(100vh - var(--header-h));
+  overflow: hidden;
+}
+
 .left-sidebar {
-  width: 240px;
-  border-right: 1px solid var(--border-soft);
-  background: rgba(10,10,10,0.28);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  width: 264px;
+  flex-shrink: 0;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  transition: width 0.25s ease, transform 0.25s ease;
-}.left-sidebar.collapsed {
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.left-sidebar.collapsed {
   width: 0;
+  opacity: 0;
   overflow: hidden;
   border-right: none;
-  padding: 0;
 }
 
 .sidebar-header {
-  padding: 18px 16px 12px;
+  padding: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid var(--border);
 }
 
-.sidebar-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
+.sidebar-title,
+.panel-card-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--text-3);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .btn-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
-  border-radius: var(--radius-full);
-  background: var(--button-bg);
-  color: var(--button-text);
+  border: 1px solid var(--btn-bg);
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 12px;
   font-weight: 600;
-  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
-.btn-new:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+.btn-new:hover { background: #e9e9e9; }
+
+.sidebar-title-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  margin-left: 6px;
 }
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-clear {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-clear:hover { background: var(--bg-hover); color: var(--red); }
+
+.conv-limit-note {
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.sidebar-dataset-btn {
+  width: 100%;
+  margin: 12px 0 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.sidebar-dataset-btn:hover { background: var(--bg-hover); }
 
 .conversation-list {
   flex: 1;
-  overflow-y: auto;
   padding: 0 10px 12px;
+  overflow-y: auto;
 }
 
 .conversation-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 10px;
-  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+  padding: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
-  margin-bottom: 2px;
-  position: relative;
 }
 
-.conversation-item:hover { background: rgba(255,255,255,0.04); }
-.conversation-item.active { background: rgba(255,255,255,0.07); }
+.conversation-item:hover { background: var(--bg-hover); }
+.conversation-item.active { background: var(--bg-active); }
 
 .conv-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border-soft);
-  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  color: var(--text-2);
   flex-shrink: 0;
 }
 
-.conv-body {
-  flex: 1;
-  min-width: 0;
-}
+.conv-body { flex: 1; min-width: 0; }
 
 .conv-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -367,151 +340,109 @@ button, input, textarea {
 
 .conv-meta {
   font-size: 11px;
-  color: var(--muted);
-  margin-top: 1px;
+  color: var(--text-3);
+  margin-top: 2px;
 }
 
 .conv-delete {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  display: flex;
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
-  font-size: 13px;
-  flex-shrink: 0;
+  color: var(--text-3);
 }
 
 .conversation-item:hover .conv-delete { opacity: 1; }
-.conv-delete:hover { background: rgba(255,255,255,0.06); color: #ef4444; }
+.conv-delete:hover { background: var(--bg-hover); color: var(--red); }
 
 .empty-conv {
-  text-align: center;
-  padding: 40px 16px;
-  color: var(--muted);
+  color: var(--text-3);
   font-size: 12px;
-  line-height: 1.6;
+  text-align: center;
+  padding: 36px 12px;
+  line-height: 1.7;
 }
 
 .sidebar-footer {
-  padding: 12px 14px;
-  border-top: 1px solid var(--border-soft);
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
   font-size: 11px;
-  color: var(--muted);
   text-align: center;
 }
 
-/* ===== Center Chat Area ===== */
 .center-area {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  background: transparent;
-  position: relative;
 }
 
-/* Ticker */
 .hero-ticker {
-  height: auto;
-  border-bottom: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: transparent;
-  padding: 10px 16px 0;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
 }
 
 .ticker-track {
+  max-width: 100%;
+  overflow-x: auto;
   display: flex;
   gap: 8px;
-  flex-wrap: nowrap;
   white-space: nowrap;
-  width: max-content;
-  animation: ticker-scroll 36s linear infinite;
-}
-
-.ticker-group {
-  display: flex;
-  gap: 8px;
 }
 
 .ticker-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-2);
+  background: var(--bg-elev);
+  padding: 5px 10px;
   font-size: 12px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.9);
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border-soft);
 }
 
 .ticker-item.active {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-bg);
 }
 
-.hero-ticker:hover .ticker-track { animation-play-state: paused; }
-
-@keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-/* Chat Output */
 .chat-output {
   flex: 1;
   overflow-y: auto;
-  padding: 28px 32px 0;
-  scroll-behavior: smooth;
+  padding: 20px 16px 0;
 }
 
 .empty-chat {
+  min-height: 60vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  min-height: 60vh;
+  align-items: center;
   text-align: center;
-  color: var(--muted);
 }
 
 .empty-chat h1 {
-  font-family: "Instrument Serif", "Noto Serif SC", serif;
-  font-size: 40px;
-  font-weight: 600;
-  font-style: italic;
-  letter-spacing: -0.06em;
-  color: var(--text);
-  margin-bottom: 14px;
-  max-width: 520px;
-  line-height: 1.05;
+  max-width: 560px;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
 }
 
 .empty-chat p {
-  font-size: 15px;
-  line-height: 1.55;
-  max-width: 420px;
-  color: var(--muted);
+  max-width: 540px;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-/* Message Bubbles */
 .message {
-  max-width: 620px;
-  margin: 0 auto 22px;
-  animation: fadeIn 0.35s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto 12px;
 }
 
 .message-user {
@@ -520,14 +451,13 @@ button, input, textarea {
 }
 
 .user-bubble {
-  background: var(--button-bg);
-  color: var(--button-text);
-  padding: 12px 16px;
-  border-radius: 18px 18px 4px 18px;
-  font-size: 14px;
-  line-height: 1.55;
   max-width: 80%;
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-active);
+  border: 1px solid var(--border);
+  border-radius: 14px 14px 4px 14px;
+  padding: 11px 13px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .message-assistant {
@@ -536,15 +466,14 @@ button, input, textarea {
 }
 
 .assistant-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--button-bg);
-  color: var(--button-text);
-  display: flex;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-xs);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -554,505 +483,480 @@ button, input, textarea {
 }
 
 .assistant-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.assistant-name .tag {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: rgba(0,0,0,0.06);
-  color: var(--muted);
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-2);
 }
 
 .assistant-text {
   font-size: 14px;
-  line-height: 1.75;
   color: var(--text);
-  white-space: pre-wrap;
+  line-height: 1.75;
+  white-space: pre-line;
 }
 
 .assistant-text p { margin-bottom: 10px; }
 .assistant-text p:last-child { margin-bottom: 0; }
 
-/* Agent Call Cards inside assistant message */
-.agent-card {
-  margin-top: 6px;
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  background: rgba(8,8,8,0.34);
+.step-timeline {
+  margin-top: 8px;
+  position: relative;
   white-space: normal;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
 }
 
-.agent-card-header {
+.step-item {
+  position: relative;
+  margin-bottom: 6px;
+  padding-left: 24px;
+}
+
+.step-item::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 16px;
+  bottom: -10px;
+  width: 1px;
+  background: var(--border);
+}
+
+.step-item:last-child::before { display: none; }
+
+.step-item::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.step-item.running::after { background: var(--amber); animation: pulse 1.2s infinite; }
+.step-item.done::after { background: var(--green); }
+.step-item.failed::after { background: var(--red); }
+
+.step-header {
+  min-height: 28px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 8px;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
-.agent-card-header:hover { background: rgba(255,255,255,0.02); }
-
-.agent-card-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: rgba(255,255,255,0.06);
-  display: flex;
+.step-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-2);
+}
+
+.step-title {
   font-size: 13px;
-}
-
-.agent-card-title {
-  flex: 1;
-  font-size: 13px;
   font-weight: 600;
 }
 
-.agent-card-desc {
+.step-desc {
+  color: var(--text-3);
   font-size: 11px;
-  color: var(--muted);
-  margin-top: 1px;
 }
 
-.agent-card-status {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.06);
-  color: var(--muted);
-  flex-shrink: 0;
-}
-
-.agent-card-status.running { background: rgba(180,106,0,0.15); color: #f5a623; }
-.agent-card-status.done { background: rgba(17,201,100,0.12); color: #17c964; }
-.agent-card-status.failed { background: rgba(239,68,68,0.12); color: #ef4444; }
-
-.agent-card-toggle {
-  font-size: 11px;
-  color: var(--muted);
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-
-.agent-card-toggle.open { transform: rotate(90deg); }
-
-.agent-card-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.agent-card-body.open {
-  max-height: none;
-  overflow-y: auto;
-}
-
-.agent-card-inner {
-  padding: 8px 10px;
-  border-top: 1px solid var(--border-soft);
-}
-
-.agent-thinking-line {
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-
-.agent-tool-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin: 4px 0 3px;
-}
-
-.agent-tool-chip {
-  font-size: 10px;
-  font-weight: 600;
+.step-status {
+  margin-left: auto;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
   padding: 2px 7px;
-  border-radius: 5px;
-  background: rgba(0,0,0,0.04);
-  color: var(--muted);
-  border: 1px solid var(--border-soft);
+  font-size: 10px;
+  color: var(--text-2);
 }
 
-.agent-tool-chip.done {
-  background: rgba(17,201,100,0.12);
-  color: #6ee7b7;
-  border-color: rgba(17,201,100,0.25);
+.step-status.running { border-color: rgba(251,191,36,0.35); color: var(--amber); }
+.step-status.done { border-color: rgba(74,222,128,0.35); color: var(--green); }
+.step-status.failed { border-color: rgba(248,113,113,0.35); color: var(--red); }
+
+.step-toggle {
+  color: var(--text-3);
+  font-size: 10px;
+  transition: transform 0.2s ease;
 }
 
-.agent-llm-box {
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-top: 4px;
+.step-toggle.open { transform: rotate(90deg); }
+
+.step-body { display: none; }
+.step-body.open { display: block; }
+
+.step-body-inner {
+  padding: 4px 0 6px;
+}
+
+.step-detail {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.65;
+  padding-left: 12px;
+  margin-bottom: 4px;
+  white-space: pre-line;
+  word-break: break-word;
+  position: relative;
+}
+
+.step-detail::before {
+  content: "";
+  width: 6px;
+  height: 1px;
+  background: var(--border);
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+
+.step-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid rgba(74,222,128,0.45);
+  border-radius: var(--radius-xs);
+  color: var(--green);
+  margin: 2px 6px 4px 12px;
+}
+
+.step-llm {
+  margin: 3px 0 6px 12px;
   border-left: 2px solid var(--green);
+  padding-left: 8px;
 }
 
-.agent-llm-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--muted);
-  margin-bottom: 3px;
+.step-llm-label {
+  color: var(--text-3);
+  font-size: 10px;
+  margin-bottom: 2px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
-.agent-llm-text {
-  font-size: 11.5px;
-  line-height: 1.55;
-  color: var(--text);
-  white-space: pre-wrap;
+.step-llm-text {
+  white-space: pre-line;
+  word-break: break-word;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
 }
 
-.agent-llm-text.typing::after {
+.step-llm-text.typing::after {
   content: "▋";
   animation: blink 1s infinite;
-  color: var(--text);
 }
 
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 
-.agent-result-line {
-  margin-top: 6px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: rgba(17,201,100,0.1);
-  color: #17c964;
+.step-result {
+  margin: 4px 0 4px 12px;
+  border: 1px solid rgba(74,222,128,0.35);
+  border-radius: var(--radius-xs);
+  color: var(--green);
+  padding: 6px 8px;
   font-size: 11px;
-  font-weight: 500;
-  border: 1px solid rgba(17,201,100,0.2);
 }
 
-/* Report Card (inside chat) */
 .report-card {
-  max-width: 620px;
-  margin: 18px auto 28px;
+  width: 100%;
+  max-width: 780px;
+  margin: 12px auto 18px;
+  background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(10,10,10,0.34);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow);
-  animation: fadeIn 0.45s ease;
 }
 
 .report-header {
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255,255,255,0.03);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .report-header-title {
-  font-family: "Instrument Serif", "Noto Serif SC", serif;
-  font-style: italic;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .risk-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.risk-critical { background: rgba(180,35,24,0.15); color: #fca5a5; border: 1px solid rgba(180,35,24,0.3); }
-.risk-high { background: rgba(180,106,0,0.15); color: #fcd34d; border: 1px solid rgba(180,106,0,0.3); }
-.risk-medium { background: rgba(161,98,7,0.15); color: #fde68a; border: 1px solid rgba(161,98,7,0.3); }
-.risk-low { background: rgba(4,120,87,0.15); color: #6ee7b7; border: 1px solid rgba(4,120,87,0.3); }
-.risk-safe { background: rgba(21,128,61,0.15); color: #86efac; border: 1px solid rgba(21,128,61,0.3); }
-.risk-unknown { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border-soft); }
+.risk-critical { border-color: rgba(248,113,113,0.4); color: #fca5a5; background: rgba(248,113,113,0.12); }
+.risk-high { border-color: rgba(251,146,60,0.4); color: #fdba74; background: rgba(251,146,60,0.12); }
+.risk-medium { border-color: rgba(251,191,36,0.4); color: #fcd34d; background: rgba(251,191,36,0.12); }
+.risk-low, .risk-safe { border-color: rgba(74,222,128,0.4); color: #86efac; background: rgba(74,222,128,0.12); }
+.risk-unknown { border-color: var(--border); color: var(--text-2); background: rgba(255,255,255,0.04); }
+.risk-hybrid { border-color: rgba(255,255,255,0.75); color: #f8fafc; background: rgba(255,255,255,0.08); }
 
-.report-body { padding: 18px 20px; }
+.report-body {
+  padding: 16px;
+}
 
-.report-section { margin-bottom: 18px; }
+.report-section {
+  margin-bottom: 16px;
+}
+
 .report-section:last-child { margin-bottom: 0; }
 
 .report-section-title {
   font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
 }
 
 .report-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .report-box {
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px;
-  background: var(--bg);
+  padding: 10px;
 }
 
 .report-box-label {
+  color: var(--text-3);
   font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
   margin-bottom: 4px;
 }
 
 .report-box-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: -0.03em;
 }
 
 .report-text {
   font-size: 13px;
+  color: var(--text-2);
   line-height: 1.7;
-  color: var(--text);
 }
-
-.report-text strong { font-weight: 600; }
 
 .report-evidence-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 11px;
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  margin-bottom: 7px;
-  font-size: 12px;
-  background: var(--bg);
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
 }
 
+.report-evidence-item:last-child { margin-bottom: 0; }
+
 .evidence-info { flex: 1; min-width: 0; }
-.evidence-type { font-weight: 600; }
-.evidence-meta { color: var(--muted); font-size: 11px; margin-top: 1px; }
+.evidence-type { font-size: 12px; font-weight: 600; }
+.evidence-meta { margin-top: 2px; font-size: 11px; color: var(--text-3); }
 
 .evidence-bar-wrap {
-  width: 70px;
-  height: 5px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.06);
-  overflow: hidden;
+  width: 72px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(74,222,128,0.18);
 }
 
 .evidence-bar {
   height: 100%;
   background: var(--green);
-  border-radius: var(--radius-full);
-  transition: width 0.5s ease;
+  border-radius: var(--radius-pill);
 }
 
-/* Input Area */
 .input-area {
-  border-top: 1px solid var(--border-soft);
-  background: rgba(10,10,10,0.22);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 12px 24px 14px;
-  transition: padding 0.25s ease;
+  padding: 0 16px 14px;
 }
 
-.input-area.shrink { padding: 8px 24px 10px; }
+.input-area.shrink .input-row-2,
+.input-area.shrink .input-row-3 {
+  display: none;
+}
 
 .input-card {
-  max-width: 620px;
+  width: 100%;
+  max-width: 780px;
   margin: 0 auto;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  transition: border-color 0.2s ease;
+}
+
+.input-card:focus-within {
+  border-color: rgba(255,255,255,0.28);
 }
 
 .input-fields {
   padding: 10px 12px;
   display: grid;
+  gap: 8px;
+}
+
+.input-row-1 {
+  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  transition: all 0.25s ease;
+  gap: 8px;
 }
-
-.input-area.shrink .input-fields {
-  grid-template-columns: 1fr;
-  padding: 8px 12px;
-}
-
-.input-area.shrink .input-row-2 { display: none; }
 
 .input-card input,
 .input-card textarea {
   width: 100%;
   border: none;
+  border-radius: 0;
   background: transparent;
-  padding: 8px 4px;
+  padding: 8px 2px;
   font-size: 14px;
-  color: var(--text);
   outline: none;
   resize: none;
 }
 
 .input-card input::placeholder,
-.input-card textarea::placeholder { color: #525252; }
+.input-card textarea::placeholder {
+  color: var(--text-3);
+}
 
-.input-card textarea { min-height: 64px; line-height: 1.5; }
-.input-area.shrink .input-card textarea { min-height: 24px; }
+.input-card textarea {
+  min-height: 66px;
+  line-height: 1.55;
+}
+
+.input-card textarea#prompt {
+  min-height: 44px;
+  font-size: 13px;
+}
 
 .input-divider {
   height: 1px;
-  background: var(--border-soft);
-  margin: 0 12px;
+  background: var(--border);
 }
 
 .input-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: transparent;
+  padding: 9px 12px;
 }
 
 .input-hint {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--text-3);
 }
 
 .btn-run {
-  height: 38px;
-  padding: 0 20px;
-  border-radius: var(--radius-full);
-  background: var(--button-bg);
-  color: var(--button-text);
+  height: 34px;
+  border: 1px solid var(--btn-bg);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 13px;
   font-weight: 600;
-  border: none;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.btn-run:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,255,255,0.14); }
-.btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-.btn-run.running { background: #f5a623; color: #000; }
+.btn-run:hover { background: #e9e9e9; }
+.btn-run:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-run.running { background: var(--amber); border-color: var(--amber); color: #111; }
 
-/* ===== Right Sidebar ===== */
 .right-sidebar {
-  width: 320px;
-  border-left: 1px solid var(--border-soft);
-  background: rgba(10,10,10,0.28);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  width: 312px;
+  flex-shrink: 0;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  transition: width 0.25s ease;
-}.right-sidebar.collapsed {
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.right-sidebar.collapsed {
   width: 0;
+  opacity: 0;
   overflow: hidden;
   border-left: none;
 }
 
 .right-header {
-  padding: 16px 18px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 .right-title {
   font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 .right-body {
   flex: 1;
-  padding: 0 14px 14px;
-  display: flex;
-  flex-direction: column;
-  align-content: flex-start;
-  gap: 10px;
   overflow-y: auto;
-  min-height: 0;
+  padding: 0 12px;
 }
 
 .panel-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  padding: 11px 12px;
-  flex-shrink: 0;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow-sm);
-}.panel-card-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
 }
+
+.panel-card-title { margin-bottom: 8px; }
+
+.panel-card:first-child { border-top: none; }
 
 .status-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 13px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .status-row:last-child { margin-bottom: 0; }
 
-.status-label { color: var(--muted); }
-.status-value { font-weight: 600; color: var(--text); }
+.status-label { color: var(--text-3); }
+.status-value { color: var(--text); font-weight: 600; }
+.status-value.llm-fallback-badge { color: var(--amber); }
 
 .health-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.health-ok { background: rgba(17,201,100,0.12); color: #17c964; }
-.health-degraded { background: rgba(180,106,0,0.15); color: #f5a623; }
-.health-fail { background: rgba(239,68,68,0.12); color: #ef4444; }
+.health-ok { color: var(--green); border-color: rgba(74,222,128,0.4); }
+.health-degraded { color: var(--amber); border-color: rgba(251,191,36,0.4); }
+.health-fail { color: var(--red); border-color: rgba(248,113,113,0.4); }
 
 .score-grid {
   display: grid;
@@ -1061,157 +965,181 @@ button, input, textarea {
 }
 
 .score-box {
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 10px;
-  text-align: center;
-  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
 }
 
 .score-label {
+  color: var(--text-3);
   font-size: 10px;
-  color: var(--muted);
-  font-weight: 600;
   margin-bottom: 4px;
 }
 
 .score-value {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.03em;
 }
 
 .score-diff {
-  font-size: 11px;
-  color: var(--muted);
   margin-top: 8px;
-  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
 }
 
 .evidence-mini-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border-soft);
+  gap: 7px;
+  padding: 6px 0;
   font-size: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
-.evidence-mini-item:last-child { border-bottom: none; padding-bottom: 0; }
+.evidence-mini-item:last-child { border-bottom: none; }
 
 .evidence-mini-bar-wrap {
-  width: 50px;
+  width: 48px;
   height: 4px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.06);
-  overflow: hidden;
+  background: rgba(74,222,128,0.18);
+  border-radius: var(--radius-pill);
 }
 
-.evidence-mini-bar { height: 100%; background: var(--green); border-radius: var(--radius-full); }
-
-.kb-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.evidence-mini-bar {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--green);
 }
 
-.kb-item {
-  font-size: 12px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid var(--border-soft);
-  color: var(--text);
-}
-
-.kb-item-empty {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  padding: 8px 0;
-}
-
-.replay-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.replay-btn {
-  flex: 1;
-  padding: 7px 0;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-soft);
-  background: var(--bg);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.replay-btn:hover { background: rgba(255,255,255,0.04); }
-.replay-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
-
+.kb-list,
 .recent-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.recent-item {
+.kb-item,
+.kb-item-empty {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.kb-item-empty {
+  color: var(--text-3);
+  text-align: center;
+}
+
+.kb-item-expandable {
+  cursor: pointer;
+}
+
+.kb-item.kb-item-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border-soft);
-  font-size: 12px;
+  gap: 8px;
+  text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.recent-item:hover { background: rgba(255,255,255,0.03); }
+.kb-item.kb-item-link:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
 
-.recent-title {
-  font-weight: 600;
+.kb-item-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kb-item-title {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+}
+
+.kb-item-jump {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.kb-item-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
+  display: none;
+}
+
+.kb-item.open .kb-item-meta {
+  display: block;
+}
+
+.kb-panel-note {
+  font-size: 11px;
+  color: var(--text-3);
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 5px 9px;
+  margin-bottom: 6px;
+}
+
+.kb-match-score {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.recent-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.recent-item:hover { background: var(--bg-hover); }
+
+.recent-title {
+  max-width: 145px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.recent-delete {
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.recent-delete:hover { color: var(--red); }
+
+.recent-delete-error {
+  font-size: 11px;
+  color: var(--red);
+  padding: 4px 2px;
 }
 
 .recent-score { font-weight: 700; }
 
-/* Layout toggles */
-.layout-toggles {
-  display: flex;
-  gap: 6px;
-}
-
-.icon-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid var(--border-soft);
-  background: var(--panel);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 13px;
-  transition: all 0.15s;
-}
-
-.icon-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-.icon-btn.active { background: var(--button-bg); color: var(--button-text); border-color: var(--button-bg); }
-
-/* Dataset Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.56);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -1220,62 +1148,70 @@ button, input, textarea {
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
-.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .modal-card {
   width: 640px;
   max-width: 92vw;
   max-height: 84vh;
-  background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-  border: 1px solid var(--border-soft);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: translateY(10px);
-  transition: transform 0.2s ease;
 }
-.modal-overlay.open .modal-card { transform: translateY(0); }
 
 .modal-header {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.modal-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
+
+.modal-title { font-size: 15px; font-weight: 600; }
+
 .modal-close {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: rgba(0,0,0,0.05);
-  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-2);
   cursor: pointer;
-  font-size: 16px;
 }
-.modal-close:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+
+.modal-close:hover { background: var(--bg-hover); color: var(--text); }
 
 .modal-toolbar {
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  gap: 10px;
-  align-items: center;
+  gap: 8px;
 }
-.modal-toolbar input, .modal-toolbar select {
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-full);
-  padding: 7px 12px;
-  font-size: 13px;
-  outline: none;
+
+.modal-toolbar input,
+.modal-toolbar select {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
 }
+
 .modal-toolbar input { flex: 1; }
-.modal-toolbar select { min-width: 120px; }
+
+.dataset-meta {
+  padding: 6px 16px 0;
+  font-size: 11px;
+  color: var(--text-3);
+}
 
 .modal-body {
   flex: 1;
@@ -1285,121 +1221,245 @@ button, input, textarea {
 
 .dataset-empty {
   text-align: center;
-  padding: 40px 20px;
-  color: var(--muted);
+  color: var(--text-3);
   font-size: 13px;
+  padding: 36px 20px;
 }
 
+/* 批量评测面板（置于邮件列表之前） */
+.eval-panel {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+}
+.eval-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.eval-panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.eval-panel-note { font-size: 11px; color: var(--text-3); }
+.eval-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--text-2); }
+.eval-controls input {
+  width: 64px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 8px;
+}
+.eval-progress { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.eval-progress-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.eval-progress-fill { height: 100%; background: var(--btn-bg); width: 0%; transition: width 0.3s; }
+.eval-progress-text { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.eval-metrics { display: flex; gap: 10px; margin: 8px 0; }
+.eval-metric { flex: 1; text-align: center; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; }
+.eval-metric-value { font-size: 20px; font-weight: 700; color: var(--text); }
+.eval-metric-label { font-size: 11px; color: var(--text-3); }
+.eval-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.eval-cell { text-align: center; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px; }
+.eval-cell-value { font-size: 16px; font-weight: 700; }
+.eval-cell-label { font-size: 10px; color: var(--text-3); }
+.eval-tp .eval-cell-value, .eval-tn .eval-cell-value { color: #86efac; }
+.eval-fp .eval-cell-value, .eval-fn .eval-cell-value { color: #fca5a5; }
+.eval-misjudge-title { font-size: 12px; color: var(--text-2); margin: 8px 0 6px; }
+.eval-misjudge-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.eval-misjudge-item { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12px; }
+.eval-misjudge-tag { color: #fca5a5; font-weight: 600; flex-shrink: 0; }
+.eval-misjudge-subject { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.eval-misjudge-score { color: var(--text-3); flex-shrink: 0; font-size: 11px; }
+
+/* 批次5：评测面板增强 */
+.eval-skip-label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; }
+.eval-progress-detail { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-3); margin: -4px 0 8px; }
+.eval-progress-detail span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eval-config-line { font-size: 11px; color: var(--text-3); margin: 2px 0 8px; }
+.eval-matrix-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px; }
+.eval-matrix-table th, .eval-matrix-table td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: center;
+  color: var(--text-2);
+}
+.eval-matrix-table th { color: var(--text-3); font-weight: 600; }
+.eval-matrix-table td.eval-tp span, .eval-matrix-table td.eval-tn span { color: #86efac; font-weight: 700; }
+.eval-matrix-table td.eval-fp span, .eval-matrix-table td.eval-fn span { color: #fca5a5; font-weight: 700; }
+.eval-misjudge-header { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 6px; }
+.eval-misjudge-tabs { display: flex; gap: 4px; }
+.eval-mtab {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.eval-mtab.active { background: var(--btn-bg); color: var(--btn-text); border-color: var(--btn-bg); }
+.eval-expand-btn { width: 100%; margin-top: 6px; }
+
+/* 批次5：评测全局徽标（固定右上角，弹窗关闭也可见） */
+.eval-badge {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1200;
+  background: var(--bg-elev);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+}
+.eval-badge.done { border-color: #4ade80; color: #86efac; }
+
+/* 批次5：邮件库标签切换 / 分页 / 详情展开 */
+.dataset-tabs { display: flex; gap: 6px; padding: 8px 16px 0; }
+.dataset-tab {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.dataset-tab.active { background: var(--btn-bg); color: var(--btn-text); border-color: var(--btn-bg); }
+.dataset-item-label.phishing { color: #fca5a5; }
+.dataset-item-label.benign { color: #86efac; }
+.dataset-item-detail {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.dataset-load-more {
+  width: calc(100% - 28px);
+  margin: 8px 14px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dataset-load-more:hover { background: var(--bg-hover); }
+
 .dataset-item {
-  padding: 12px;
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  background: var(--bg);
 }
-.dataset-item:hover { background: rgba(255,255,255,0.02); border-color: var(--border); }
+
+.dataset-item:hover { background: var(--bg-hover); }
 
 .dataset-item-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 6px;
 }
+
 .dataset-item-subject {
   font-size: 13px;
   font-weight: 600;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 340px;
+  white-space: nowrap;
 }
+
 .dataset-item-label {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
   text-transform: uppercase;
 }
-.dataset-item-label.phishing { background: rgba(180,35,24,0.15); color: #fca5a5; }
-.dataset-item-label.benign, .dataset-item-label.legitimate, .dataset-item-label.ham, .dataset-item-label.safe {
-  background: rgba(17,201,100,0.12); color: #6ee7b7;
-}
-.dataset-item-label.spam { background: rgba(180,106,0,0.15); color: #fcd34d; }
+
+.dataset-item-label.phishing { color: #fca5a5; border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.12); }
+.dataset-item-label.benign,
+.dataset-item-label.legitimate,
+.dataset-item-label.ham,
+.dataset-item-label.safe { color: #86efac; border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.12); }
+.dataset-item-label.spam { color: #fcd34d; border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.12); }
 
 .dataset-item-sender {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--text-3);
   margin-bottom: 6px;
 }
+
 .dataset-item-body {
   font-size: 12px;
-  color: var(--text);
-  line-height: 1.5;
+  color: var(--text-2);
+  line-height: 1.55;
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .dataset-footer {
-  padding: 10px 18px;
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px;
+  color: var(--text-3);
   font-size: 11px;
-  color: var(--muted);
   text-align: center;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-/* Responsive */
-@media (max-width: 1200px) {
-  .right-sidebar { width: 280px; }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
 }
 
 @media (min-width: 1024px) {
-  .top-nav {
-    display: inline-flex;
+  .top-nav { display: inline-flex; }
+}
+
+@media (max-width: 780px) {
+  .report-grid,
+  .input-row-1 {
+    grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 900px) {
-  .left-sidebar { position: absolute; z-index: 40; height: 100%; box-shadow: var(--shadow); }
-  .right-sidebar { position: absolute; right: 0; z-index: 40; height: 100%; box-shadow: var(--shadow); }
-  .chat-output { padding: 20px 16px 0; }
-}
-
-@media (max-width: 640px) {
-  .report-grid { grid-template-columns: 1fr; }
-  .input-fields { grid-template-columns: 1fr; }
-  .empty-chat h1 { font-size: 34px; }
+  .chat-output { padding: 16px 12px 0; }
+  .input-area { padding: 0 12px 12px; }
 }
 </style>
 </head>
 <body>
 
-<video id="studioBgVideo" class="studio-bg" autoPlay muted playsInline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_094631_d30ab262-45ee-4b7d-99f3-5d5848c8ef13.mp4"></video>
-<div class="studio-overlay"></div>
-
-<!-- Top Header -->
-<header class="topbar">
+<header class="topbar" id="studioTopbar">
   <div class="brand">
     <div class="brand-mark">P</div>
     <div class="brand-text">PhishingDetector</div>
     <div class="brand-beta">Studio</div>
   </div>
-  <nav class="top-nav liquid-glass" aria-label="Studio 导航">
-    <a class="top-nav-link" href="/">首页</a>
-    <a class="top-nav-link" href="/studio">检测引擎</a>
-    <a class="top-nav-link" href="/studio">知识库</a>
-    <a class="top-nav-link" href="/studio">报告中心</a>
-    <a class="top-nav-link" href="/studio">关于</a>
-    <a class="top-nav-cta" href="/studio">开始检测 <span aria-hidden="true">↗</span></a>
+  <nav class="top-nav" aria-label="Studio 导航">
+    <a class="top-nav-link" href="/landing">首页</a>
+    <a class="top-nav-link active" href="/studio">检测引擎</a>
+    <a class="top-nav-link" href="/knowledge">知识库</a>
+    <a class="top-nav-link" href="javascript:void(0)" onclick="toggleSidebar('right'); setTimeout(()=>document.getElementById('recentList').scrollIntoView({behavior:'smooth',block:'center'}),260)">报告中心</a>
+    <a class="top-nav-link" href="/landing">关于</a>
+    <a class="top-nav-cta" href="javascript:void(0)" onclick="inputArea.classList.remove('shrink'); document.getElementById('body').focus();">开始检测 <span aria-hidden="true">↗</span></a>
   </nav>
   <div class="topbar-meta">
     <div class="layout-toggles">
@@ -1417,16 +1477,25 @@ button, input, textarea {
 <div class="app-shell">
 
   <!-- Left Sidebar: History -->
-  <aside class="left-sidebar liquid-glass" id="leftSidebar">
+  <aside class="left-sidebar" id="leftSidebar">
     <div class="sidebar-header">
-      <div class="sidebar-title">历史对话</div>
-      <button class="btn-new" onclick="startNewChat()">
-        <span>+</span> 新对话
-      </button>
+      <div class="sidebar-title" title="保存在本浏览器">历史对话</div>
+      <div class="sidebar-header-actions">
+        <button class="btn-clear" onclick="clearAllConversations()" title="清空全部历史对话">清空</button>
+        <button class="btn-new" onclick="startNewChat()">
+          <span>+</span> 新对话
+        </button>
+      </div>
     </div>
     <div style="padding:0 14px 10px;">
-      <button class="btn-new" style="width:100%;justify-content:center;background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border-soft);" onclick="openDatasetModal()">
-        <span>📧</span> 示例邮件库
+      <button class="sidebar-dataset-btn" onclick="openDatasetModal()">
+        <span aria-hidden="true">
+          <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+            <path d="M3 8l9 6 9-6"></path>
+          </svg>
+        </span>
+        示例邮件库
       </button>
     </div>
     <div class="conversation-list" id="conversationList">
@@ -1437,30 +1506,16 @@ button, input, textarea {
 
   <!-- Center: Chat -->
   <main class="center-area">
-    <div class="hero-ticker">
+    <div class="hero-ticker" style="display:none;">
       <div class="ticker-track" id="tickerTrack">
-        <div class="ticker-group">
-          <span class="ticker-item liquid-glass" data-step="域名检测">域名检测</span>
-          <span class="ticker-item liquid-glass" data-step="语义意图分析">语义意图分析</span>
-          <span class="ticker-item liquid-glass" data-step="多维关联检测">多维关联检测</span>
-          <span class="ticker-item liquid-glass" data-step="风险研判">风险研判</span>
-          <span class="ticker-item liquid-glass" data-step="响应处置">响应处置</span>
-          <span class="ticker-item liquid-glass" data-step="ATT&CK 映射">ATT&CK 映射</span>
-          <span class="ticker-item liquid-glass" data-step="知识库命中">知识库命中</span>
-          <span class="ticker-item liquid-glass" data-step="URL 信誉">URL 信誉</span>
-          <span class="ticker-item liquid-glass" data-step="发件人域名检测">发件人域名检测</span>
-        </div>
-        <div class="ticker-group" aria-hidden="true">
-          <span class="ticker-item liquid-glass" data-step="域名检测">域名检测</span>
-          <span class="ticker-item liquid-glass" data-step="语义意图分析">语义意图分析</span>
-          <span class="ticker-item liquid-glass" data-step="多维关联检测">多维关联检测</span>
-          <span class="ticker-item liquid-glass" data-step="风险研判">风险研判</span>
-          <span class="ticker-item liquid-glass" data-step="响应处置">响应处置</span>
-          <span class="ticker-item liquid-glass" data-step="ATT&CK 映射">ATT&CK 映射</span>
-          <span class="ticker-item liquid-glass" data-step="知识库命中">知识库命中</span>
-          <span class="ticker-item liquid-glass" data-step="URL 信誉">URL 信誉</span>
-          <span class="ticker-item liquid-glass" data-step="发件人域名检测">发件人域名检测</span>
-        </div>
+        <span class="ticker-item" data-step="发件人域名检测">发件人域名检测</span>
+        <span class="ticker-item" data-step="邮件头取证">邮件头取证</span>
+        <span class="ticker-item" data-step="语义意图分析">语义意图分析</span>
+        <span class="ticker-item" data-step="ATT&CK 映射">ATT&CK 映射</span>
+        <span class="ticker-item" data-step="RAG检索">RAG检索</span>
+        <span class="ticker-item" data-step="多维关联检测">多维关联检测</span>
+        <span class="ticker-item" data-step="风险研判">风险研判</span>
+        <span class="ticker-item" data-step="响应处置">响应处置</span>
       </div>
     </div>
 
@@ -1472,33 +1527,36 @@ button, input, textarea {
     </div>
 
     <div class="input-area" id="inputArea">
-      <div class="input-card liquid-glass">
-        <div class="input-fields">
-          <div class="input-row-1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题">
-            <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人">
+        <div class="input-card">
+          <div class="input-fields">
+            <div class="input-row-1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题">
+              <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人">
+            </div>
+            <div class="input-row-2">
+              <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+            </div>
+            <div class="input-row-3">
+              <textarea id="prompt" placeholder="补充提示词（可选）：例如要求重点关注发件人仿冒、URL 异常，或输入“联网搜索”让 Agent 检索公开情报..."></textarea>
+            </div>
           </div>
-          <div class="input-row-2">
-            <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+          <div class="input-divider"></div>
+          <div class="input-actions">
+            <div class="input-hint">Ctrl+Enter 快速运行 · 支持邮件+提示词同时输入</div>
+            <button class="btn-run" id="runBtn" onclick="runFlow()">▶ 运行检测</button>
           </div>
         </div>
-        <div class="input-divider"></div>
-        <div class="input-actions">
-          <div class="input-hint">Ctrl+Enter 快速运行 · 支持中文/英文邮件</div>
-          <button class="btn-run" id="runBtn" onclick="runFlow()">▶ 运行检测</button>
-        </div>
-      </div>
     </div>
   </main>
 
   <!-- Right Sidebar: Analysis Overview -->
-  <aside class="right-sidebar liquid-glass" id="rightSidebar">
+  <aside class="right-sidebar" id="rightSidebar">
     <div class="right-header">
       <div class="right-title">分析概览</div>
     </div>
     <div class="right-body">
       <!-- Status -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">运行状态</div>
         <div class="status-row">
           <span class="status-label">状态</span>
@@ -1511,7 +1569,7 @@ button, input, textarea {
       </div>
 
       <!-- Environment Health -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">环境健康</div>
         <div class="status-row">
           <span class="status-label">探针</span>
@@ -1528,7 +1586,7 @@ button, input, textarea {
       </div>
 
       <!-- Risk Score -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">风险评分</div>
         <div class="score-grid">
           <div class="score-box">
@@ -1544,7 +1602,7 @@ button, input, textarea {
       </div>
 
       <!-- Evidence Weights -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">证据权重</div>
         <div id="evidenceList">
           <div class="kb-item-empty">暂无证据</div>
@@ -1552,24 +1610,15 @@ button, input, textarea {
       </div>
 
       <!-- KB Hits -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">知识库命中</div>
         <div class="kb-list" id="kbList">
           <div class="kb-item-empty">暂无命中</div>
         </div>
       </div>
 
-      <!-- Replay -->
-      <div class="panel-card liquid-glass">
-        <div class="panel-card-title">运行回放</div>
-        <div class="replay-controls">
-          <button class="replay-btn active" id="speedNormal" onclick="setReplaySpeed(1)">慢速</button>
-          <button class="replay-btn" id="speedFast" onclick="setReplaySpeed(2)">快速</button>
-        </div>
-      </div>
-
       <!-- Recent Reports -->
-      <div class="panel-card liquid-glass">
+      <div class="panel-card">
         <div class="panel-card-title">最近报告</div>
         <div class="recent-list" id="recentList">
           <div class="kb-item-empty">暂无报告</div>
@@ -1589,22 +1638,75 @@ button, input, textarea {
     </div>
     <div class="modal-toolbar">
       <select id="datasetSelect" onchange="loadDataset()">
-        <option value="sunny_phishing_benign">Phishing & Benign (JSONL)</option>
-        <option value="rokibul_phishing">Phishing Email Dataset (CSV)</option>
+        <option value="test_set">示例邮件测试集 (默认)</option>
+        <option value="sunny_phishing_benign">Phishing & Benign (原始·JSONL)</option>
+        <option value="rokibul_phishing">Phishing Email Dataset (原始·CSV)</option>
       </select>
-      <select id="datasetLabelFilter" onchange="loadDataset()">
-        <option value="">全部标签</option>
-        <option value="phishing">钓鱼</option>
-        <option value="benign">正常</option>
-      </select>
-      <input id="datasetSearch" type="text" placeholder="搜索主题或正文..." oninput="loadDataset()">
+      <input id="datasetSearch" type="text" placeholder="搜索主题/发件人..." oninput="onDatasetSearchInput()">
+    </div>
+    <div class="dataset-meta" id="datasetMeta"></div>
+    <!-- 批量评测面板（纯规则路径，不调 LLM）：置于邮件列表之前，避免被长列表压到弹窗底部 -->
+    <div class="eval-panel" id="evalPanel">
+      <div class="eval-panel-header">
+        <span class="eval-panel-title">批量评测</span>
+        <span class="eval-panel-note">纯规则路径，未调用 LLM，指标不代表最终效果</span>
+      </div>
+      <div class="eval-controls">
+        <label>样本量 <input id="evalLimit" type="number" value="20" min="1" max="400"></label>
+        <label class="eval-skip-label" title="跳过 threat_intel 的联网检索，单样本耗时从约 96s 降到约 2.5s">
+          <input type="checkbox" id="evalSkipWeb" checked> 跳过联网检索（大幅提速）
+        </label>
+        <button class="btn-new" id="evalRunBtn" onclick="startEvalRun()">开始评测</button>
+        <button class="btn-clear" id="evalStopPollBtn" onclick="stopEvalPolling()" style="display:none">停止刷新</button>
+      </div>
+      <div class="eval-progress" id="evalProgress" style="display:none">
+        <div class="eval-progress-bar"><div class="eval-progress-fill" id="evalProgressFill"></div></div>
+        <span class="eval-progress-text" id="evalProgressText"></span>
+      </div>
+      <div class="eval-progress-detail" id="evalProgressDetail" style="display:none">
+        <span id="evalProgressSubject"></span>
+        <span id="evalProgressTime"></span>
+      </div>
+      <div class="eval-result" id="evalResult" style="display:none">
+        <div class="eval-metrics">
+          <div class="eval-metric"><div class="eval-metric-value" id="evalPrecision">-</div><div class="eval-metric-label">Precision</div></div>
+          <div class="eval-metric"><div class="eval-metric-value" id="evalRecall">-</div><div class="eval-metric-label">Recall</div></div>
+          <div class="eval-metric"><div class="eval-metric-value" id="evalF1">-</div><div class="eval-metric-label">F1</div></div>
+          <div class="eval-metric"><div class="eval-metric-value" id="evalAccuracy">-</div><div class="eval-metric-label">Accuracy</div></div>
+        </div>
+        <div class="eval-config-line" id="evalConfigLine"></div>
+        <table class="eval-matrix-table">
+          <tr><th></th><th>预测：钓鱼</th><th>预测：正常</th></tr>
+          <tr><th>实际：钓鱼</th><td class="eval-tp">TP <span id="evalTP">0</span></td><td class="eval-fn">FN <span id="evalFN">0</span></td></tr>
+          <tr><th>实际：正常</th><td class="eval-fp">FP <span id="evalFP">0</span></td><td class="eval-tn">TN <span id="evalTN">0</span></td></tr>
+        </table>
+        <div class="eval-misjudge-header">
+          <span class="eval-misjudge-title">误判样本</span>
+          <div class="eval-misjudge-tabs">
+            <button class="eval-mtab active" data-filter="all" onclick="setEvalMisjudgeFilter('all')">全部</button>
+            <button class="eval-mtab" data-filter="fp" onclick="setEvalMisjudgeFilter('fp')">仅误报(FP)</button>
+            <button class="eval-mtab" data-filter="fn" onclick="setEvalMisjudgeFilter('fn')">仅漏报(FN)</button>
+          </div>
+        </div>
+        <div class="eval-misjudge-list" id="evalMisjudgeList"></div>
+        <button class="btn-clear eval-expand-btn" id="evalExpandBtn" onclick="toggleEvalMisjudgeExpand()" style="display:none">展开全部</button>
+      </div>
+    </div>
+    <!-- 标签过滤切换（列表顶部） -->
+    <div class="dataset-tabs" id="datasetTabs">
+      <button class="dataset-tab active" data-label="" onclick="setDatasetLabelTab('')">全部</button>
+      <button class="dataset-tab" data-label="phishing" onclick="setDatasetLabelTab('phishing')">钓鱼</button>
+      <button class="dataset-tab" data-label="benign" onclick="setDatasetLabelTab('benign')">正常</button>
     </div>
     <div class="modal-body" id="datasetBody">
       <div class="dataset-empty">正在加载数据集...</div>
     </div>
-    <div class="dataset-footer">数据来自 GitHub 公开数据集，仅供研究测试使用</div>
+    <div class="dataset-footer">数据来自公开数据集（DataCon2023 / TREC06c / GitHub），仅供研究测试使用</div>
   </div>
 </div>
+
+<!-- 评测全局徽标：评测运行时固定在右上角，弹窗关闭也可见；点击回到评测面板 -->
+<div class="eval-badge" id="evalBadge" style="display:none" onclick="openEvalFromBadge()"></div>
 
 <script>
 // ===== State =====
@@ -1616,7 +1718,6 @@ const runBtn = document.getElementById("runBtn");
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const statusPill = document.getElementById("statusPill");
-const studioBgVideo = document.getElementById("studioBgVideo");
 
 let running = false;
 let currentAgentKey = null;
@@ -1625,69 +1726,34 @@ let currentAssistantBody = null;
 let currentNarrativeEl = null;
 let conversations = [];
 let activeConversationId = null;
-let replaySpeed = 1;
+let finalReport = null;
 let llmFallbackUsed = false;
+// 兜底原因：unavailable（真不可用）/ parse_error（输出解析失败），
+// 读取自 llm_failed 事件的 fallback_reason 字段，不再靠文案字符串匹配
+let llmFallbackReason = "";
 
 const FADE_MS = 500;
 const FADE_OUT_LEAD = 0.55;
 
-function attachFadingVideo(video) {
-  let rafId = 0;
-  let fadeToken = 0;
-  let fadingOut = false;
+function envelopeIconSvg() {
+  return '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 8l9 6 9-6"></path></svg>';
+}
 
-  function getOpacity() {
-    const raw = parseFloat(video.style.opacity || "0");
-    return Number.isFinite(raw) ? raw : 0;
-  }
+function brandAvatarSvg() {
+  return '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M9 16V8h4.5a2.5 2.5 0 0 1 0 5H9"></path></svg>';
+}
 
-  function fadeTo(target, duration) {
-    fadeToken += 1;
-    const token = fadeToken;
-    const start = performance.now();
-    const from = getOpacity();
-    cancelAnimationFrame(rafId);
-
-    function tick(now) {
-      if (token !== fadeToken) return;
-      const progress = Math.min((now - start) / duration, 1);
-      video.style.opacity = String(from + (target - from) * progress);
-      if (progress < 1) {
-        rafId = requestAnimationFrame(tick);
-      }
-    }
-
-    rafId = requestAnimationFrame(tick);
-  }
-
-  function onLoadedData() {
-    video.style.opacity = "0";
-    video.play().catch(() => {});
-    fadeTo(1, FADE_MS);
-  }
-
-  function onTimeUpdate() {
-    const remaining = video.duration - video.currentTime;
-    if (!fadingOut && remaining <= FADE_OUT_LEAD && remaining > 0) {
-      fadingOut = true;
-      fadeTo(0, FADE_MS);
-    }
-  }
-
-  function onEnded() {
-    video.style.opacity = "0";
-    setTimeout(() => {
-      video.currentTime = 0;
-      video.play().catch(() => {});
-      fadingOut = false;
-      fadeTo(1, FADE_MS);
-    }, 100);
-  }
-
-  video.loop = false;
-  video.addEventListener("loadeddata", onLoadedData);
-  video.addEventListener("timeupdate", onTimeUpdate);
-  video.addEventListener("ended", onEnded);
+function getAgentIconSvg(iconText) {
+  const map = {
+    "👤": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"></circle><path d="M5 19c1.4-3 4.1-4.5 7-4.5s5.6 1.5 7 4.5"></path></svg>',
+    "📨": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 8l9 6 9-6"></path></svg>',
+    "🧠": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5a3 3 0 0 0-3 3v1a3 3 0 0 0 0 6v1a3 3 0 0 0 3 3"></path><path d="M15 5a3 3 0 0 1 3 3v1a3 3 0 0 1 0 6v1a3 3 0 0 1-3 3"></path><path d="M9 9h6M9 13h6"></path></svg>',
+    "🛰️": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19l5-5"></path><path d="M9 5l10 10"></path><rect x="10" y="10" width="6" height="6" rx="1"></rect><path d="M14 4a8 8 0 0 1 6 6"></path><path d="M4 14a8 8 0 0 0 6 6"></path></svg>',
+    "🔍": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.2-4.2"></path></svg>',
+    "⚖️": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v15"></path><path d="M7 7h10"></path><path d="M6 7l-3 5h6z"></path><path d="M18 7l-3 5h6z"></path><path d="M8 19h8"></path></svg>',
+    "🛡️": '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-2.8 7.8-7 9-4.2-1.2-7-4.5-7-9V6z"></path></svg>'
+  };
+  return map[iconText] || '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v8M8 12h8"></path></svg>';
 }
 
 // ===== Helpers =====
@@ -1704,7 +1770,19 @@ function setStatus(state, text) {
   statusDot.className = "status-dot " + state;
   statusText.textContent = text || "待命";
   document.getElementById("panelStatus").textContent = text || "待命";
-  document.getElementById("panelLLM").textContent = llmFallbackUsed ? "规则兜底" : (running ? "运行中" : "未触发");
+  updateLlmBadge();
+}
+
+// LLM 状态徽章：仅在规则兜底发生时按原因显示（数据源为 llm_failed 事件字段）
+function updateLlmBadge() {
+  const el = document.getElementById("panelLLM");
+  if (llmFallbackUsed) {
+    el.textContent = llmFallbackReason === "parse_error" ? "规则兜底 · 解析失败" : "规则兜底 · LLM 不可用";
+    el.classList.add("llm-fallback-badge");
+  } else {
+    el.textContent = running ? "运行中" : "未触发";
+    el.classList.remove("llm-fallback-badge");
+  }
 }
 
 function scrollToBottom() {
@@ -1721,6 +1799,7 @@ function cleanText(text) {
     .replace(/\[run_finished\]\s*/g, "")
     .replace(/\[error\]\s*/g, "")
     .replace(/\[warn\]\s*/g, "")
+    .replace(/\n{2,}/g, "\n")  // collapse 2+ consecutive newlines into 1 to remove blank lines
     .trim();
 }
 
@@ -1747,18 +1826,31 @@ const EVIDENCE_TYPE_MAP = {
   "threat_intel": { name: "威胁情报关联", desc: "IOC 指标匹配、已知攻击模式对比、ATT&CK 映射" },
 };
 
+// 7 个子 Agent 与 ticker 项一一对应（按执行顺序排列）：
+// 每个 agent 执行时有且仅有一个语义正确的项高亮，不存在"永远不亮"的项
 const AGENT_TICKER_STEP_MAP = {
+  sender_profiler: "发件人域名检测",
+  header_forensics: "邮件头取证",
   semantic: "语义意图分析",
+  threat_intel: "ATT&CK 映射",
   detector: "多维关联检测",
   risk: "风险研判",
   response: "响应处置",
-  header_forensics: "发件人域名检测",
-  sender_profiler: "发件人域名检测",
-  threat_intel: "ATT&CK 映射",
 };
 
 function clearActiveTickerSteps() {
   document.querySelectorAll(".ticker-item.active").forEach((el) => el.classList.remove("active"));
+}
+
+// KB 检索类工具（后端 emit_tool_finished 与注册工具事件同构）：
+// 命中时点亮"RAG检索"项但不清除当前 agent 高亮（允许双高亮共存），
+// 下一个 agent_call 到达时随 clearActiveTickerSteps 一并熄灭
+const RAG_TICKER_TOOLS = new Set(["hybrid_search_kb", "search_kb", "vector_search_kb"]);
+
+function highlightRagTickerStep() {
+  document.querySelectorAll(".ticker-item").forEach((el) => {
+    if (el.dataset.step === "RAG检索") el.classList.add("active");
+  });
 }
 
 function highlightTickerStepByAgentKey(agentKey) {
@@ -1785,12 +1877,54 @@ function loadConversations() {
   } catch (e) {
     conversations = [];
   }
+  trimConversations();
   renderConversationList();
 }
 
+// 单会话事件存储上限：防止 llm_chunk 洪流撑爆 localStorage 配额（约 5MB）
+const MAX_STORED_EVENTS = 500;
+
 function saveConversations() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+  // 配额防护：写入失败（典型为 QuotaExceededError）时降级为"只保留报告"重试一次，
+  // 仍失败则放弃本次持久化——界面状态收敛永远优先于历史保存
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+  } catch (e) {
+    console.warn("[storage] 会话历史写入失败，降级为仅保留报告后重试", e);
+    try {
+      const degraded = conversations.map(c => ({ ...c, events: [], eventsTruncated: true }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(degraded));
+      conversations = degraded;
+    } catch (e2) {
+      console.warn("[storage] 降级写入仍失败，本次会话历史不保存", e2);
+    }
+  }
   renderConversationList();
+}
+
+// 历史会话容量上限：超出后自动清理最旧的已完成会话
+const MAX_CONVERSATIONS = 50;
+
+function trimConversations() {
+  // 容量自治：仅保留最近 50 条；进行中的会话（无结果）不参与清理
+  if (conversations.length <= MAX_CONVERSATIONS) return;
+  const active = conversations.filter(c => !c.hasResult);
+  const done = conversations.filter(c => c.hasResult);
+  conversations = active.concat(done).slice(0, MAX_CONVERSATIONS);
+  // 被裁掉的若是当前查看会话，回到空态
+  if (activeConversationId && !conversations.some(c => c.id === activeConversationId)) {
+    activeConversationId = null;
+    resetToEmpty();
+  }
+}
+
+function clearAllConversations() {
+  if (!conversations.length) return;
+  if (!confirm(`确定清空全部 ${conversations.length} 条历史对话吗？此操作不可恢复。`)) return;
+  conversations = [];
+  activeConversationId = null;
+  saveConversations();
+  resetToEmpty();
 }
 
 function createConversation(subject, sender, body) {
@@ -1799,12 +1933,15 @@ function createConversation(subject, sender, body) {
     id,
     title: subject || "未命名检测",
     sender,
-    bodyPreview: body.slice(0, 80),
+    body,                                  // 完整正文（用于回填输入框与重跑）
+    bodyPreview: body.slice(0, 80),        // 侧边栏预览（仅展示用）
     timestamp: Date.now(),
     report: null,
+    events: [],
     hasResult: false,
   };
   conversations.unshift(conv);
+  trimConversations();
   activeConversationId = id;
   saveConversations();
   return conv;
@@ -1838,14 +1975,17 @@ function renderConversationList() {
   }
   list.innerHTML = conversations.map(conv => `
     <div class="conversation-item ${conv.id === activeConversationId ? 'active' : ''}" onclick="loadConversation('${conv.id}')">
-      <div class="conv-icon">🎯</div>
+      <div class="conv-icon">${envelopeIconSvg()}</div>
       <div class="conv-body">
         <div class="conv-title">${escapeHtml(conv.title)}</div>
         <div class="conv-meta">${formatTime(conv.timestamp)} · ${conv.hasResult ? '已完成' : '进行中'}</div>
       </div>
-      <div class="conv-delete" onclick="deleteConversation('${conv.id}', event)" title="删除">×</div>
+      <div class="conv-delete" onclick="deleteConversation('${conv.id}', event)" title="删除此记录">×</div>
     </div>
   `).join("");
+  if (conversations.length >= MAX_CONVERSATIONS) {
+    list.innerHTML += '<div class="conv-limit-note">仅保留最近 50 条</div>';
+  }
 }
 
 function escapeHtml(str) {
@@ -1856,19 +1996,107 @@ function loadConversation(id) {
   const conv = conversations.find(c => c.id === id);
   if (!conv) return;
   activeConversationId = id;
+  // 切换会话时重置兜底徽章，回放中如遇 llm_failed 事件会重新设置
+  llmFallbackUsed = false;
+  llmFallbackReason = "";
+  updateLlmBadge();
   renderConversationList();
   document.getElementById("subject").value = conv.title || "";
   document.getElementById("sender").value = conv.sender || "";
-  document.getElementById("body").value = conv.bodyPreview || "";
+  // 优先回填完整正文；兼容旧记录（仅有 bodyPreview）
+  document.getElementById("body").value = conv.body || conv.bodyPreview || "";
 
   chatOutput.innerHTML = "";
-  if (conv.report) {
+  if (conv.events && conv.events.length > 0) {
+    // Replay full thinking process from saved events
+    renderUserBubble(conv);
+    currentAgentKey = null;
+    currentAgentCard = null;
+    currentAssistantBody = null;
+    currentNarrativeEl = null;
+    stepTimelineEl = null;
+    clearOverviewPanel();
+    for (const evt of conv.events) {
+      renderEventStatic(evt.type, evt.payload);
+    }
+    if (conv.report) updateOverviewPanel(conv.report);
+  } else if (conv.report) {
     renderUserBubble(conv);
     renderReportCard(conv.report);
     updateOverviewPanel(conv.report);
   } else {
     resetToEmpty();
   }
+}
+
+// Static replay version of renderEvent (no live stream logic)
+function renderEventStatic(eventType, data) {
+    if (eventType === "run_started") return;
+    if (eventType === "orchestrator_start") {
+      ensureAssistantMessage();
+      return;
+    }
+    if (eventType === "orchestrator_thinking") {
+      const msg = (data.payload?.message || "").trim();
+      if (!msg) return;
+      appendNarrative(msg);
+      return;
+    }
+    if (eventType === "agent_call") {
+      const agentKey = data.payload?.agent_key || "unknown";
+      const agentName = data.payload?.agent_name || "未知 Agent";
+      const agentIcon = data.payload?.agent_icon || "";
+      const agentDesc = data.payload?.agent_desc || "";
+      currentAgentKey = agentKey;
+      createAgentCard(agentKey, agentName, agentIcon, agentDesc);
+      setAgentStatus(agentKey, "done", "已完成");
+      // 回放同样遵循"下一个 agent 到来时熄灭 RAG 高亮"的节奏
+      clearActiveTickerSteps();
+      return;
+    }
+    if (eventType === "agent_result") {
+      const agentKey = data.payload?.agent_key || currentAgentKey;
+      setAgentStatus(agentKey, "done", "已完成");
+      finalizeAgentLLM(agentKey);
+      const summary = data.payload?.result_summary || {};
+      addAgentResultInline(agentKey, summary);
+      currentAgentKey = null;
+      return;
+    }
+    if (eventType === "step_progress") {
+      const msg = (data.payload?.message || "").trim();
+      if (!msg) return;
+      const channel = data.payload?.channel || "thinking";
+      const agentKey = data.step_id || currentAgentKey;
+      if (channel === "llm_chunk") appendAgentLLM(agentKey, msg);
+      else if (channel === "thinking" || channel === "sub_step") addAgentThinking(agentKey, msg);
+      return;
+    }
+    if (eventType === "tool_finished") {
+      const tool = data.payload?.tool || "tool";
+      const agentKey = data.step_id || currentAgentKey;
+      addAgentTool(agentKey, tool);
+      // 历史回放：复现 RAG 检索点亮行为
+      if (RAG_TICKER_TOOLS.has(tool)) highlightRagTickerStep();
+      return;
+    }
+    if (eventType === "report") {
+      finalReport = data.payload || {};
+      renderReportCard(finalReport);
+      return;
+    }
+    if (eventType === "orchestrator_done") {
+      const tag = document.getElementById("orchTag");
+      if (tag) { tag.className = "tag"; tag.textContent = "检测完成"; tag.style.background = "rgba(17,201,100,0.15)"; tag.style.color = "#6ee7b7"; }
+      return;
+    }
+    if (eventType === "llm_failed") {
+      // 历史回放：恢复当时的兜底徽章状态（缺失字段按 unavailable 兼容）
+      llmFallbackUsed = true;
+      llmFallbackReason = data.payload?.fallback_reason || "unavailable";
+      updateLlmBadge();
+      return;
+    }
 }
 
 function resetToEmpty() {
@@ -1881,11 +2109,13 @@ function resetToEmpty() {
 function renderUserBubble(conv) {
   const msg = document.createElement("div");
   msg.className = "message message-user";
+  // 优先展示完整正文；兼容旧记录（仅有 bodyPreview）
+  const bodyText = conv.body || conv.bodyPreview || "";
   msg.innerHTML = `
     <div class="user-bubble">
       <div style="font-weight:600;margin-bottom:3px;">${escapeHtml(conv.title)}</div>
       <div style="font-size:12px;opacity:0.85;">${escapeHtml(conv.sender)}</div>
-      <div style="margin-top:6px;font-size:13px;">${escapeHtml(conv.bodyPreview)}</div>
+      <div style="margin-top:6px;font-size:13px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(bodyText)}</div>
     </div>
   `;
   chatOutput.appendChild(msg);
@@ -1904,20 +2134,15 @@ function toggleSidebar(side) {
   }
 }
 
-// ===== Replay Speed =====
-function setReplaySpeed(speed) {
-  replaySpeed = speed;
-  document.getElementById("speedNormal").classList.toggle("active", speed === 1);
-  document.getElementById("speedFast").classList.toggle("active", speed === 2);
-}
-
 // ===== Chat Rendering =====
+let stepTimelineEl = null;
+
 function ensureAssistantMessage() {
   if (!currentAssistantBody) {
     const msg = document.createElement("div");
     msg.className = "message message-assistant";
     msg.innerHTML = `
-      <div class="assistant-avatar">🎯</div>
+      <div class="assistant-avatar">${brandAvatarSvg()}</div>
       <div class="assistant-body">
         <div class="assistant-name">钓鱼检测编排器 <span class="tag" id="orchTag">思考中</span></div>
         <div class="assistant-text" id="orchText"></div>
@@ -1930,69 +2155,80 @@ function ensureAssistantMessage() {
   return currentAssistantBody;
 }
 
+function ensureStepTimeline() {
+  const body = ensureAssistantMessage();
+  if (!stepTimelineEl || !stepTimelineEl.parentNode) {
+    stepTimelineEl = document.createElement("div");
+    stepTimelineEl.className = "step-timeline";
+    body.appendChild(stepTimelineEl);
+  }
+  return stepTimelineEl;
+}
+
 function appendNarrative(text) {
   const clean = cleanText(text);
   if (!clean) return;
   const body = ensureAssistantMessage();
-  const p = document.createElement("p");
-  p.textContent = clean;
-  body.appendChild(p);
+  // If timeline already exists, insert narrative before it
+  if (stepTimelineEl && stepTimelineEl.parentNode === body) {
+    const p = document.createElement("p");
+    p.textContent = clean;
+    body.insertBefore(p, stepTimelineEl);
+  } else {
+    const p = document.createElement("p");
+    p.textContent = clean;
+    body.appendChild(p);
+  }
   scrollToBottom();
 }
 
-function createAgentCard(agentKey, agentName, agentIcon, agentDesc) {
-  const body = ensureAssistantMessage();
-  const card = document.createElement("div");
-  card.className = "agent-card liquid-glass";
-  card.dataset.agentKey = agentKey;
-  card.innerHTML = `
-    <div class="agent-card-header" onclick="toggleAgentCard('${agentKey}')">
-      <div class="agent-card-icon">${agentIcon}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="agent-card-title">${agentName}</div>
-        <div class="agent-card-desc">${agentDesc}</div>
-      </div>
-      <div class="agent-card-status running" id="agentStatus-${agentKey}">执行中</div>
-      <div class="agent-card-toggle" id="agentToggle-${agentKey}">▶</div>
+function createStepItem(agentKey, agentName, agentIcon, agentDesc) {
+  const timeline = ensureStepTimeline();
+  const item = document.createElement("div");
+  item.className = "step-item running";
+  item.dataset.agentKey = agentKey;
+  item.innerHTML = `
+    <div class="step-header" onclick="toggleStepItem('${agentKey}')">
+      <span class="step-icon">${getAgentIconSvg(agentIcon)}</span>
+      <span class="step-title">${agentName}</span>
+      <span class="step-desc">${agentDesc}</span>
+      <span class="step-status running" id="stepStatus-${agentKey}">执行中</span>
+      <span class="step-toggle" id="stepToggle-${agentKey}">▶</span>
     </div>
-    <div class="agent-card-body" id="agentBody-${agentKey}">
-      <div class="agent-card-inner">
-        <div class="agent-thinking-text" id="agentThinking-${agentKey}"></div>
-        <div class="agent-tool-row" id="agentTools-${agentKey}"></div>
-        <div class="agent-llm-box" id="agentLLM-${agentKey}" style="display:none;">
-          <div class="agent-llm-label">LLM 深度分析</div>
-          <div class="agent-llm-text typing" id="agentLLMText-${agentKey}"></div>
-        </div>
+    <div class="step-body" id="stepBody-${agentKey}">
+      <div class="step-body-inner" id="stepInner-${agentKey}">
       </div>
     </div>
   `;
-  body.appendChild(card);
-  currentAgentCard = card;
+  timeline.appendChild(item);
+  currentAgentCard = item;
+  // Auto-open while running
+  openStepItem(agentKey);
   scrollToBottom();
-  return card;
+  return item;
 }
 
-function openAgentCard(agentKey) {
-  const body = document.getElementById(`agentBody-${agentKey}`);
-  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+function openStepItem(agentKey) {
+  const body = document.getElementById(`stepBody-${agentKey}`);
+  const toggle = document.getElementById(`stepToggle-${agentKey}`);
   if (body && !body.classList.contains("open")) {
     body.classList.add("open");
     if (toggle) toggle.classList.add("open");
   }
 }
 
-function closeAgentCard(agentKey) {
-  const body = document.getElementById(`agentBody-${agentKey}`);
-  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+function closeStepItem(agentKey) {
+  const body = document.getElementById(`stepBody-${agentKey}`);
+  const toggle = document.getElementById(`stepToggle-${agentKey}`);
   if (body && body.classList.contains("open")) {
     body.classList.remove("open");
     if (toggle) toggle.classList.remove("open");
   }
 }
 
-function toggleAgentCard(agentKey) {
-  const body = document.getElementById(`agentBody-${agentKey}`);
-  const toggle = document.getElementById(`agentToggle-${agentKey}`);
+function toggleStepItem(agentKey) {
+  const body = document.getElementById(`stepBody-${agentKey}`);
+  const toggle = document.getElementById(`stepToggle-${agentKey}`);
   if (!body || !toggle) return;
   if (body.classList.contains("open")) {
     body.classList.remove("open");
@@ -2003,61 +2239,75 @@ function toggleAgentCard(agentKey) {
   }
 }
 
-function addAgentThinking(agentKey, text) {
-  const el = document.getElementById(`agentThinking-${agentKey}`);
-  if (!el) return;
+function addStepDetail(agentKey, text) {
+  const inner = document.getElementById(`stepInner-${agentKey}`);
+  if (!inner) return;
   const clean = cleanText(text);
   if (!clean) return;
-  openAgentCard(agentKey);
+  openStepItem(agentKey);
   const div = document.createElement("div");
-  div.className = "agent-thinking-line";
+  div.className = "step-detail";
   div.textContent = clean;
-  el.appendChild(div);
+  inner.appendChild(div);
   scrollToBottom();
 }
 
-function addAgentTool(agentKey, toolName) {
-  const list = document.getElementById(`agentTools-${agentKey}`);
-  if (!list) return;
-  openAgentCard(agentKey);
-  const chip = document.createElement("span");
-  chip.className = "agent-tool-chip done";
+function addStepTool(agentKey, toolName) {
+  const inner = document.getElementById(`stepInner-${agentKey}`);
+  if (!inner) return;
+  openStepItem(agentKey);
+  const chip = document.createElement("div");
+  chip.className = "step-tool";
   chip.innerHTML = `<span>✓</span> ${toolName}`;
-  list.appendChild(chip);
+  inner.appendChild(chip);
   scrollToBottom();
 }
 
-function appendAgentLLM(agentKey, chunk) {
-  const box = document.getElementById(`agentLLM-${agentKey}`);
-  const textEl = document.getElementById(`agentLLMText-${agentKey}`);
-  if (!box || !textEl) return;
+function appendStepLLM(agentKey, chunk) {
+  let box = document.getElementById(`stepLLM-${agentKey}`);
+  let textEl = document.getElementById(`stepLLMText-${agentKey}`);
+  const inner = document.getElementById(`stepInner-${agentKey}`);
+  if (!inner) return;
   const clean = cleanText(chunk);
   if (!clean) return;
-  openAgentCard(agentKey);
-  box.style.display = "block";
+  openStepItem(agentKey);
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "step-llm";
+    box.id = `stepLLM-${agentKey}`;
+    box.innerHTML = `<div class="step-llm-label">LLM 深度分析</div><div class="step-llm-text typing" id="stepLLMText-${agentKey}"></div>`;
+    inner.appendChild(box);
+    textEl = box.querySelector(".step-llm-text");
+  }
   textEl.textContent += clean;
   scrollToBottom();
 }
 
-function finalizeAgentLLM(agentKey) {
-  const textEl = document.getElementById(`agentLLMText-${agentKey}`);
+function finalizeStepLLM(agentKey) {
+  const textEl = document.getElementById(`stepLLMText-${agentKey}`);
   if (textEl) textEl.classList.remove("typing");
 }
 
-function setAgentStatus(agentKey, status, text) {
-  const el = document.getElementById(`agentStatus-${agentKey}`);
+function setStepStatus(agentKey, status, text) {
+  const el = document.getElementById(`stepStatus-${agentKey}`);
   if (el) {
-    el.className = "agent-card-status " + status;
+    el.className = "step-status " + status;
     el.textContent = text;
+  }
+  // Update step item class for dot color
+  const item = document.querySelector(`.step-item[data-agent-key="${agentKey}"]`);
+  if (item) {
+    item.classList.remove("running", "done", "failed");
+    item.classList.add(status);
   }
 }
 
-function addAgentResultInline(agentKey, summary) {
-  const body = document.getElementById(`agentBody-${agentKey}`);
-  if (!body) return;
+function addStepResult(agentKey, summary) {
+  const inner = document.getElementById(`stepInner-${agentKey}`);
+  if (!inner) return;
   let resultText = "";
   if (agentKey === "semantic") {
-    resultText = `意图：${summary.intent || "?"} · 置信度 ${(summary.confidence * 100).toFixed(0) || "?"}% · 话术 ${(summary.techniques || []).join(", ") || "无"}`;
+    resultText = `意图：${summary.intent || "?"} · 置信度 ${((summary.confidence || 0) * 100).toFixed(0)}% · 话术 ${(summary.techniques || []).join(", ") || "无"}`;
   } else if (agentKey === "detector") {
     resultText = `发件人 ${(summary.sender_score || 0).toFixed(1)} · URL ${(summary.url_score || 0).toFixed(1)} · 标记 ${(summary.content_flags || []).length} 个 · KB ${summary.kb_hits || 0} 条`;
   } else if (agentKey === "risk") {
@@ -2070,24 +2320,39 @@ function addAgentResultInline(agentKey, summary) {
     resultText = `域名声誉 ${summary.domain_reputation || "?"} · 相似域名 ${summary.lookalike_domains || 0} 个`;
   } else if (agentKey === "threat_intel") {
     resultText = `IOC ${summary.ioc_count || 0} 个 · 已知威胁 ${summary.known_threats || 0} 条`;
+    // KB 交叉验证含语义/混合命中时追加提示（数据来自后端 kb_semantic_hits 字段）
+    if (summary.kb_semantic_hits > 0) {
+      resultText += ` · 含语义命中 ${summary.kb_semantic_hits} 条`;
+    }
   } else if (agentKey === "report_composer") {
     resultText = `报告已生成 · 包含 ${summary.sections || 0} 个章节`;
   }
   if (resultText) {
     const div = document.createElement("div");
-    div.className = "agent-result-line";
+    div.className = "step-result";
     div.textContent = resultText;
-    body.querySelector(".agent-card-inner").appendChild(div);
+    inner.appendChild(div);
   }
-  // 执行完成后自动折叠，避免留下大片空白
-  closeAgentCard(agentKey);
 }
+
+// ===== Backward-compatible aliases (for renderEvent / renderEventStatic callers) =====
+const createAgentCard = createStepItem;
+const openAgentCard = openStepItem;
+const closeAgentCard = closeStepItem;
+const toggleAgentCard = toggleStepItem;
+const addAgentThinking = addStepDetail;
+const addAgentTool = addStepTool;
+const appendAgentLLM = appendStepLLM;
+const finalizeAgentLLM = finalizeStepLLM;
+const setAgentStatus = setStepStatus;
+const addAgentResultInline = addStepResult;
 
 // ===== Report Rendering =====
 function renderReportCard(report) {
   const riskLevel = report.risk_level || "unknown";
   const riskScore = report.risk_score || 0;
   const risk = report.risk || {};
+  const llmParticipated = risk.llm_participated !== false;
   const response = report.response || {};
   const evidence = report.evidence_items || [];
   const sp = report.sender_profiler || {};
@@ -2120,7 +2385,7 @@ function renderReportCard(report) {
     const reputationColor = sp.domain_reputation === "trusted" ? "#047857" : sp.domain_reputation === "malicious" ? "#b42318" : sp.domain_reputation === "suspicious" ? "#b46a00" : "#6b6b6b";
     senderProfileHtml = `
       <div class="report-section">
-        <div class="report-section-title">👤 发件人画像</div>
+        <div class="report-section-title">发件人画像</div>
         <div class="report-grid">
           <div class="report-box">
             <div class="report-box-label">发件人类型</div>
@@ -2143,7 +2408,7 @@ function renderReportCard(report) {
     const authColor = hf.auth_alignment === "pass" ? "#047857" : hf.auth_alignment === "fail" ? "#b42318" : "#b46a00";
     headerForensicsHtml = `
       <div class="report-section">
-        <div class="report-section-title">📨 邮件头取证</div>
+        <div class="report-section-title">邮件头取证</div>
         <div class="report-grid">
           <div class="report-box">
             <div class="report-box-label">SPF</div>
@@ -2172,7 +2437,7 @@ function renderReportCard(report) {
   if (ti.ioc_count > 0 || ti.threat_patterns && ti.threat_patterns.length > 0) {
     threatIntelHtml = `
       <div class="report-section">
-        <div class="report-section-title">🛰️ 威胁情报关联</div>
+        <div class="report-section-title">威胁情报关联</div>
         <div class="report-grid">
           <div class="report-box">
             <div class="report-box-label">IOC 指标数</div>
@@ -2192,7 +2457,7 @@ function renderReportCard(report) {
   }
 
   const card = document.createElement("div");
-  card.className = "report-card liquid-glass";
+  card.className = "report-card";
   card.innerHTML = `
     <div class="report-header">
       <div class="report-header-title">钓鱼邮件智能检测报告</div>
@@ -2216,17 +2481,19 @@ function renderReportCard(report) {
           </div>
           <div class="report-box">
             <div class="report-box-label">LLM 评分</div>
-            <div class="report-box-value">${risk.llm_score ?? "-"}</div>
+            <div class="report-box-value">${llmParticipated ? (risk.llm_score ?? "-") : "未参与"}</div>
           </div>
         </div>
-        ${risk.consistency_warning ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(180,106,0,0.12);border-radius:8px;font-size:12px;color:#fcd34d;border:1px solid rgba(180,106,0,0.3);">⚠ ${escapeHtml(risk.consistency_warning)}</div>` : ""}
+        ${llmParticipated
+          ? (risk.consistency_warning ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(180,106,0,0.12);border-radius:8px;font-size:12px;color:#fcd34d;border:1px solid rgba(180,106,0,0.3);">⚠ ${escapeHtml(risk.consistency_warning)}</div>` : "")
+          : `<div style="margin-top:10px;padding:9px 11px;background:rgba(107,114,128,0.12);border-radius:8px;font-size:12px;color:var(--text-2);border:1px solid rgba(107,114,128,0.35);">LLM 未参与（规则兜底）</div>`}
       </div>
 
       ${senderProfileHtml}
       ${headerForensicsHtml}
 
       <div class="report-section">
-        <div class="report-section-title">🧠 语义意图分析</div>
+        <div class="report-section-title">语义意图分析</div>
         <div class="report-grid">
           <div class="report-box">
             <div class="report-box-label">意图判定</div>
@@ -2281,12 +2548,45 @@ function clearOverviewPanel() {
   document.getElementById("kbList").innerHTML = '<div class="kb-item-empty">暂无命中</div>';
 }
 
+function getMatchTypeLabel(matchType) {
+  const key = String(matchType || "").toLowerCase();
+  if (key === "semantic") return "语义";
+  if (key === "hybrid") return "关键词+语义";
+  return "关键词";
+}
+
+function getMatchTypeClass(matchType) {
+  const key = String(matchType || "").toLowerCase();
+  if (key === "semantic") return "risk-low";
+  if (key === "hybrid") return "risk-hybrid";
+  return "risk-unknown";
+}
+
+function buildKbEvidenceLine(hit) {
+  if (!hit || typeof hit !== "object") return "";
+  const parts = [];
+  const vectorScore = hit.vector_score;
+  const hasVector = vectorScore !== undefined && vectorScore !== null && String(vectorScore) !== "";
+  if (hasVector) {
+    parts.push(`相似度 ${escapeHtml(String(vectorScore))}`);
+  }
+  const keywords = Array.isArray(hit.matched_keywords) ? hit.matched_keywords.slice(0, 5).filter(Boolean) : [];
+  if (keywords.length) {
+    parts.push(`关键词 ${escapeHtml(keywords.join("、"))}`);
+  }
+  if (!parts.length) return "";
+  return `命中依据：${parts.join(" / ")}`;
+}
+
 function updateOverviewPanel(report) {
   const risk = report.risk || {};
+  const llmParticipated = risk.llm_participated !== false;
   document.getElementById("scoreRule").textContent = risk.rule_score ?? "-";
   document.getElementById("scoreLLM").textContent = risk.llm_score ?? "-";
   const diff = (risk.rule_score !== undefined && risk.llm_score !== undefined) ? Math.abs(risk.rule_score - risk.llm_score) : null;
-  document.getElementById("scoreDiff").textContent = diff !== null ? `分差：${diff}` : "分差：-";
+  document.getElementById("scoreDiff").textContent = llmParticipated
+    ? (diff !== null ? `分差：${diff}` : "分差：-")
+    : "LLM 未参与（规则兜底）";
 
   const evidence = report.evidence_items || [];
   const evidenceList = document.getElementById("evidenceList");
@@ -2311,10 +2611,60 @@ function updateOverviewPanel(report) {
   if (typeof kbHits === "number" && kbHits > 0) {
     kbList.innerHTML = `<div class="kb-item">命中 ${kbHits} 条知识库记录</div>`;
   } else if (Array.isArray(kbHits) && kbHits.length > 0) {
-    kbList.innerHTML = kbHits.map(hit => `<div class="kb-item">${escapeHtml(typeof hit === "string" ? hit : hit.title || JSON.stringify(hit))}</div>`).join("");
+    kbList.innerHTML = `<div class="kb-panel-note">关键词 + 向量语义混合检索</div>` + kbHits.map(hit => {
+      if (hit && typeof hit === "object" && Number.isInteger(Number(hit.id)) && Number(hit.id) > 0) {
+        const severity = String(hit.severity || "unknown").toLowerCase();
+        const severityClass = ["critical", "high", "medium", "low", "safe"].includes(severity) ? `risk-${severity}` : "risk-unknown";
+        const title = escapeHtml(hit.title || `知识条目 #${Number(hit.id)}`);
+        const score = hit.fused_score ?? hit.score;
+        // 混合检索命中展示双路分数（融合/关键词/向量）；纯关键词命中保持单一分数
+        const hasDualScore = hit.fused_score !== undefined && hit.fused_score !== null && hit.kw_score !== undefined;
+        const scoreText = hasDualScore
+          ? `融合 ${hit.fused_score} · 词 ${hit.kw_score || 0} · 向量 ${hit.vector_score || 0}`
+          : (score !== undefined && score !== null ? String(score) : "");
+        const hasMatchType = Boolean(hit.match_type);
+        const evidenceLine = buildKbEvidenceLine(hit);
+        const matchType = getMatchTypeLabel(hit.match_type);
+        const matchClass = getMatchTypeClass(hit.match_type);
+        return `
+          <div class="kb-item kb-item-expandable" data-kb-expandable="true">
+            <a class="kb-item kb-item-link" href="/knowledge#${Number(hit.id)}" target="_blank" rel="noopener noreferrer">
+              <span class="kb-item-main">
+                <span class="kb-item-title">${title}</span>
+                <span class="risk-badge ${severityClass}">${escapeHtml(severity)}</span>
+                ${hasMatchType ? `<span class="risk-badge ${matchClass}">${escapeHtml(matchType)}</span>` : ""}
+                ${scoreText ? `<span class="kb-match-score">${escapeHtml(scoreText)}</span>` : ""}
+              </span>
+              <span class="kb-item-jump">↗</span>
+            </a>
+            ${evidenceLine ? `<div class="kb-item-meta">${evidenceLine}</div>` : ""}
+          </div>
+        `;
+      }
+
+      if (typeof hit === "number") {
+        return `<div class="kb-item">命中知识库条目 #${hit}</div>`;
+      }
+
+      if (typeof hit === "string") {
+        return `<div class="kb-item">${escapeHtml(hit)}</div>`;
+      }
+
+      const fallbackText = hit && typeof hit === "object"
+        ? (hit.title || hit.category || JSON.stringify(hit))
+        : String(hit);
+      return `<div class="kb-item">${escapeHtml(fallbackText)}</div>`;
+    }).join("");
   } else {
     kbList.innerHTML = '<div class="kb-item-empty">暂无命中</div>';
   }
+
+  kbList.querySelectorAll('[data-kb-expandable="true"]').forEach((item) => {
+    item.addEventListener("click", (evt) => {
+      if (evt.target.closest("a")) return;
+      item.classList.toggle("open");
+    });
+  });
 }
 
 function updatePanelFromAgentResult(agentKey, resultSummary) {
@@ -2334,6 +2684,7 @@ function startNewChat() {
   document.getElementById("subject").value = "";
   document.getElementById("sender").value = "";
   document.getElementById("body").value = "";
+  document.getElementById("prompt").value = "";
   inputArea.classList.remove("shrink");
   document.getElementById("subject").focus();
 }
@@ -2342,10 +2693,12 @@ async function runFlow() {
   if (running) return;
   running = true;
   llmFallbackUsed = false;
+  llmFallbackReason = "";
 
   const subject = document.getElementById("subject").value.trim() || "未命名检测";
   const sender = document.getElementById("sender").value.trim();
   const body = document.getElementById("body").value.trim();
+  const prompt = document.getElementById("prompt").value.trim();
 
   const conv = createConversation(subject, sender, body);
 
@@ -2366,12 +2719,14 @@ async function runFlow() {
   currentAgentCard = null;
   currentAssistantBody = null;
   currentNarrativeEl = null;
+  stepTimelineEl = null;
   clearOverviewPanel();
 
   const payload = {
     subject,
     sender,
     body,
+    prompt,
     selected_steps: [],
     strict_llm: false,
     execution_mode: "serial",
@@ -2401,6 +2756,12 @@ async function runFlow() {
   let buffer = "";
   let currentEvent = "message";
   let finalReport = null;
+  // 是否已收到 run_finished / run_failed 正常收尾信号（流中断兜底用）
+  let runSettled = false;
+  // SSE 解析失败留痕：按事件类型统计连续失败次数，超限后一次性提示
+  let lastParseFailEvent = null;
+  let parseFailStreak = 0;
+  let parseErrorNotified = false;
 
   const finishRun = () => {
     running = false;
@@ -2411,6 +2772,19 @@ async function runFlow() {
   };
 
   const renderEvent = (eventType, data) => {
+    // Save event for history replay
+    if (activeConversationId) {
+      const convIdx = conversations.findIndex(c => c.id === activeConversationId);
+      if (convIdx >= 0 && conversations[convIdx].events) {
+        // 事件条数上限：超限后停止追加并标记截断，
+        // 历史回放自动降级为"只显示报告卡"（loadConversation 已有该分支）
+        if (conversations[convIdx].events.length < MAX_STORED_EVENTS) {
+          conversations[convIdx].events.push({ type: eventType, payload: data });
+        } else {
+          conversations[convIdx].eventsTruncated = true;
+        }
+      }
+    }
     if (eventType === "run_started") {
       setStatus("running", "编排器启动");
       return;
@@ -2425,7 +2799,6 @@ async function runFlow() {
     if (eventType === "orchestrator_thinking") {
       const msg = data.payload?.message?.trim() || "";
       if (!msg) return;
-      if (msg.includes("规则兜底") || msg.includes("LLM 不可用") || msg.includes("LLM 未配置")) llmFallbackUsed = true;
       appendNarrative(msg);
       return;
     }
@@ -2433,7 +2806,7 @@ async function runFlow() {
     if (eventType === "agent_call") {
       const agentKey = data.payload?.agent_key || "unknown";
       const agentName = data.payload?.agent_name || "未知 Agent";
-      const agentIcon = data.payload?.agent_icon || "🤖";
+      const agentIcon = data.payload?.agent_icon || "";
       const agentDesc = data.payload?.agent_desc || "";
       currentAgentKey = agentKey;
       createAgentCard(agentKey, agentName, agentIcon, agentDesc);
@@ -2456,7 +2829,6 @@ async function runFlow() {
     if (eventType === "step_progress") {
       const msg = data.payload?.message?.trim() || "";
       if (!msg) return;
-      if (msg.includes("规则兜底") || msg.includes("LLM 不可用") || msg.includes("LLM 未配置")) llmFallbackUsed = true;
       const channel = data.payload?.channel || "thinking";
       const agentKey = data.step_id || currentAgentKey;
       if (channel === "llm_chunk") appendAgentLLM(agentKey, msg);
@@ -2468,6 +2840,7 @@ async function runFlow() {
       const tool = data.payload?.tool || "tool";
       const agentKey = data.step_id || currentAgentKey;
       addAgentTool(agentKey, tool);
+      if (RAG_TICKER_TOOLS.has(tool)) highlightRagTickerStep();
       return;
     }
 
@@ -2485,25 +2858,32 @@ async function runFlow() {
     }
 
     if (eventType === "run_finished") {
+      runSettled = true;
       const result = data.payload?.result || {};
       const riskLevel = result.risk_level || "unknown";
       const riskScore = result.risk_score || 0;
       clearActiveTickerSteps();
       setStatus("done", `${getRiskLabel(riskLevel)} · ${riskScore}/100`);
+      // 界面状态收敛优先于历史持久化：finishRun 必须先于 updateConversation，
+      // 避免 localStorage 写满抛错导致运行按钮永远禁用
+      finishRun();
       if (activeConversationId) {
         updateConversation(activeConversationId, { report: finalReport || result, hasResult: true });
       }
       updateRecentReports();
-      finishRun();
       return;
     }
 
     if (eventType === "llm_failed") {
+      // 结构化兜底事件：读取 fallback_reason 字段（缺失时按 unavailable 兼容旧事件流）
       llmFallbackUsed = true;
+      llmFallbackReason = data.payload?.fallback_reason || "unavailable";
+      updateLlmBadge();
       return;
     }
 
     if (eventType === "run_failed") {
+      runSettled = true;
       setStatus("failed", "检测失败");
       const msg = data.payload?.message || "未知错误";
       appendNarrative(`⚠ 检测失败：${msg}`);
@@ -2515,25 +2895,56 @@ async function runFlow() {
     }
   };
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let idx;
-    while ((idx = buffer.indexOf("\n\n")) >= 0) {
-      const chunk = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 2);
-      const lines = chunk.split("\n");
-      for (const line of lines) {
-        if (line.startsWith("event:")) currentEvent = line.slice(6).trim();
-        else if (line.startsWith("data:")) {
-          const raw = line.slice(5).trim();
-          try {
-            const payload = JSON.parse(raw);
-            renderEvent(currentEvent, payload);
-          } catch (e) {}
+  // 流中断兜底：正常读到 done 但未收到收尾事件、或 read() 抛网络层异常，
+  // 统一走"连接中断"路径收敛 UI，避免界面永远停在"运行中"只能刷新页面
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf("\n\n")) >= 0) {
+        const chunk = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("event:")) currentEvent = line.slice(6).trim();
+          else if (line.startsWith("data:")) {
+            const raw = line.slice(5).trim();
+            try {
+              const payload = JSON.parse(raw);
+              renderEvent(currentEvent, payload);
+              // 解析成功则重置连续失败计数（不改变成功路径行为）
+              lastParseFailEvent = null;
+              parseFailStreak = 0;
+            } catch (e) {
+              // 解析失败留痕：后端事件字段漂移时前端不再无声丢事件
+              console.warn("[SSE] 事件解析失败", currentEvent, raw.slice(0, 200), e);
+              if (currentEvent === lastParseFailEvent) {
+                parseFailStreak += 1;
+              } else {
+                lastParseFailEvent = currentEvent;
+                parseFailStreak = 1;
+              }
+              // 同一事件连续解析失败超过 5 次：状态栏一次性提示，不重复弹
+              if (parseFailStreak > 5 && !parseErrorNotified) {
+                parseErrorNotified = true;
+                setStatus("running", "事件流异常，部分步骤可能未显示");
+              }
+            }
+          }
         }
       }
+    }
+  } catch (streamErr) {
+    // 网络层读取异常：不逃逸为未捕获 Promise rejection，交给 finally 统一收尾
+    console.warn("[SSE] 读取事件流异常", streamErr);
+  } finally {
+    if (!runSettled) {
+      setStatus("failed", "连接中断");
+      appendNarrative("⚠ 连接中断：未收到检测完成信号，结果可能不完整，请重试");
+      clearActiveTickerSteps();
+      finishRun();
     }
   }
 }
@@ -2552,7 +2963,27 @@ let datasetCache = {};
 
 function openDatasetModal() {
   document.getElementById("datasetModal").classList.add("open");
-  loadDataset();
+  ensureDefaultDataset().finally(() => {
+    loadDataset();
+    resumeEvalIfAny();
+  });
+}
+
+// 弹窗打开时默认选中第一个 available=true 的数据集
+async function ensureDefaultDataset() {
+  try {
+    if (!datasetCache._meta) {
+      const resp = await fetch("/api/datasets");
+      if (resp.ok) datasetCache._meta = await resp.json();
+    }
+    const metas = datasetCache._meta || [];
+    const select = document.getElementById("datasetSelect");
+    const current = metas.find(d => d.id === select.value);
+    if (!current || !current.available) {
+      const firstAvail = metas.find(d => d.available);
+      if (firstAvail) select.value = firstAvail.id;
+    }
+  } catch (e) {}
 }
 
 function closeDatasetModal() {
@@ -2563,62 +2994,402 @@ function closeDatasetModalOnBackdrop(ev) {
   if (ev.target.id === "datasetModal") closeDatasetModal();
 }
 
+// ===== 批量评测（纯规则路径，支持断线恢复与全局徽标） =====
+const EVAL_JOB_KEY = "phishing_detector_eval_job";
+let evalJobId = null;
+let evalPollTimer = null;
+let evalMisjudgeFilter = "all";
+let evalMisjudgeExpanded = false;
+let evalLastJob = null;   // 最近一次轮询的 job 对象（含 config/started_at/result）
+
+function saveEvalJobState() {
+  if (!evalJobId) return;
+  try {
+    localStorage.setItem(EVAL_JOB_KEY, JSON.stringify({
+      job_id: evalJobId,
+      dataset_id: document.getElementById("datasetSelect").value,
+      saved_at: Date.now(),
+    }));
+  } catch (e) {}
+}
+
+function clearEvalJobState() {
+  try { localStorage.removeItem(EVAL_JOB_KEY); } catch (e) {}
+}
+
+function readEvalJobState() {
+  try {
+    const raw = localStorage.getItem(EVAL_JOB_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function formatEvalSeconds(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m > 0 ? `${m}分${s}秒` : `${s}秒`;
+}
+
+function updateEvalBadge(text, isDone) {
+  const badge = document.getElementById("evalBadge");
+  if (!text) { badge.style.display = "none"; return; }
+  badge.textContent = text;
+  badge.className = "eval-badge" + (isDone ? " done" : "");
+  badge.style.display = "";
+}
+
+function openEvalFromBadge() {
+  openDatasetModal();
+  const panel = document.getElementById("evalPanel");
+  if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  // 已完成：直接展示结果，查看后隐藏徽标并清除持久化记录
+  if (evalLastJob && evalLastJob.status === "done" && evalLastJob.result) {
+    renderEvalResult(evalLastJob.result);
+    updateEvalBadge("", false);
+    clearEvalJobState();
+  }
+}
+
+async function startEvalRun() {
+  const datasetId = document.getElementById("datasetSelect").value;
+  const label = datasetLabelTab;
+  const limit = Math.max(1, Math.min(400, parseInt(document.getElementById("evalLimit").value || "20", 10)));
+  const skipWeb = document.getElementById("evalSkipWeb").checked;
+  const btn = document.getElementById("evalRunBtn");
+  btn.disabled = true;
+  stopEvalPolling();
+  document.getElementById("evalResult").style.display = "none";
+  document.getElementById("evalProgress").style.display = "flex";
+  document.getElementById("evalProgressDetail").style.display = "flex";
+  document.getElementById("evalProgressText").textContent = "启动评测任务...";
+  try {
+    const resp = await fetch("/api/eval/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset_id: datasetId, label, limit, use_llm: true, skip_web_search: skipWeb }),
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { const err = await resp.json(); if (err.detail) detail = err.detail; } catch (_) {}
+      throw new Error(detail);
+    }
+    const data = await resp.json();
+    evalJobId = data.job_id;
+    saveEvalJobState();
+    document.getElementById("evalStopPollBtn").style.display = "";
+    pollEvalJob();
+  } catch (e) {
+    document.getElementById("evalProgressText").textContent = `⚠ ${e.message}`;
+    btn.disabled = false;
+  }
+}
+
+async function pollEvalJob() {
+  if (!evalJobId) return;
+  try {
+    const resp = await fetch(`/api/eval/${evalJobId}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const job = await resp.json();
+    evalLastJob = job;
+    const done = job.progress?.done || 0;
+    const total = job.progress?.total || 0;
+    document.getElementById("evalProgressFill").style.width = total ? `${(done / total) * 100}%` : "0%";
+    document.getElementById("evalProgressText").textContent = `评测中 ${done}/${total}（停止刷新不影响后端任务）`;
+
+    // 当前样本主题 + 已耗时 + 预计剩余
+    const startedAt = job.started_at ? Date.parse(job.started_at) : Date.now();
+    const elapsedSec = (Date.now() - startedAt) / 1000;
+    document.getElementById("evalProgressSubject").textContent =
+      job.progress?.current_subject ? `当前：${job.progress.current_subject}` : "";
+    const etaText = (done > 0 && done < total)
+      ? ` · 预计剩余 ${formatEvalSeconds((elapsedSec / done) * (total - done))}`
+      : "";
+    document.getElementById("evalProgressTime").textContent = `已耗时 ${formatEvalSeconds(elapsedSec)}${etaText}`;
+    updateEvalBadge(`评测中 ${done}/${total}`, false);
+
+    if (job.status === "done") {
+      renderEvalResult(job.result);
+      updateEvalBadge("评测完成，点击查看", true);
+      clearEvalJobState();
+      stopEvalPolling();
+      return;
+    }
+    if (job.status === "failed") {
+      document.getElementById("evalProgressText").textContent = `⚠ 评测失败：${job.error || "未知错误"}`;
+      updateEvalBadge("", false);
+      clearEvalJobState();
+      stopEvalPolling();
+      return;
+    }
+  } catch (e) {
+    document.getElementById("evalProgressText").textContent = `⚠ 进度查询失败：${e.message}`;
+  }
+  evalPollTimer = setTimeout(pollEvalJob, 2000);
+}
+
+// 停止前端轮询（后端 job 继续运行，不中断）
+function stopEvalPolling() {
+  if (evalPollTimer) { clearTimeout(evalPollTimer); evalPollTimer = null; }
+  const stopBtn = document.getElementById("evalStopPollBtn");
+  if (stopBtn) stopBtn.style.display = "none";
+  const btn = document.getElementById("evalRunBtn");
+  if (btn) btn.disabled = false;
+}
+
+// 重新打开弹窗时恢复未完成的评测 job（断线恢复）
+async function resumeEvalIfAny() {
+  const saved = readEvalJobState();
+  if (!saved || !saved.job_id) return;
+  try {
+    const resp = await fetch(`/api/eval/${saved.job_id}`);
+    if (!resp.ok) { clearEvalJobState(); return; }
+    const job = await resp.json();
+    evalLastJob = job;
+    if (job.status === "running") {
+      evalJobId = saved.job_id;
+      document.getElementById("evalProgress").style.display = "flex";
+      document.getElementById("evalProgressDetail").style.display = "flex";
+      document.getElementById("evalStopPollBtn").style.display = "";
+      document.getElementById("evalRunBtn").disabled = true;
+      pollEvalJob();
+    } else if (job.status === "done") {
+      evalJobId = saved.job_id;
+      renderEvalResult(job.result);
+      updateEvalBadge("评测完成，点击查看", true);
+    } else {
+      clearEvalJobState();
+    }
+  } catch (e) {}
+}
+
+function renderEvalResult(result) {
+  if (!result) return;
+  document.getElementById("evalProgressText").textContent = `评测完成 · 共 ${result.total} 条`;
+  document.getElementById("evalPrecision").textContent = `${(result.precision * 100).toFixed(1)}%`;
+  document.getElementById("evalRecall").textContent = `${(result.recall * 100).toFixed(1)}%`;
+  document.getElementById("evalF1").textContent = `${(result.f1 * 100).toFixed(1)}%`;
+  const acc = result.total ? (result.tp + result.tn) / result.total : 0;
+  document.getElementById("evalAccuracy").textContent = `${(acc * 100).toFixed(1)}%`;
+  document.getElementById("evalTP").textContent = result.tp;
+  document.getElementById("evalFP").textContent = result.fp;
+  document.getElementById("evalFN").textContent = result.fn;
+  document.getElementById("evalTN").textContent = result.tn;
+
+  // 配置行（截图留档对比用）
+  const cfg = (evalLastJob && evalLastJob.config) || {};
+  document.getElementById("evalConfigLine").textContent = [
+    cfg.dataset_id ? `数据集 ${cfg.dataset_id}` : "",
+    `${result.total} 条`,
+    `use_llm=${result.use_llm}`,
+    `skip_web_search=${result.skip_web_search}`,
+    result.elapsed_sec !== undefined ? `耗时 ${formatEvalSeconds(result.elapsed_sec)}` : "",
+  ].filter(Boolean).join(" · ");
+
+  evalMisjudgeExpanded = false;
+  renderEvalMisjudgeList(result);
+  document.getElementById("evalResult").style.display = "";
+}
+
+function evalMisjudgeItems(result) {
+  return (result.details || []).filter(
+    d => !d.error && d.true_label && d.predicted_phishing !== (d.true_label === "phishing")
+  );
+}
+
+function renderEvalMisjudgeList(result) {
+  const filtered = evalMisjudgeItems(result).filter(d => {
+    if (evalMisjudgeFilter === "fp") return d.true_label !== "phishing";
+    if (evalMisjudgeFilter === "fn") return d.true_label === "phishing";
+    return true;
+  });
+  const shown = evalMisjudgeExpanded ? filtered : filtered.slice(0, 20);
+  const list = document.getElementById("evalMisjudgeList");
+  list.innerHTML = shown.length
+    ? shown.map(d => {
+      const tag = d.true_label === "phishing" ? "FN 漏判" : "FP 误判";
+      const flow = `真${d.true_label === "phishing" ? "钓鱼" : "正常"}→判${d.predicted_phishing ? "钓鱼" : "正常"}`;
+      return `
+      <div class="eval-misjudge-item">
+        <span class="eval-misjudge-tag">#${d.index} ${tag}</span>
+        <span class="eval-misjudge-subject" title="${escapeHtml(d.subject || "")}">${escapeHtml(d.subject || "(无主题)")}</span>
+        <span class="eval-misjudge-score" title="发件人">${escapeHtml(d.sender || "-")}</span>
+        <span class="eval-misjudge-score">${flow} · ${escapeHtml(d.risk_level || "-")}/${d.risk_score ?? "-"}</span>
+        <button class="btn-clear" onclick="replayEvalSample(${d.index})">回填到检测台</button>
+      </div>`;
+    }).join("")
+    : '<div class="dataset-empty">无匹配误判样本</div>';
+  const btn = document.getElementById("evalExpandBtn");
+  btn.style.display = (!evalMisjudgeExpanded && filtered.length > 20) ? "" : "none";
+  btn.textContent = `展开全部（${filtered.length} 条）`;
+}
+
+function setEvalMisjudgeFilter(filter) {
+  evalMisjudgeFilter = filter;
+  document.querySelectorAll(".eval-mtab").forEach(b => b.classList.toggle("active", b.dataset.filter === filter));
+  if (evalLastJob && evalLastJob.result) renderEvalMisjudgeList(evalLastJob.result);
+}
+
+function toggleEvalMisjudgeExpand() {
+  evalMisjudgeExpanded = !evalMisjudgeExpanded;
+  if (evalLastJob && evalLastJob.result) renderEvalMisjudgeList(evalLastJob.result);
+}
+
+// 回填评测样本到检测台：与后端相同的筛选/切片口径从已加载条目中取原文
+function replayEvalSample(index) {
+  const cfg = (evalLastJob && evalLastJob.config) || {};
+  const label = cfg.label || "";
+  const total = (evalLastJob && evalLastJob.result && evalLastJob.result.total) || datasetItems.length;
+  let pool = datasetItems;
+  if (label) pool = pool.filter(it => (it.label || "").toLowerCase() === label);
+  pool = pool.slice(0, total);
+  const item = pool[index];
+  if (!item) return;
+  fillDatasetItemToStudio(item);
+}
+
+// ===== 邮件库浏览（全量加载 + 前端过滤/分页/详情展开） =====
+let datasetItems = [];
+let datasetPage = 0;
+const DATASET_PAGE_SIZE = 50;
+let datasetLabelTab = "";
+
 async function loadDataset() {
   const body = document.getElementById("datasetBody");
   const datasetId = document.getElementById("datasetSelect").value;
-  const label = document.getElementById("datasetLabelFilter").value;
-  const q = document.getElementById("datasetSearch").value.trim();
-
   body.innerHTML = '<div class="dataset-empty">正在加载数据集...</div>';
+  loadDatasetMeta(datasetId);
 
-  const cacheKey = `${datasetId}_${label}_${q}`;
+  const cacheKey = `${datasetId}_full`;
   try {
     if (!datasetCache[cacheKey]) {
-      const params = new URLSearchParams();
-      if (label) params.set("label", label);
-      if (q) params.set("q", q);
-      params.set("limit", "50");
-      const resp = await fetch(`/api/datasets/${datasetId}?${params.toString()}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const resp = await fetch(`/api/datasets/${datasetId}?limit=500`);
+      if (!resp.ok) {
+        // 结构化错误（如 503 数据集文件缺失）：detail 展示在元信息行一处，列表区不重复
+        let detail = `HTTP ${resp.status}`;
+        try {
+          const errBody = await resp.json();
+          if (errBody && errBody.detail) detail = errBody.detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
       datasetCache[cacheKey] = await resp.json();
     }
-    const data = datasetCache[cacheKey];
-    renderDatasetItems(data.items || []);
+    datasetItems = datasetCache[cacheKey].items || [];
+    datasetPage = 0;
+    renderDatasetPage();
   } catch (e) {
-    body.innerHTML = `<div class="dataset-empty">加载失败：${escapeHtml(e.message)}<br>请检查网络连接或稍后重试</div>`;
+    datasetItems = [];
+    // 数据集缺失时提示已在元信息行显示，列表区保持空白不重复
+    body.innerHTML = String(e.message || "").includes("缺失")
+      ? ""
+      : `<div class="dataset-empty">⚠ ${escapeHtml(e.message)}</div>`;
   }
 }
 
-function renderDatasetItems(items) {
+// 元信息行：名称、总条数、标签分布、来源（切换数据集时联动更新）
+async function loadDatasetMeta(datasetId) {
+  const el = document.getElementById("datasetMeta");
+  try {
+    if (!datasetCache._meta) {
+      const resp = await fetch("/api/datasets");
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      datasetCache._meta = await resp.json();
+    }
+    const info = (datasetCache._meta || []).find(d => d.id === datasetId);
+    if (!info) { el.textContent = ""; return; }
+    if (!info.available) {
+      el.textContent = "⚠ 数据集不可用：本地文件缺失（可先运行 scripts/download_datasets.py）";
+      return;
+    }
+    const dist = info.label_distribution || {};
+    const labelName = { phishing: "钓鱼", benign: "正常" };
+    const distText = Object.keys(dist).length
+      ? " · " + Object.entries(dist).map(([k, v]) => `${labelName[k] || k} ${v}`).join(" / ")
+      : "";
+    el.textContent = `${info.name || datasetId} · 共 ${info.total} 条${distText} · 来源：${info.source || "-"}`;
+  } catch (e) {
+    el.textContent = "";
+  }
+}
+
+function datasetFilteredItems() {
+  const q = document.getElementById("datasetSearch").value.trim().toLowerCase();
+  return datasetItems.filter(it => {
+    if (datasetLabelTab && (it.label || "").toLowerCase() !== datasetLabelTab) return false;
+    if (!q) return true;
+    return (it.subject || "").toLowerCase().includes(q) || (it.sender || "").toLowerCase().includes(q);
+  });
+}
+
+function renderDatasetPage() {
   const body = document.getElementById("datasetBody");
-  if (!items.length) {
+  const filtered = datasetFilteredItems();
+  if (!filtered.length) {
     body.innerHTML = '<div class="dataset-empty">没有匹配的邮件样本</div>';
     return;
   }
-  body.innerHTML = items.map((item, idx) => `
-    <div class="dataset-item" onclick="useDatasetItem(${idx})">
-      <div class="dataset-item-header">
+  const shown = filtered.slice(0, (datasetPage + 1) * DATASET_PAGE_SIZE);
+  body.innerHTML = shown.map((item) => {
+    const idx = datasetItems.indexOf(item);
+    const label = (item.label || "").toLowerCase();
+    const badgeClass = label === "phishing" ? "phishing" : label === "benign" ? "benign" : "";
+    const badgeText = label === "phishing" ? "钓鱼" : label === "benign" ? "正常" : (item.label || "未知");
+    return `
+    <div class="dataset-item">
+      <div class="dataset-item-header" onclick="toggleDatasetItemDetail(this)">
         <div class="dataset-item-subject">${escapeHtml(item.subject || "无主题")}</div>
-        <div class="dataset-item-label ${item.label}">${escapeHtml(item.label || "未知")}</div>
+        <div class="dataset-item-label ${badgeClass}">${badgeText}</div>
       </div>
       <div class="dataset-item-sender">${escapeHtml(item.sender || "未知发件人")}</div>
-      <div class="dataset-item-body">${escapeHtml(item.body || "")}</div>
-    </div>
-  `).join("");
-  body.dataset.items = JSON.stringify(items);
+      <div class="dataset-item-detail" style="display:none">
+        <div>${escapeHtml((item.body || "").slice(0, 500))}${(item.body || "").length > 500 ? "……" : ""}</div>
+        <button class="btn-new" style="margin-top:8px" onclick="event.stopPropagation();useDatasetItem(${idx})">检测此邮件</button>
+      </div>
+    </div>`;
+  }).join("");
+  const remaining = filtered.length - shown.length;
+  if (remaining > 0) {
+    body.innerHTML += `<button class="dataset-load-more" onclick="loadMoreDatasetItems()">加载更多（剩余 ${remaining} 条）</button>`;
+  }
+}
+
+function loadMoreDatasetItems() {
+  datasetPage += 1;
+  renderDatasetPage();
+}
+
+function setDatasetLabelTab(label) {
+  datasetLabelTab = label;
+  datasetPage = 0;
+  document.querySelectorAll(".dataset-tab").forEach(b => b.classList.toggle("active", b.dataset.label === label));
+  renderDatasetPage();
+}
+
+function onDatasetSearchInput() {
+  datasetPage = 0;
+  renderDatasetPage();
+}
+
+function toggleDatasetItemDetail(headerEl) {
+  const detail = headerEl.parentElement.querySelector(".dataset-item-detail");
+  if (detail) detail.style.display = detail.style.display === "none" ? "" : "none";
 }
 
 function useDatasetItem(idx) {
-  const body = document.getElementById("datasetBody");
-  const items = JSON.parse(body.dataset.items || "[]");
-  const item = items[idx];
+  const item = datasetItems[idx];
   if (!item) return;
+  fillDatasetItemToStudio(item);
+}
+
+// 回填检测台：关弹窗、填输入区并滚动到可视位置
+function fillDatasetItemToStudio(item) {
   closeDatasetModal();
   // 只填写输入框，不自动开始检测——用户需要手动点击运行
   document.getElementById("subject").value = item.subject || "";
   document.getElementById("sender").value = item.sender || "";
   document.getElementById("body").value = item.body || "";
   inputArea.classList.remove("shrink");
+  inputArea.scrollIntoView({ behavior: "smooth", block: "start" });
   // 清空聊天区域，显示欢迎页面
   chatOutput.innerHTML = "";
   chatOutput.appendChild(emptyChat);
@@ -2660,10 +3431,29 @@ async function updateRecentReports() {
       <div class="recent-item" onclick="loadReport(${r.id})">
         <span class="recent-title">#${r.id} ${getRiskLabel(r.risk_level)}</span>
         <span class="recent-score">${r.risk_score}分</span>
+        <span class="recent-delete" title="删除此报告" onclick="deleteReport(${r.id}, event)">×</span>
       </div>
     `).join("");
   } catch (e) {
     document.getElementById("recentList").innerHTML = '<div class="kb-item-empty">加载失败</div>';
+  }
+}
+
+async function deleteReport(reportId, ev) {
+  if (ev) ev.stopPropagation();
+  if (!confirm(`确定删除报告 #${reportId} 吗？此操作不可恢复。`)) return;
+  const list = document.getElementById("recentList");
+  try {
+    const resp = await fetch(`/api/reports/${reportId}`, { method: "DELETE" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    // 聊天区内容保留（会话数据在 localStorage，不受影响），仅原地刷新列表
+    await updateRecentReports();
+  } catch (e) {
+    const hint = document.createElement("div");
+    hint.className = "recent-delete-error";
+    hint.textContent = "删除失败，请重试";
+    list.appendChild(hint);
+    setTimeout(() => hint.remove(), 3000);
   }
 }
 
@@ -2712,7 +3502,6 @@ document.addEventListener("keydown", (e) => {
 
 // ===== Init =====
 loadConversations();
-attachFadingVideo(studioBgVideo);
 checkHealth();
 updateRecentReports();
 setInterval(checkHealth, 30000);
