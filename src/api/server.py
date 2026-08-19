@@ -59,3 +59,9 @@ async def landing_page():
 async def studio_page():
     """Studio 页：可视化编排与运行状态演示页"""
     return FileResponse(str(PAGES_DIR / "studio.html"), headers=NOCACHE)
+
+
+@app.get("/knowledge")
+async def knowledge_page():
+    """知识库页：浏览与检索钓鱼威胁知识体系。"""
+    return FileResponse(str(PAGES_DIR / "knowledge.html"), headers=NOCACHE)

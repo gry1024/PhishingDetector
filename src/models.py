@@ -24,6 +24,7 @@ class EmailInput(BaseModel):
     headers: dict = Field(default_factory=dict, description="邮件原始头部信息")
     has_attachment: bool = Field(default=False, description="是否包含附件")
     raw_text: str = Field(default="", description="原始完整邮件文本（用于直接粘贴场景）")
+    prompt: str = Field(default="", description="用户补充提示词/指令")
 
 
 class SemanticResult(BaseModel):
@@ -35,6 +36,7 @@ class SemanticResult(BaseModel):
     )
     explanation: str = Field(description="LLM 的分析推理过程")
     confidence: float = Field(default=0.0, description="置信度 0-1")
+    fallback_reason: str = Field(default="", description="规则兜底原因: unavailable/parse_error，空串表示 LLM 正常参与")
 
 
 class DetectionResult(BaseModel):
@@ -56,6 +58,7 @@ class DetectionResult(BaseModel):
     kb_hits: list[dict] = Field(default_factory=list, description="命中的知识库证据条目")
     kb_summary: str = Field(default="", description="知识库命中摘要")
     explanation: str = Field(default="", description="检测推理过程")
+    fallback_reason: str = Field(default="", description="规则兜底原因: unavailable/parse_error，空串表示 LLM 正常参与")
 
 
 class RiskResult(BaseModel):
@@ -68,9 +71,11 @@ class RiskResult(BaseModel):
     )
     rule_score: int = Field(default=0, description="规则引擎评分 0-100")
     llm_score: int = Field(default=0, description="LLM 原始评分 0-100")
+    llm_participated: bool = Field(default=True, description="本次风险研判是否由 LLM 参与")
     score_gap: int = Field(default=0, description="规则评分与LLM评分差值")
     consistency_warning: str = Field(default="", description="规则与LLM分差过大时的风险提示")
     explanation: str = Field(description="研判推理过程")
+    fallback_reason: str = Field(default="", description="规则兜底原因: unavailable/parse_error，空串表示 LLM 正常参与")
 
 
 class ResponseResult(BaseModel):
@@ -79,6 +84,7 @@ class ResponseResult(BaseModel):
     alert_message: str = Field(default="", description="告警消息")
     trace_report: str = Field(default="", description="溯源分析摘要")
     recommendation: str = Field(default="", description="对用户的安全建议")
+    fallback_reason: str = Field(default="", description="规则兜底原因: unavailable/parse_error，空串表示 LLM 正常参与")
 
 
 class EvidenceItem(BaseModel):

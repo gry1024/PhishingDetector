@@ -9,11 +9,13 @@
 """
 
 import re
+import time
 import logging
 
 from src.agents.base import BaseAgent, EventCallback
 from src.models import EmailInput
 from src import database as db
+from src.tools import get_tools_for_agent, TRUSTED_DOMAINS
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,7 @@ class ThreatIntelAgent(BaseAgent):
 
     name = "威胁情报关联"
     icon = "🛰️"
+    tools = get_tools_for_agent("threat_intel")
 
     # 已知钓鱼 URL/域名模式
     IOC_PATTERNS = [
@@ -115,6 +118,78 @@ class ThreatIntelAgent(BaseAgent):
         result.ioc_count = len(result.ioc_list)
         self.emit_sub_step(f"发现 {result.ioc_count} 个 IOC 指标", callback=callback)
 
+        # 1.5 主动联网搜索公开情报（Agent 默认触发，确保每次检测都检索公开情报）
+        web_search_summary = ""
+        web_results = []
+        web_threat_score = 0
+        web_threat_types = []
+        web_evidence = []
+        web_findings = []
+        if kwargs.get("skip_web_search"):
+            # 评测等场景显式跳过联网检索（提速），其余环节照常
+            self.emit_sub_step("已跳过联网检索（skip_web_search 开启）", "done", callback)
+            web_search_summary = "已跳过联网检索"
+        else:
+            query = self._build_search_query(email)
+            self.emit_sub_step(f"正在检索网页（{query[:60]}）......", "running", callback)
+            try:
+                search_result = self.call_tool("web_search", query, 5, callback=callback)
+                web_search_summary = search_result.output
+                web_results = getattr(search_result, "extra", {}).get("results", [])
+                # 提取联网情报威胁指标，实际影响最终威胁评分
+                threat_indicators = getattr(search_result, "extra", {}).get("threat_indicators", {})
+                web_threat_score = threat_indicators.get("score", 0)
+                web_threat_types = threat_indicators.get("matched_types", [])
+                web_evidence = threat_indicators.get("evidence", [])
+                # 提取深度威胁情报发现
+                threat_intel_data = getattr(search_result, "extra", {}).get("threat_intel", {})
+                web_findings = threat_intel_data.get("findings", [])
+                page_contents = getattr(search_result, "extra", {}).get("page_contents", [])
+
+                # 逐条推送检索到的网页名称，让用户看到 Agent 正在检索哪些公开情报源
+                if web_results:
+                    for r in web_results:
+                        title = (r.get("title", "") or "无标题").strip()
+                        self.emit_sub_step(f"正在检索网页（{title[:70]}）......", "running", callback)
+
+                    # 推送深度抓取的网页正文信息
+                    if page_contents:
+                        for pc in page_contents:
+                            title = (pc.get("title", "") or "无标题").strip()
+                            preview = (pc.get("content_preview", "") or "")[:120]
+                            self.emit_sub_step(
+                                f"已抓取网页正文（{title[:50]}）：{preview}......",
+                                "running", callback,
+                            )
+
+                    # 推送威胁情报发现
+                    if web_findings:
+                        for finding in web_findings[:3]:
+                            self.emit_sub_step(f"威胁情报发现：{finding[:120]}", "running", callback)
+
+                    if web_threat_score > 0:
+                        evidence_str = ""
+                        if web_evidence:
+                            evidence_str = f"（证据：{'; '.join(web_evidence[:3])}）"
+                        self.emit_sub_step(
+                            f"联网情报分析：命中 {len(web_threat_types)} 类威胁信号（{', '.join(web_threat_types)}），"
+                            f"深度抓取 {len(page_contents)} 个网页，联网情报风险分 +{web_threat_score}{evidence_str}",
+                            "done", callback,
+                        )
+                    else:
+                        self.emit_sub_step(
+                            f"联网情报检索完成，共检索 {len(web_results)} 个公开网页，深度抓取 {len(page_contents)} 个网页正文，未发现明显威胁信号",
+                            "done", callback,
+                        )
+                else:
+                    self.emit_sub_step(
+                        "联网检索未获取到公开结果，已退回本地规则与知识库分析",
+                        "done", callback,
+                    )
+            except Exception as e:
+                self.emit_sub_step(f"联网搜索未成功：{str(e)[:100]}，继续本地分析", "done", callback)
+                web_search_summary = f"联网搜索失败：{str(e)[:100]}"
+
         # 2. 话术模式匹配
         matched_patterns = set()
         text_lower = text_to_scan.lower()
@@ -144,19 +219,33 @@ class ThreatIntelAgent(BaseAgent):
             if ioc_type in self.ATTACK_TECHNIQUES:
                 attack_techniques.append(self.ATTACK_TECHNIQUES[ioc_type])
 
-        result.attack_techniques = attack_techniques
+        # 聚合出口保序去重：多个话术/IOC 类型可映射到同一 ATT&CK 技术，避免重复项
+        result.attack_techniques = list(dict.fromkeys(attack_techniques))
         if attack_techniques:
             self.emit_sub_step(
                 f"映射到 {len(attack_techniques)} 个 ATT&CK 技战术",
                 callback=callback,
             )
 
-        # 4. 知识库交叉验证
+        # 4. 知识库交叉验证（混合检索：向量不可用时静默退化为纯关键词结果）
+        kb_start = time.time()
         try:
-            kb_results = db.search_kb(text_to_scan[:200], limit=5)
+            kb_results = db.hybrid_search_kb(text_to_scan[:200], limit=5)
             result.kb_hits = kb_results if isinstance(kb_results, list) else []
         except Exception:
             result.kb_hits = []
+        # 结构化工具事件：让前端感知 RAG 检索发生（与注册工具事件同构）
+        kb_semantic_hits = sum(
+            1 for h in result.kb_hits
+            if isinstance(h, dict) and h.get("match_type") in {"semantic", "hybrid"}
+        )
+        self.emit_tool_finished(
+            "hybrid_search_kb",
+            f"交叉验证（{len(text_to_scan[:200])} 字符）",
+            f"命中 {len(result.kb_hits)} 条（含语义 {kb_semantic_hits} 条）",
+            int((time.time() - kb_start) * 1000),
+            callback,
+        )
 
         if result.kb_hits:
             self.emit_sub_step(
@@ -164,20 +253,20 @@ class ThreatIntelAgent(BaseAgent):
                 callback=callback,
             )
 
-        # 5. 计算威胁评分
-        result.threat_score = self._calc_threat_score(result)
+        # 5. 计算威胁评分（含联网情报贡献）
+        result.threat_score = self._calc_threat_score(result, web_threat_score)
         self.emit_sub_step(
-            f"威胁评分：{result.threat_score:.0f}/100",
+            f"威胁评分：{result.threat_score:.0f}/100（含联网情报 +{web_threat_score}）",
             callback=callback,
         )
 
         # 6. 生成说明
-        result.explanation = self._build_explanation(result)
+        result.explanation = self._build_explanation(result, web_search_summary, web_threat_types)
         self.emit_sub_step("威胁情报关联分析完成", callback=callback)
 
         return {"threat_intel": result}
 
-    def _calc_threat_score(self, result: ThreatIntelResult) -> float:
+    def _calc_threat_score(self, result: ThreatIntelResult, web_threat_score: float = 0) -> float:
         score = 0.0
 
         # IOC 指标加分
@@ -194,9 +283,80 @@ class ThreatIntelAgent(BaseAgent):
         # 知识库命中加分
         score += min(len(result.kb_hits) * 8, 20)
 
+        # 联网情报威胁信号加分（实际影响评分）
+        score += web_threat_score
+
         return min(score, 100)
 
-    def _build_explanation(self, result: ThreatIntelResult) -> str:
+    def _should_web_search(self, email: EmailInput) -> bool:
+        """
+        Agent 自行判断是否需要联网检索公开情报。
+        触发条件：
+        1. 用户显式要求；
+        2. 发现 IOC 指标（IP/短链/可疑 URL 等）；
+        3. 命中高威胁话术（凭证窃取/紧急施压/权威冒充/账户冻结）；
+        4. 发件人域名看起来可疑且非高可信域名。
+        """
+        text_to_scan = f"{email.subject or ''}\n{email.body or ''}"
+
+        # 1. 用户显式要求
+        if email.prompt:
+            prompt_lower = email.prompt.lower()
+            trigger_words = ["搜索", "search", "联网", "web", "查", "查查", "检索", "公开情报"]
+            if any(word in prompt_lower for word in trigger_words):
+                return True
+
+        # 2. 发现 IOC 指标
+        ioc_count = sum(
+            len(re.findall(pattern, text_to_scan, re.IGNORECASE))
+            for pattern, _, _ in self.IOC_PATTERNS
+        )
+        if ioc_count > 0:
+            return True
+
+        # 3. 命中高威胁话术
+        high_risk_patterns = {"credential_theft", "urgency_pressure", "authority_impersonation", "account_suspension"}
+        text_lower = text_to_scan.lower()
+        matched_patterns = set()
+        for pattern_name, keywords in self.THREAT_PATTERNS.items():
+            if any(kw in text_lower for kw in keywords):
+                matched_patterns.add(pattern_name)
+        if matched_patterns & high_risk_patterns:
+            return True
+
+        # 4. 发件人域名可疑
+        if email.sender and "@" in email.sender:
+            domain = email.sender.split("@")[-1].lower().strip().rstrip(">")
+            if not any(domain.endswith(d) for d in TRUSTED_DOMAINS):
+                suspicious_keywords = ["verify", "secure", "account", "login", "bank", "update", "confirm", "service", "support", "official"]
+                if any(kw in domain for kw in suspicious_keywords):
+                    return True
+
+        return False
+
+    def _build_search_query(self, email: EmailInput) -> str:
+        """构造联网搜索查询词，优先指向公开威胁报告/情报源。"""
+        candidates = []
+        # 优先使用发件人域名和邮件中的 URL（英文关键词更易命中权威情报源）
+        if email.sender and "@" in email.sender:
+            domain = email.sender.split("@")[-1].strip().rstrip(">")
+            candidates.append(f"{domain} phishing scam")
+        url_match = re.search(r'https?://([^/\s]+)', email.body or "")
+        if url_match:
+            host = url_match.group(1)
+            candidates.append(f"{host} phishing scam report")
+        if not candidates:
+            # 兜底：用主题的英文部分
+            subject = email.subject or ""
+            if subject:
+                candidates.append(f"{subject[:40]} phishing scam")
+            else:
+                candidates.append("phishing email scam report")
+        # 只取第一个候选，避免查询过长导致 DuckDuckGo 拒绝
+        return candidates[0]
+
+    def _build_explanation(self, result: ThreatIntelResult, web_search_summary: str = "", web_threat_types: list = None) -> str:
+        """生成威胁情报分析说明"""
         parts = []
 
         if result.ioc_list:
@@ -211,6 +371,14 @@ class ThreatIntelAgent(BaseAgent):
 
         if result.kb_hits:
             parts.append(f"知识库命中 {len(result.kb_hits)} 条。")
+
+        if web_search_summary and "失败" not in web_search_summary and "未获取" not in web_search_summary:
+            snippet = web_search_summary[:280].replace("\n", " ")
+            parts.append(f"公开情报检索：{snippet}...")
+            if web_threat_types:
+                parts.append(f"联网情报命中威胁类型：{', '.join(web_threat_types)}。")
+        elif web_search_summary and "失败" in web_search_summary:
+            parts.append("公开情报检索未成功，已退回本地规则分析。")
 
         parts.append(f"威胁评分 {result.threat_score:.0f}/100。")
 

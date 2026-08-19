@@ -20,6 +20,23 @@ from src.models import (
     EmailInput, SemanticResult, DetectionResult, RiskResult,
 )
 from src.tools import get_tools_for_agent
+import json
+import os
+
+# ── 加载校准参数（由 scripts/split_and_calibrate.py 生成）──
+_calibration_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "datasets", "calibration.json",
+)
+_calibration = {}
+try:
+    with open(_calibration_path, "r", encoding="utf-8") as f:
+        _calibration = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    pass
+
+CALIBRATED_THRESHOLD = _calibration.get("best_threshold", 35)
+PHISHING_RISK_LEVELS = {"high", "critical"}
 
 
 SYSTEM_PROMPT = """你是网络安全风险研判专家。综合语义分析和多维检测结果，做出最终风险判定。
@@ -43,7 +60,9 @@ T1566.003: 服务钓鱼 | T1598: 信息钓鱼 | T1657: 金融盗窃
     "risk_level": "critical/high/medium/low/safe",
     "attack_techniques": ["ATT&CK编号列表"],
     "explanation": "详细研判推理过程"
-}"""
+}
+若知识库命中条目与本次研判相关，请在 explanation 中显式引用条目标题及其识别要点编号作为依据；不相关则忽略。
+输出要求：直接输出裸 JSON，不要用 markdown 代码围栏（```）包裹；explanation 不超过 200 字，确保 JSON 完整结束。"""
 
 
 class RiskAgent(BaseAgent):
@@ -113,6 +132,7 @@ class RiskAgent(BaseAgent):
             callback,
         )
         user_prompt = self._build_prompt(email, semantic, detection, rule_score)
+        fallback_reason = ""
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
             self.emit_sub_step(
@@ -120,25 +140,42 @@ class RiskAgent(BaseAgent):
                 "done",
                 callback,
             )
+            llm_available = True
+            llm_participated = True
         except Exception as e:
-            self.emit_thinking("⚠️ LLM 不可用，已启用规则化风险研判。", callback)
-            self.emit_sub_step(f"规则兜底接管：直接采用规则预评分作为最终风险（原因：{str(e)[:80]}）", "done", callback)
+            fallback_reason = self.emit_llm_fallback(e, callback)
+            self.emit_sub_step(f"规则兜底接管：直接采用规则预评分作为最终风险（{fallback_reason}）", "done", callback)
             llm_result = self._fallback_llm_result(rule_score, semantic, detection)
+            llm_available = False
+            llm_participated = False
 
         # ---- Step 4: 分数融合 ----
         self.emit_thinking("第四步：融合规则评分与 LLM 研判评分，输出最终风险等级。", callback)
         self.emit_sub_step("计算 LLM 评分与规则评分的加权平均值，并检测双轨一致性", "running", callback)
-        llm_score = int(llm_result.get("risk_score", 50))
-        final_score = round(llm_score * 0.6 + rule_score * 0.4)
-        final_score = max(0, min(100, final_score))
-        risk_level = self._score_to_level(final_score)
-        score_gap = abs(llm_score - rule_score)
-        consistency_warning = ""
-        if score_gap >= 25:
-            consistency_warning = "规则评分与LLM评分差异较大，建议人工复核关键证据。"
-            self.emit_sub_step(f"⚠️ 规则/LLM 分差 {score_gap}，双轨结果不一致，建议人工复核", "done", callback)
+        if llm_available:
+            llm_score = int(llm_result.get("risk_score", 50))
+            final_score = round(llm_score * 0.6 + rule_score * 0.4)
+            final_score = max(0, min(100, final_score))
         else:
-            self.emit_sub_step(f"双轨一致性良好：分差 {score_gap}，最终风险分 {final_score}/100（{risk_level}）", "done", callback)
+            llm_score = 0
+            final_score = max(0, min(100, rule_score))
+        risk_level = self._score_to_level(final_score)
+        if llm_available:
+            score_gap = abs(llm_score - rule_score)
+            consistency_warning = ""
+            if score_gap >= 25:
+                consistency_warning = "规则评分与LLM评分差异较大，建议人工复核关键证据。"
+                self.emit_sub_step(f"⚠️ 规则/LLM 分差 {score_gap}，双轨结果不一致，建议人工复核", "done", callback)
+            else:
+                self.emit_sub_step(f"双轨一致性良好：分差 {score_gap}，最终风险分 {final_score}/100（{risk_level}）", "done", callback)
+        else:
+            score_gap = 0
+            consistency_warning = (
+                "LLM 输出解析失败，已采用规则兜底，未计算双轨分差。"
+                if fallback_reason == "parse_error"
+                else "LLM 不可用，已采用规则兜底，未计算双轨分差。"
+            )
+            self.emit_sub_step("LLM 未参与本次研判，结果由规则引擎独立给出", "done", callback)
 
         # 合并 ATT&CK 技术（LLM + 工具）
         llm_techniques = llm_result.get("attack_techniques", [])
@@ -154,9 +191,11 @@ class RiskAgent(BaseAgent):
             attack_techniques=all_techniques,
             rule_score=rule_score,
             llm_score=llm_score,
+            llm_participated=llm_participated,
             score_gap=score_gap,
             consistency_warning=consistency_warning,
             explanation=llm_result.get("explanation", ""),
+            fallback_reason=fallback_reason,
         )
 
         self.emit_sub_step(
@@ -167,7 +206,7 @@ class RiskAgent(BaseAgent):
 
         return {
             "risk": risk,
-            "is_phishing": final_score >= 60,
+            "is_phishing": risk_level in PHISHING_RISK_LEVELS,
         }
 
     def _fallback_llm_result(self, rule_score: int, semantic: SemanticResult, detection: DetectionResult) -> dict:
@@ -187,26 +226,63 @@ class RiskAgent(BaseAgent):
         }
 
     def _rule_risk_score(self, semantic: SemanticResult, detection: DetectionResult) -> int:
-        """规则引擎快速预评分"""
+        """规则引擎快速预评分（已降低误报率）"""
         score = 0
+        # 意图判定：仅高置信度钓鱼/可疑才给高分
         if semantic.intent == "phishing":
-            score += 40
+            conf = getattr(semantic, "confidence", 0.5)
+            score += 35 if conf >= 0.65 else 22
         elif semantic.intent == "suspicious":
-            score += 20
-        score += min(len(semantic.persuasion_techniques) * 5, 20)
-        score += int((1 - detection.sender_score) * 20)
-        score += int((1 - detection.url_score) * 15)
-        score += int(detection.attachment_score * 15)
-        score += int(detection.behavior_score * 15)
-        score += min(len(detection.content_flags) * 3, 15)
-        return min(score, 100)
+            score += 12
+        # 话术数量得分上限降至 15
+        score += min(len(semantic.persuasion_techniques) * 4, 15)
+        # 发件人可信度惩罚 — 仅不可信时才扣分
+        if detection.sender_score < 0.5:
+            score += int((1 - detection.sender_score) * 18)
+        # URL 安全惩罚
+        if detection.url_score < 0.6:
+            score += int((1 - detection.url_score) * 12)
+        # 附件风险
+        score += int(detection.attachment_score * 12)
+        # 行为异常
+        score += int(detection.behavior_score * 10)
+        # 内容标记
+        score += min(len(detection.content_flags) * 3, 12)
+
+        # 良性偏移：当邮件看起来正常时减分
+        benign_signals = 0
+        if detection.sender_score >= 0.75:
+            benign_signals += 1
+        if detection.url_score >= 0.75:
+            benign_signals += 1
+        if detection.attachment_score < 0.2:
+            benign_signals += 1
+        if detection.behavior_score < 0.3:
+            benign_signals += 1
+        if len(detection.content_flags) == 0:
+            benign_signals += 1
+        # 多良性信号时大幅降分
+        if benign_signals >= 4:
+            score = max(0, score - 18)
+        elif benign_signals >= 3:
+            score = max(0, score - 10)
+        elif benign_signals >= 2:
+            score = max(0, score - 4)
+
+        return max(0, min(score, 100))
 
     def _score_to_level(self, score: int) -> str:
-        """分数 → 风险等级"""
+        """分数 → 风险等级（使用训练集校准阈值）"""
+        # 校准阈值用于 safe/low 边界；更高阈值保持不变
+        # TODO(后续任务): safe_boundary 目前为死代码（计算后从未使用），
+        # 实际 safe/low 边界由下方 low_boundary 决定；按裁决本次仅注释标记，
+        # 不删除、不调整阈值，留待单独任务清理
+        safe_boundary = max(10, CALIBRATED_THRESHOLD - 3)
+        low_boundary = max(20, CALIBRATED_THRESHOLD + 5)
         if score >= 81: return "critical"
         if score >= 61: return "high"
         if score >= 41: return "medium"
-        if score >= 21: return "low"
+        if score >= low_boundary: return "low"
         return "safe"
 
     def _build_prompt(self, email, semantic, detection, rule_score) -> str:
@@ -215,7 +291,7 @@ class RiskAgent(BaseAgent):
         if email.subject: parts.append(f"主题: {email.subject}")
         if email.sender: parts.append(f"发件人: {email.sender}")
         if email.body:
-            body = email.body[:800] + ("..." if len(email.body) > 800 else "")
+            body = email.body[:2000] + ("..." if len(email.body) > 2000 else "")
             parts.append(f"正文: {body}")
 
         parts.append(f"\n--- 语义分析 ---")
@@ -229,6 +305,64 @@ class RiskAgent(BaseAgent):
         if detection.content_flags:
             parts.append(f"内容标记: {', '.join(detection.content_flags)}")
 
+        kb_section = self._build_kb_evidence_section(detection.kb_hits)
+        if kb_section:
+            parts.append("\n--- 知识库命中证据 ---")
+            parts.append(kb_section)
+        elif detection.kb_summary:
+            parts.append(f"知识库摘要: {detection.kb_summary}")
+
         parts.append(f"\n规则预评分: {rule_score}/100")
 
         return "请综合以下分析结果，做出最终风险研判：\n\n" + "\n".join(parts)
+
+    def _format_kb_context(self, kb_hits: list[dict], limit: int = 3) -> str:
+        """将知识库命中压缩成 LLM 可读的研判上下文。"""
+        snippets = []
+        for hit in (kb_hits or [])[:limit]:
+            title = hit.get("title", "未命中标题")
+            severity = hit.get("severity", "")
+            score = hit.get("score", 0)
+            keywords = ", ".join(hit.get("matched_keywords", [])[:5]) or "无"
+            semantic_terms = ", ".join(hit.get("matched_semantic_terms", [])[:5]) or "无"
+            summary = (hit.get("summary") or hit.get("content") or "")[:120]
+            recommendation = (hit.get("recommendation") or "")[:100]
+            snippets.append(
+                f"{title}[{severity},score={score}] 命中词:{keywords}; 语义:{semantic_terms}; 摘要:{summary}; 建议:{recommendation}"
+            )
+        return " || ".join(snippets) if snippets else "无"
+
+    def _build_kb_evidence_section(self, kb_hits: list[dict], limit: int = 3, max_chars: int = 1200) -> str:
+        """构造知识库证据小节：标题、severity、summary、识别要点（最多前三条）。"""
+        if not kb_hits:
+            return ""
+
+        lines = []
+        for idx, hit in enumerate((kb_hits or [])[:limit], 1):
+            title = hit.get("title") or "未命名条目"
+            severity = hit.get("severity") or "unknown"
+            summary = (hit.get("summary") or "").strip()
+            points = hit.get("detection_points") or []
+            if not isinstance(points, list):
+                points = []
+            points = [str(p).strip() for p in points if str(p).strip()][:3]
+            semantic_terms = hit.get("matched_semantic_terms") or []
+            if not isinstance(semantic_terms, list):
+                semantic_terms = []
+            semantic_terms = [str(t).strip() for t in semantic_terms if str(t).strip()][:5]
+
+            block = [f"[{idx}] {title}（{severity}）"]
+            if summary:
+                block.append(f"摘要: {summary}")
+            if semantic_terms:
+                block.append(f"语义命中: {', '.join(semantic_terms)}")
+            if points:
+                block.append("识别要点:")
+                for i, point in enumerate(points, 1):
+                    block.append(f"  - ({i}) {point}")
+            lines.append("\n".join(block))
+
+        section = "\n\n".join(lines)
+        if len(section) > max_chars:
+            return section[:max_chars] + "..."
+        return section

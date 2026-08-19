@@ -18,6 +18,8 @@
 6. LLM 不可用时自动启用规则化技术兜底
 """
 
+import time
+
 from src.agents.base import BaseAgent, EventCallback
 from src.models import EmailInput, DetectionResult, SemanticResult
 from src.tools import get_tools_for_agent, extract_urls
@@ -40,7 +42,8 @@ SYSTEM_PROMPT = """你是一个邮件安全技术检测专家。基于工具预�
     "url_analysis": "URL分析",
     "content_flags": ["标记列表"],
     "explanation": "综合分析说明"
-}"""
+}
+输出要求：直接输出裸 JSON，不要用 markdown 代码围栏（```）包裹；sender_analysis、url_analysis、explanation 各不超过 200 字，确保 JSON 完整结束。"""
 
 
 class DetectorAgent(BaseAgent):
@@ -114,16 +117,45 @@ class DetectorAgent(BaseAgent):
 
         # ---- Step 2.5: 知识库检索（RAG-MVP） ----
         self.emit_thinking("第三步：检索本地知识库，匹配已知钓鱼攻击模式。", callback)
-        kb_query_text = "\n".join([
-            email.subject or "",
-            email.sender or "",
-            email.body or "",
-            " ".join(all_urls),
-        ])
-        self.emit_sub_step("将邮件主题、发件人、正文、URL 拼接为知识库查询向量", "running", callback)
-        kb_hits = db.search_kb(kb_query_text, limit=5)
+        route_a_text = "\n".join([email.subject or "", email.sender or ""]).strip()
+        route_b_text = "\n".join([(email.body or "")[:500], " ".join(all_urls)]).strip()
+        self.emit_sub_step("对邮件主题/发件人与正文/URL 分别执行语义向量+关键词双路检索", "running", callback)
+
+        semantic_available = self._semantic_channel_available(route_a_text or route_b_text)
+        degraded = False
+        kb_start = time.time()
+        route_a_hits = self._search_kb_with_fallback(route_a_text, semantic_available, limit=5)
+        route_b_hits = self._search_kb_with_fallback(route_b_text, semantic_available, limit=5)
+        if not semantic_available:
+            degraded = True
+
+        kb_hits = self._merge_kb_hits(route_a_hits, route_b_hits, limit=5)
+        kb_hits = self._enrich_kb_hits(kb_hits)
+        # 结构化工具事件：让前端感知 RAG 检索发生（与注册工具事件同构）
+        kb_semantic_hits = sum(
+            1 for h in kb_hits
+            if isinstance(h, dict) and h.get("match_type") in {"semantic", "hybrid"}
+        )
+        self.emit_tool_finished(
+            "hybrid_search_kb" if not degraded else "search_kb",
+            "双路检索（主题+发件人 / 正文+URL）",
+            (
+                f"命中 {len(kb_hits)} 条（含语义 {kb_semantic_hits} 条）"
+                if not degraded
+                else f"命中 {len(kb_hits)} 条（关键词通道）"
+            ),
+            int((time.time() - kb_start) * 1000),
+            callback,
+        )
+
+        if degraded:
+            self.emit_sub_step("语义检索不可用，已回退纯关键词匹配", "done", callback)
+
         if kb_hits:
-            top_titles = "；".join(hit["title"] for hit in kb_hits[:3])
+            top_titles = "; ".join(
+                f"{hit['title']}（{self._match_type_to_label(hit.get('match_type', 'keyword'))}）"
+                for hit in kb_hits[:3]
+            )
             self.emit_sub_step(f"命中知识库 {len(kb_hits)} 条：{top_titles}", "done", callback)
         else:
             self.emit_sub_step("未命中知识库条目，继续按规则与 LLM 分析", "done", callback)
@@ -147,13 +179,13 @@ class DetectorAgent(BaseAgent):
             callback,
         )
         self.emit_sub_step("整合 URL 风险、发件人可信度、行为异常、知识库命中、内容标记为统一提示词", "running", callback)
-        user_prompt = self._build_prompt(email, all_urls, semantic_result)
+        user_prompt = self._build_prompt(email, all_urls, semantic_result, kb_hits)
         try:
             llm_result = self.chat_json(SYSTEM_PROMPT, user_prompt, callback=callback)
             self.emit_sub_step("LLM 多维关联分析完成，提取结构化检测结果", "done", callback)
         except Exception as e:
-            self.emit_thinking("⚠️ LLM 不可用，已启用规则化技术兜底分析。", callback)
-            self.emit_sub_step(f"规则兜底接管：基于工具分数融合生成技术判定（原因：{str(e)[:80]}）", "done", callback)
+            fallback_reason = self.emit_llm_fallback(e, callback)
+            self.emit_sub_step(f"规则兜底接管：基于工具分数融合生成技术判定（{fallback_reason}）", "done", callback)
             llm_result = self._fallback_detection_result(
                 email=email,
                 sender_result=sender_result,
@@ -161,6 +193,7 @@ class DetectorAgent(BaseAgent):
                 pattern_result=pattern_result,
                 semantic_result=semantic_result,
             )
+            llm_result["fallback_reason"] = fallback_reason
 
         # ---- Step 6: 分数融合（工具 + LLM + 邮件头校验） ----
         self.emit_thinking("第七步：融合多维度分数，生成最终技术检测指标。", callback)
@@ -219,6 +252,11 @@ class DetectorAgent(BaseAgent):
                 for hit in kb_hits[:3]
             )
 
+        # 无 URL 可评估时最终 url_score 固定为中性 0.5：
+        # "没有链接"不等于"链接已验证安全"，避免满分在风险研判中被误计为良性信号
+        if not url_tool_results:
+            url_score = 0.5
+
         detection = DetectionResult(
             sender_score=max(0, min(1, sender_score)),
             sender_analysis=llm_result.get("sender_analysis", sender_result.output),
@@ -234,6 +272,7 @@ class DetectorAgent(BaseAgent):
             kb_hits=kb_hits,
             kb_summary=kb_summary,
             explanation=llm_result.get("explanation", ""),
+            fallback_reason=llm_result.get("fallback_reason", ""),
         )
 
         self.emit_sub_step(
@@ -267,10 +306,14 @@ class DetectorAgent(BaseAgent):
             f"规则引擎已识别出可疑链接特征，建议将该邮件标记为需要人工复核。"
         )
 
+        # 无 URL 可评估时给中性分 0.5："没有链接"不等于"链接已验证安全"，
+        # 避免 url_score=1.0 在风险研判中被误计为良性信号
+        url_score = 0.5 if not url_tool_results else max(0, min(1, 1 - url_risk / 100))
+
         return {
             "sender_score": max(0, min(1, sender_trust / 100)),
             "sender_analysis": sender_analysis,
-            "url_score": max(0, min(1, 1 - url_risk / 100)),
+            "url_score": url_score,
             "url_analysis": url_analysis,
             "content_flags": content_flags,
             "explanation": (
@@ -325,6 +368,7 @@ class DetectorAgent(BaseAgent):
         email: EmailInput,
         urls: list[str],
         semantic: SemanticResult = None,
+        kb_hits: list[dict] = None,
     ) -> str:
         """构造 LLM 提示"""
         parts = []
@@ -336,8 +380,102 @@ class DetectorAgent(BaseAgent):
             parts.append(f"正文:\n{email.body}")
         if urls:
             parts.append(f"URL列表: {', '.join(urls)}")
+        if email.prompt:
+            parts.append(f"用户补充提示/指令: {email.prompt}")
 
         if semantic:
             parts.append(f"\n[语义分析结果] 意图:{semantic.intent} 话术:{','.join(semantic.persuasion_techniques)}")
 
+        if kb_hits:
+            parts.append("\n[知识库命中]")
+            parts.append(self._format_kb_context(kb_hits))
+
         return "请对以下邮件进行技术安全分析：\n\n" + "\n".join(parts)
+
+    def _format_kb_context(self, kb_hits: list[dict], limit: int = 3) -> str:
+        """将知识库命中压缩成适合 LLM 阅读的上下文。"""
+        lines = []
+        for hit in (kb_hits or [])[:limit]:
+            summary = (hit.get("summary") or hit.get("content") or "")[:140]
+            recommendation = (hit.get("recommendation") or "")[:120]
+            keywords = ", ".join(hit.get("matched_keywords", [])[:5]) or "无"
+            semantic_terms = ", ".join(hit.get("matched_semantic_terms", [])[:5]) or "无"
+            lines.append(
+                f"- {hit.get('title', '未命中标题')} | 分类:{hit.get('category', '')} | 严重度:{hit.get('severity', '')} | "
+                f"检索分:{hit.get('score', 0)} | 关键词:{keywords} | 语义:{semantic_terms} | 摘要:{summary} | 建议:{recommendation}"
+            )
+        return "\n".join(lines) if lines else "- 无"
+
+    def _semantic_channel_available(self, probe_text: str) -> bool:
+        """检查语义向量通道是否可用，不影响主流程。"""
+        embed_fn = getattr(db, "_embed", None)
+        if not callable(embed_fn):
+            return False
+        try:
+            vectors = embed_fn([probe_text or "phishing"])
+        except Exception:
+            return False
+        return bool(vectors and vectors[0])
+
+    def _search_kb_with_fallback(self, query_text: str, semantic_available: bool, limit: int = 5) -> list[dict]:
+        query = (query_text or "").strip()
+        if not query:
+            return []
+
+        if semantic_available:
+            try:
+                hybrid_fn = getattr(db, "hybrid_search_kb")
+                hits = hybrid_fn(query, limit=limit)
+                if isinstance(hits, list):
+                    return hits
+            except Exception:
+                pass
+
+        hits = db.search_kb(query, limit=limit)
+        normalized = []
+        for hit in hits:
+            row = dict(hit)
+            row["kw_score"] = int(hit.get("score", 0))
+            row["vector_score"] = 0
+            row["fused_score"] = int(hit.get("score", 0))
+            row["match_type"] = "keyword"
+            normalized.append(row)
+        return normalized
+
+    def _merge_kb_hits(self, hits_a: list[dict], hits_b: list[dict], limit: int = 5) -> list[dict]:
+        merged: dict[int, dict] = {}
+        for hit in (hits_a or []) + (hits_b or []):
+            if "id" not in hit:
+                continue
+            entry_id = int(hit["id"])
+            score = float(hit.get("fused_score", hit.get("score", 0)))
+            existing = merged.get(entry_id)
+            if existing is None or score > float(existing.get("fused_score", existing.get("score", 0))):
+                merged[entry_id] = dict(hit)
+
+        result = list(merged.values())
+        result.sort(key=lambda x: float(x.get("fused_score", x.get("score", 0))), reverse=True)
+        return result[:limit]
+
+    def _enrich_kb_hits(self, hits: list[dict]) -> list[dict]:
+        """补齐 detection_points 等详情，供后续 risk prompt 使用。"""
+        enriched = []
+        for hit in hits:
+            row = dict(hit)
+            if not row.get("detection_points") and row.get("id") is not None:
+                try:
+                    entry = db.get_kb_entry(int(row["id"]))
+                except Exception:
+                    entry = None
+                if isinstance(entry, dict):
+                    row["detection_points"] = entry.get("detection_points") or []
+            enriched.append(row)
+        return enriched
+
+    def _match_type_to_label(self, match_type: str) -> str:
+        mapping = {
+            "semantic": "语义",
+            "keyword": "关键词",
+            "hybrid": "关键词+语义",
+        }
+        return mapping.get((match_type or "").lower(), "关键词")

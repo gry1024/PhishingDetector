@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>PhishingDetector | 钓鱼威胁知识库</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg-elev: #111112;
+      --bg-hover: #171718;
+      --bg-active: #1d1d1f;
+      --border: rgba(255,255,255,0.09);
+      --border-strong: rgba(255,255,255,0.16);
+      --text: #f5f5f5;
+      --text-2: rgba(255,255,255,0.64);
+      --text-3: rgba(255,255,255,0.40);
+      --btn-bg: #f5f5f5;
+      --btn-text: #0a0a0a;
+      --green: #4ade80;
+      --radius: 10px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 14px;
+      --radius-pill: 999px;
+      --topbar-h: 60px;
+      --page-max: 1200px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: #0a0a0a;
+      color: var(--text);
+      font-family: "Inter", -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      overflow-x: hidden;
+    }
+
+    body {
+      padding-top: var(--topbar-h);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 50;
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 20px;
+      background: rgba(10, 10, 10, 0.85);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex-shrink: 0;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-sm);
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .nav-links a {
+      font-size: 13.5px;
+      color: var(--text-2);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .nav-links a.active {
+      color: var(--text);
+      background: var(--bg-active);
+    }
+
+    .nav-links a.btn-primary {
+      color: var(--btn-text);
+      background: var(--btn-bg);
+      font-weight: 700;
+      padding: 8px 14px;
+      margin-left: 6px;
+    }
+
+    .nav-links a.btn-primary:hover {
+      background: #e8e8e8;
+      color: var(--btn-text);
+    }
+
+    .page {
+      width: min(var(--page-max), 100%);
+      margin: 0 auto;
+      padding: 0 20px 36px;
+    }
+
+    .hero {
+      padding-top: 96px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 12px;
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 4.5vw, 48px);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+
+    .hero-subtitle {
+      margin-top: 16px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-2);
+    }
+
+    .search-wrap {
+      margin: 28px auto 0;
+      width: min(560px, 100%);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--bg-elev);
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .search-result-meta {
+      margin-top: 10px;
+      min-height: 20px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .stats {
+      width: min(100%, 920px);
+      margin: 24px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--bg-elev);
+    }
+
+    .stat {
+      padding: 18px 18px 16px;
+      text-align: left;
+      min-height: 112px;
+    }
+
+    .stat + .stat {
+      border-left: 1px solid var(--border);
+    }
+
+    .stat-value {
+      font-size: 26px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .stat-desc {
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--text-2);
+    }
+
+    .feedback {
+      margin: 18px auto 0;
+      width: min(100%, 920px);
+      display: none;
+      border: 1px solid rgba(248,113,113,0.4);
+      border-radius: var(--radius-md);
+      background: var(--bg-elev);
+      padding: 16px;
+      text-align: left;
+    }
+
+    .feedback.open {
+      display: block;
+    }
+
+    .feedback-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fca5a5;
+    }
+
+    .feedback-text {
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-2);
+    }
+
+    .feedback-btn {
+      margin-top: 12px;
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .feedback-btn:hover {
+      background: var(--bg-hover);
+    }
+
+    .main {
+      margin: 30px auto 0;
+      max-width: 1080px;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .category-panel {
+      position: sticky;
+      top: calc(var(--topbar-h) + 14px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-elev);
+      padding: 8px;
+    }
+
+    .category-title {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-3);
+      text-transform: uppercase;
+      padding: 8px 8px 10px;
+    }
+
+    .category-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .category-item {
+      position: relative;
+      width: 100%;
+      text-align: left;
+      border-radius: var(--radius-sm);
+      padding: 10px 10px 10px 12px;
+      color: var(--text-2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .category-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .category-item.active {
+      background: var(--bg-active);
+      color: var(--text);
+    }
+
+    .category-item.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: #ffffff;
+      border-radius: 1px;
+    }
+
+    .category-count {
+      color: var(--text-3);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .category-item.active .category-count {
+      color: var(--text-2);
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 120px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-elev);
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .card-row-1 {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card-category {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: lowercase;
+    }
+
+    .risk-critical { border-color: rgba(248,113,113,0.4); color: #fca5a5; background: rgba(248,113,113,0.12); }
+    .risk-high { border-color: rgba(251,146,60,0.4); color: #fdba74; background: rgba(251,146,60,0.12); }
+    .risk-medium { border-color: rgba(251,191,36,0.4); color: #fcd34d; background: rgba(251,191,36,0.12); }
+    .risk-low, .risk-safe { border-color: rgba(74,222,128,0.4); color: #86efac; background: rgba(74,222,128,0.12); }
+    .risk-unknown { border-color: var(--border); color: var(--text-2); background: rgba(255,255,255,0.04); }
+    .risk-hybrid { border-color: rgba(255,255,255,0.75); color: #f8fafc; background: rgba(255,255,255,0.08); }
+
+    .kb-score {
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 400;
+      align-self: center;
+    }
+
+    .tech-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      color: var(--text-2);
+      font-size: 10px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .card-title {
+      font-size: 16px;
+      line-height: 1.45;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .card-summary {
+      font-size: 13.5px;
+      line-height: 1.72;
+      color: var(--text-2);
+    }
+
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+      text-align: center;
+      color: var(--text-2);
+      padding: 34px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      background: var(--bg-elev);
+    }
+
+    .loading {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      color: var(--text-2);
+      background: var(--bg-elev);
+      font-size: 14px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-panel {
+      position: relative;
+      width: min(100%, 720px);
+      max-height: 88vh;
+      overflow: auto;
+      padding: 24px 24px 20px;
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      background: #111112;
+      color: var(--text);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .detail-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .detail-category {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .detail-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 14px;
+      letter-spacing: -0.02em;
+    }
+
+    .detail-content {
+      font-size: 14.5px;
+      line-height: 1.8;
+      color: var(--text-2);
+      white-space: pre-wrap;
+    }
+
+    .detail-block {
+      margin-top: 18px;
+    }
+
+    .detail-block-title {
+      font-size: 12px;
+      line-height: 1.2;
+      color: var(--text-3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .detect-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .detect-item {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.72;
+      color: var(--text-2);
+    }
+
+    .detect-index {
+      color: var(--text-3);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .detail-recommend {
+      font-size: 14px;
+      line-height: 1.72;
+      color: var(--text-2);
+      white-space: pre-wrap;
+    }
+
+    .ioc-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ioc-item {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      word-break: break-all;
+    }
+
+    .tech-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .related-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .related-link {
+      font-size: 13px;
+      color: var(--text-2);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .related-link:hover {
+      color: var(--text);
+    }
+
+    .verify-btn {
+      margin-top: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: var(--radius);
+      border: 1px solid #ffffff;
+      background: #ffffff;
+      color: #0a0a0a;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .verify-btn:hover {
+      background: #ececec;
+      border-color: #ececec;
+    }
+
+    .modal-error {
+      border: 1px solid rgba(248,113,113,0.4);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-2);
+    }
+
+    .modal-error-title {
+      color: #fca5a5;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .nav-links a.nav-link {
+        display: none;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stat:nth-child(3),
+      .stat:nth-child(4) {
+        border-top: 1px solid var(--border);
+      }
+
+      .stat:nth-child(odd) {
+        border-left: 0;
+      }
+
+      .stat:nth-child(even) {
+        border-left: 1px solid var(--border);
+      }
+
+      .main {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .category-panel {
+        position: static;
+        padding: 8px;
+      }
+
+      .category-list {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+
+      .category-item {
+        min-width: max-content;
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+      }
+
+      .category-item.active::before {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        padding: 0 14px;
+      }
+
+      .brand-name {
+        font-size: 13px;
+      }
+
+      .page {
+        padding: 0 14px 24px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .modal-panel {
+        padding: 20px 18px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/landing" aria-label="PhishingDetector 首页">
+      <div class="brand-mark">P</div>
+      <div class="brand-name">PhishingDetector</div>
+    </a>
+
+    <nav class="nav-links" aria-label="主导航">
+      <a class="nav-link" href="/landing">首页</a>
+      <a class="nav-link" href="/studio">检测引擎</a>
+      <a class="nav-link active" href="/knowledge">知识库</a>
+      <a class="nav-link" href="/studio">报告中心</a>
+      <a class="nav-link" href="/landing">关于</a>
+      <a class="btn btn-primary" href="/studio">开始检测 <span aria-hidden="true">→</span></a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-badge">
+        <span class="badge-dot" aria-hidden="true"></span>
+        <span>与检测引擎实时联动</span>
+      </div>
+      <h1 class="hero-title">钓鱼威胁知识库</h1>
+      <p class="hero-subtitle">从攻击手法到防御指南，检测引擎背后的每一份判断依据。</p>
+      <div class="search-wrap">
+        <input id="searchInput" class="search-input" type="text" placeholder="搜索关键词，例如：M365、IP直连、凭证收集" autocomplete="off">
+        <div id="searchMeta" class="search-result-meta">共 0 条结果</div>
+      </div>
+      <div id="statsBar" class="stats" aria-label="知识库统计"></div>
+      <div id="globalFeedback" class="feedback" role="alert" aria-live="assertive"></div>
+    </section>
+
+    <section class="main" aria-label="知识库浏览区">
+      <aside class="category-panel">
+        <div class="category-title">分类</div>
+        <div id="categoryList" class="category-list"></div>
+      </aside>
+
+      <section id="cards" class="cards" aria-live="polite"></section>
+    </section>
+  </main>
+
+  <div id="detailOverlay" class="modal-overlay" onclick="if (event.target === this) closeDetail()">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <button class="modal-close" type="button" onclick="closeDetail()" aria-label="关闭">×</button>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      allEntries: [],
+      currentEntries: [],
+      categories: [],
+      selectedCategory: "__all__",
+      searchKeyword: "",
+      // 混合检索降级标记：向量服务不可用时为 true，搜索 meta 行据此提示
+      searchDegraded: false,
+      debounceTimer: null,
+      retryAction: null,
+      isBootstrapped: false,
+      pendingHashId: null,
+    };
+
+    const els = {
+      statsBar: document.getElementById("statsBar"),
+      searchInput: document.getElementById("searchInput"),
+      searchMeta: document.getElementById("searchMeta"),
+      categoryList: document.getElementById("categoryList"),
+      cards: document.getElementById("cards"),
+      feedback: document.getElementById("globalFeedback"),
+      detailOverlay: document.getElementById("detailOverlay"),
+      detailBody: document.getElementById("detailBody"),
+    };
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[ch]));
+    }
+
+    async function apiGet(path) {
+      const response = await fetch(path, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+      }
+      return response.json();
+    }
+
+    function showGlobalError(message, retryAction) {
+      state.retryAction = retryAction;
+      els.feedback.classList.add("open");
+      els.feedback.innerHTML = ""
+        + '<div class="feedback-title">加载失败</div>'
+        + '<div class="feedback-text">' + escapeHtml(message) + '</div>'
+        + '<button id="retryBtn" class="feedback-btn" type="button">重试</button>';
+      const retryBtn = document.getElementById("retryBtn");
+      if (retryBtn) {
+        retryBtn.addEventListener("click", async () => {
+          if (typeof state.retryAction === "function") {
+            await state.retryAction();
+          }
+        });
+      }
+    }
+
+    function hideGlobalError() {
+      els.feedback.classList.remove("open");
+      els.feedback.innerHTML = "";
+      state.retryAction = null;
+    }
+
+    function formatDate(value) {
+      const dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) return "-";
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const d = String(dt.getDate()).padStart(2, "0");
+      return y + "-" + m + "-" + d;
+    }
+
+    function calcStats(entries) {
+      const total = entries.length;
+      let attackCount = 0;
+      const techSet = new Set();
+      let latest = "";
+
+      entries.forEach((item) => {
+        if (item && item.category === "攻击手法") {
+          attackCount += 1;
+        }
+        if (Array.isArray(item && item.attack_techniques)) {
+          item.attack_techniques.forEach((tech) => {
+            if (tech) techSet.add(String(tech));
+          });
+        }
+        if (item && item.updated_at && String(item.updated_at) > latest) {
+          latest = String(item.updated_at);
+        }
+      });
+
+      return {
+        total,
+        attackCount,
+        techCoverage: techSet.size,
+        latestDate: latest ? formatDate(latest) : "-",
+      };
+    }
+
+    function renderStats(entries) {
+      const stats = calcStats(entries);
+      els.statsBar.innerHTML = ""
+        + '<div class="stat"><div class="stat-value">' + stats.total + '</div><div class="stat-desc">条目总数</div></div>'
+        + '<div class="stat"><div class="stat-value">' + stats.attackCount + '</div><div class="stat-desc">攻击手法类条目数</div></div>'
+        + '<div class="stat"><div class="stat-value">' + stats.techCoverage + '</div><div class="stat-desc">ATT&amp;CK 技术覆盖数</div></div>'
+        + '<div class="stat"><div class="stat-value">' + stats.latestDate + '</div><div class="stat-desc">最近更新日期</div></div>';
+    }
+
+    function severityClass(level) {
+      const safeLevel = String(level || "unknown").toLowerCase();
+      if (["critical", "high", "medium", "low", "safe"].includes(safeLevel)) {
+        return "risk-" + safeLevel;
+      }
+      return "risk-unknown";
+    }
+
+    function matchTypeLabel(matchType) {
+      const key = String(matchType || "").toLowerCase();
+      if (key === "semantic") return "语义";
+      if (key === "hybrid") return "关键词+语义";
+      if (key === "keyword") return "关键词";
+      return "";
+    }
+
+    function matchTypeClass(matchType) {
+      const key = String(matchType || "").toLowerCase();
+      if (key === "semantic") return "risk-low";
+      if (key === "hybrid") return "risk-hybrid";
+      if (key === "keyword") return "risk-unknown";
+      return "";
+    }
+
+    function renderCategoryList() {
+      const total = state.allEntries.length;
+      const list = [{ id: "__all__", name: "全部", count: total }].concat(state.categories || []);
+      els.categoryList.innerHTML = list.map((cat) => {
+        const active = state.selectedCategory === cat.id;
+        return ''
+          + '<button type="button" class="category-item' + (active ? ' active' : '') + '" data-id="' + escapeHtml(cat.id) + '" data-name="' + escapeHtml(cat.name) + '">'
+          + '<span>' + escapeHtml(cat.name) + '</span>'
+          + '<span class="category-count">' + Number(cat.count || 0) + '</span>'
+          + '</button>';
+      }).join("");
+
+      els.categoryList.querySelectorAll(".category-item").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id") || "__all__";
+          const name = btn.getAttribute("data-name") || "";
+          state.selectedCategory = id;
+          renderCategoryList();
+          if (state.searchKeyword) {
+            return;
+          }
+          await loadBrowseEntries(name, id === "__all__");
+        });
+      });
+    }
+
+    function renderLoading(text) {
+      els.cards.innerHTML = '<div class="loading">' + escapeHtml(text || "加载中...") + '</div>';
+    }
+
+    function renderEmpty(message) {
+      els.cards.innerHTML = '<div class="empty">' + escapeHtml(message) + '</div>';
+    }
+
+    function renderSearchMeta(count) {
+      if (state.searchKeyword) {
+        // 搜索态：点明检索方式；降级时明确提示
+        els.searchMeta.textContent = state.searchDegraded
+          ? "共 " + count + " 条结果 · 向量服务不可用，已降级为关键词检索"
+          : "共 " + count + " 条结果 · 关键词 + 向量语义混合检索";
+      } else {
+        els.searchMeta.textContent = "共 " + count + " 条结果";
+      }
+    }
+
+    function renderCards(entries) {
+      state.currentEntries = Array.isArray(entries) ? entries : [];
+      renderSearchMeta(state.currentEntries.length);
+
+      if (!state.currentEntries.length) {
+        if (state.searchKeyword) {
+          renderEmpty("未找到相关条目，换个关键词试试");
+        } else {
+          renderEmpty("该分类下暂无条目");
+        }
+        return;
+      }
+
+      els.cards.innerHTML = state.currentEntries.map((item) => {
+        const techniques = Array.isArray(item.attack_techniques) ? item.attack_techniques.slice(0, 4) : [];
+        const summary = item.summary || item.content || "";
+        const matchLabel = matchTypeLabel(item.match_type);
+        const matchClass = matchTypeClass(item.match_type);
+        // 混合检索命中：徽章旁展示双路分数（融合 / 关键词 / 向量）
+        const scoreLine = (item.fused_score !== undefined && item.fused_score !== null)
+          ? '<span class="kb-score">融合 ' + Number(item.fused_score) + ' · 词 ' + Number(item.kw_score || 0) + ' · 向量 ' + Number(item.vector_score || 0) + '</span>'
+          : "";
+        return ''
+          + '<article class="card" data-id="' + Number(item.id || 0) + '">'
+          + '  <div class="card-row-1">'
+          + '    <span class="card-category">' + escapeHtml(item.category || "未分类") + '</span>'
+          + '    <span class="risk-badge ' + severityClass(item.severity) + '">' + escapeHtml(item.severity || "unknown") + '</span>'
+          +      (matchLabel ? '<span class="risk-badge ' + matchClass + '">' + escapeHtml(matchLabel) + '</span>' : '')
+          +      scoreLine
+          +      techniques.map((tech) => '<span class="tech-pill">' + escapeHtml(tech) + '</span>').join("")
+          + '  </div>'
+          + '  <h3 class="card-title">' + escapeHtml(item.title || "无标题") + '</h3>'
+          + '  <p class="card-summary">' + escapeHtml(summary) + '</p>'
+          + '</article>';
+      }).join("");
+
+      els.cards.querySelectorAll(".card").forEach((card) => {
+        card.addEventListener("click", async () => {
+          const id = Number(card.getAttribute("data-id"));
+          if (Number.isInteger(id) && id > 0) {
+            await openDetail(id);
+          }
+        });
+      });
+    }
+
+    async function loadBrowseEntries(categoryName, isAll) {
+      hideGlobalError();
+      renderLoading("加载知识条目...");
+      try {
+        if (isAll) {
+          renderCards(state.allEntries);
+          return;
+        }
+        const path = "/api/kb/entries?category=" + encodeURIComponent(categoryName);
+        const entries = await apiGet(path);
+        renderCards(entries);
+      } catch (error) {
+        showGlobalError("知识库分类加载失败，请稍后重试。", async () => {
+          await loadBrowseEntries(categoryName, isAll);
+        });
+        renderEmpty("加载失败，请点击上方重试");
+      }
+    }
+
+    async function performSearch(keyword) {
+      hideGlobalError();
+      renderLoading("搜索中...");
+      try {
+        // mode=hybrid：关键词 + 向量语义混合检索；向量不可用由后端静默降级
+        const path = "/api/kb/search?q=" + encodeURIComponent(keyword) + "&limit=20&mode=hybrid";
+        const data = await apiGet(path);
+        // 兼容旧结构（纯数组）：hybrid 返回 {degraded, results}
+        const entries = Array.isArray(data) ? data : (data.results || []);
+        state.searchDegraded = Array.isArray(data) ? false : Boolean(data.degraded);
+        renderCards(entries);
+      } catch (error) {
+        showGlobalError("搜索接口请求失败，请检查服务后重试。", async () => {
+          await performSearch(keyword);
+        });
+        renderEmpty("搜索失败，请点击上方重试");
+      }
+    }
+
+    function bindSearch() {
+      els.searchInput.addEventListener("input", () => {
+        const keyword = (els.searchInput.value || "").trim();
+        state.searchKeyword = keyword;
+        if (state.debounceTimer) {
+          window.clearTimeout(state.debounceTimer);
+        }
+        state.debounceTimer = window.setTimeout(async () => {
+          if (!state.searchKeyword) {
+            const selectedBtn = els.categoryList.querySelector(".category-item.active");
+            const categoryName = selectedBtn ? (selectedBtn.getAttribute("data-name") || "") : "";
+            const isAll = state.selectedCategory === "__all__";
+            await loadBrowseEntries(categoryName, isAll);
+            return;
+          }
+          await performSearch(state.searchKeyword);
+        }, 300);
+      });
+    }
+
+    function closeDetail() {
+      els.detailOverlay.classList.remove("open");
+      els.detailBody.innerHTML = "";
+      document.body.style.overflow = "";
+      if (window.location.hash && /^#\d+$/.test(window.location.hash)) {
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    }
+
+    function parseSampleEmail(sampleEmail) {
+      if (!sampleEmail) return null;
+      if (typeof sampleEmail === "object") {
+        return {
+          subject: sampleEmail.subject || "",
+          sender: sampleEmail.sender || "",
+          body: sampleEmail.body || "",
+        };
+      }
+      return null;
+    }
+
+    function renderDetail(entry) {
+      const points = Array.isArray(entry.detection_points) ? entry.detection_points : [];
+      const iocs = Array.isArray(entry.iocs) ? entry.iocs.filter(Boolean) : [];
+      const techniques = Array.isArray(entry.attack_techniques) ? entry.attack_techniques.filter(Boolean) : [];
+      const related = Array.isArray(entry.related) ? entry.related.filter((id) => Number.isInteger(Number(id)) && Number(id) > 0) : [];
+      const sample = parseSampleEmail(entry.sample_email);
+
+      const detailHtml = [];
+      detailHtml.push('<div class="detail-meta">');
+      detailHtml.push('<span class="detail-category">' + escapeHtml(entry.category || "未分类") + '</span>');
+      detailHtml.push('<span class="risk-badge ' + severityClass(entry.severity) + '">' + escapeHtml(entry.severity || "unknown") + '</span>');
+      detailHtml.push('</div>');
+      detailHtml.push('<h2 id="detailTitle" class="detail-title">' + escapeHtml(entry.title || "无标题") + '</h2>');
+      detailHtml.push('<div class="detail-content">' + escapeHtml(entry.content || "") + '</div>');
+
+      detailHtml.push('<section class="detail-block">');
+      detailHtml.push('<div class="detail-block-title">识别要点</div>');
+      if (points.length) {
+        detailHtml.push('<ol class="detect-list">');
+        points.forEach((point, idx) => {
+          const no = String(idx + 1).padStart(2, "0");
+          detailHtml.push('<li class="detect-item"><span class="detect-index">' + no + '</span><span>' + escapeHtml(point) + '</span></li>');
+        });
+        detailHtml.push('</ol>');
+      } else {
+        detailHtml.push('<div class="detail-recommend">暂无识别要点</div>');
+      }
+      detailHtml.push('</section>');
+
+      detailHtml.push('<section class="detail-block">');
+      detailHtml.push('<div class="detail-block-title">防御建议</div>');
+      detailHtml.push('<div class="detail-recommend">' + escapeHtml(entry.recommendation || "暂无") + '</div>');
+      detailHtml.push('</section>');
+
+      if (iocs.length) {
+        detailHtml.push('<section class="detail-block">');
+        detailHtml.push('<div class="detail-block-title">IoC 指标</div>');
+        detailHtml.push('<div class="ioc-list">');
+        iocs.forEach((ioc) => {
+          detailHtml.push('<div class="ioc-item">' + escapeHtml(ioc) + '</div>');
+        });
+        detailHtml.push('</div>');
+        detailHtml.push('</section>');
+      }
+
+      if (techniques.length) {
+        detailHtml.push('<section class="detail-block">');
+        detailHtml.push('<div class="detail-block-title">ATT&CK 映射</div>');
+        detailHtml.push('<div class="tech-list">');
+        techniques.forEach((tech) => {
+          detailHtml.push('<span class="tech-pill">' + escapeHtml(tech) + '</span>');
+        });
+        detailHtml.push('</div>');
+        detailHtml.push('</section>');
+      }
+
+      if (related.length) {
+        detailHtml.push('<section class="detail-block">');
+        detailHtml.push('<div class="detail-block-title">相关条目</div>');
+        detailHtml.push('<div class="related-list">');
+        related.forEach((id) => {
+          detailHtml.push('<a class="related-link" data-related-id="' + Number(id) + '" href="#' + Number(id) + '">#' + Number(id) + '</a>');
+        });
+        detailHtml.push('</div>');
+        detailHtml.push('</section>');
+      }
+
+      if (sample && (sample.subject || sample.sender || sample.body)) {
+        detailHtml.push('<button id="verifyInStudioBtn" class="verify-btn" type="button">在检测引擎中验证 →</button>');
+      }
+
+      els.detailBody.innerHTML = detailHtml.join("");
+
+      if (sample && (sample.subject || sample.sender || sample.body)) {
+        const btn = document.getElementById("verifyInStudioBtn");
+        if (btn) {
+          btn.addEventListener("click", () => {
+            const content = "主题:" + (sample.subject || "") + "\n"
+              + "发件人:" + (sample.sender || "") + "\n"
+              + "正文:" + (sample.body || "");
+            window.location.href = "/studio?content=" + encodeURIComponent(content);
+          });
+        }
+      }
+
+      els.detailBody.querySelectorAll(".related-link").forEach((link) => {
+        link.addEventListener("click", async (event) => {
+          event.preventDefault();
+          const id = Number(link.getAttribute("data-related-id"));
+          if (Number.isInteger(id) && id > 0) {
+            await openDetail(id);
+          }
+        });
+      });
+    }
+
+    async function openDetail(entryId) {
+      if (!Number.isInteger(entryId) || entryId <= 0) {
+        return;
+      }
+
+      els.detailOverlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+      els.detailBody.innerHTML = '<div class="loading">加载条目详情...</div>';
+
+      try {
+        const entry = await apiGet("/api/kb/entries/" + entryId);
+        renderDetail(entry);
+        history.replaceState(null, "", window.location.pathname + "#" + entryId);
+      } catch (error) {
+        if (String(error.message || "").includes("404")) {
+          els.detailBody.innerHTML = ''
+            + '<div class="modal-error">'
+            + '  <div class="modal-error-title">条目不存在</div>'
+            + '  <div>未找到 ID 为 ' + entryId + ' 的知识条目。</div>'
+            + '</div>';
+        } else {
+          els.detailBody.innerHTML = ''
+            + '<div class="modal-error">'
+            + '  <div class="modal-error-title">详情加载失败</div>'
+            + '  <div>无法获取条目详情，请稍后重试。</div>'
+            + '  <button id="retryDetailBtn" class="feedback-btn" type="button">重试</button>'
+            + '</div>';
+          const retryBtn = document.getElementById("retryDetailBtn");
+          if (retryBtn) {
+            retryBtn.addEventListener("click", async () => {
+              await openDetail(entryId);
+            });
+          }
+        }
+      }
+    }
+
+    async function bootstrap() {
+      hideGlobalError();
+      renderLoading("加载知识库数据...");
+      renderSearchMeta(0);
+
+      try {
+        const [entries, categories] = await Promise.all([
+          apiGet("/api/kb/entries?limit=500"),
+          apiGet("/api/kb/categories"),
+        ]);
+
+        state.allEntries = Array.isArray(entries) ? entries : [];
+        state.categories = Array.isArray(categories) ? categories : [];
+
+        renderStats(state.allEntries);
+        renderCategoryList();
+        await loadBrowseEntries("", true);
+        state.isBootstrapped = true;
+
+        const hash = window.location.hash || "";
+        if (/^#\d+$/.test(hash)) {
+          const id = Number(hash.slice(1));
+          if (Number.isInteger(id) && id > 0) {
+            await openDetail(id);
+          }
+        }
+      } catch (error) {
+        renderEmpty("知识库加载失败");
+        showGlobalError("知识库初始化失败，请检查 /api/kb/* 接口后重试。", bootstrap);
+      }
+    }
+
+    bindSearch();
+    bootstrap();
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeDetail();
+      }
+    });
+
+    window.addEventListener("hashchange", async () => {
+      const hash = window.location.hash || "";
+      if (!hash) {
+        closeDetail();
+        return;
+      }
+      if (/^#\d+$/.test(hash)) {
+        const id = Number(hash.slice(1));
+        if (Number.isInteger(id) && id > 0) {
+          await openDetail(id);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
