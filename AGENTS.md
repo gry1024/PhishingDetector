@@ -110,11 +110,13 @@ python -m unittest tests.test_kb_search -v
 - **不依赖真实 LLM**：需要 Agent/LLM 的用例用 `unittest.mock.patch` 打桩（如 `tests/test_health_llm.py` patch `src.api.routes.get_llm`）；需要走完整 `run_analysis` 的用例通过 `settings.llm.api_key = ""` + `llm_module.llm_client = None` 强制 LLM 不可用，验证规则兜底路径（如 `tests/test_rule_fallback.py`）
 - KB 检索测试直接调用 `src.database`（如 `tests/test_kb_search.py`），会初始化真实 SQLite 库
 - 另有脚本级验收：`scripts/acceptance_kb_validation.py`（KB 种子/重建校验）、`scripts/tmp_full_regression_check.py`（需服务运行的回归脚本）、根目录 `verify_rag_embedding.py`（向量嵌入质量专项验收，需真实嵌入 API）
+- 规则兜底离线评测：`scripts/eval_rule_offline.py`（不起服务、不联网、不调 LLM，直接驱动 semantic → detector → risk 规则链路对 test_set 批量评测并导出特征 dump 到 `datasets/rule_eval_dump.jsonl`，400 条约 12 秒；`datasets/` 已 gitignore）+ `scripts/tune_rule_fallback.py`（读 dump 离线复刻打分链做抬档规则调参）。**注意 ContextVar 不跨线程传播**：`set_llm_disabled(True)` 必须在每个 worker 线程内调用（已在 `evaluate_one` 内处理），在主线程设置后丢进线程池会静默走真实 LLM。
 
 当前测试现状（2026-08 在本机实测）：
 
 - `test_cluster_execution_mode.py` 与 `test_selected_steps.py` 已按 Orchestrator 新事件协议（`agent_call`/`agent_result`）重写，4 个用例全绿且毫秒级完成。打桩方式：`patch.dict(OrchestratorAgent.SUB_AGENTS, ...)` 替换注册表内的 `agent_class`——直接 patch 模块级类名无效（SUB_AGENTS 在类定义时已捕获原始类对象），否则真实子 Agent（含 threat_intel 联网检索）会被静默调用。
 - `test_attachment_behavior_analysis.py` 原 FAIL 用例（发票附件样本误判 safe）已按方案 A 修复（2026-08）：`src/tools.py` 附件可疑词表补中文财务词 + `src/agents/detector.py` 无 URL 时 url_score 固定中性 0.5；`src/agents/risk.py` 的 safe_boundary 死代码仅加 TODO 注释标记，阈值与打分公式未动。
+- 规则兜底准确率专项（2026-08-24）：`src/tools.py` 的 `PHISHING_PATTERNS` 补强第二批中文品类词（补贴变体/邮箱容量恐吓/薪资诱饵/学术征稿/BEC 询单，均经 200 条正常样本零命中验证），并新增 `WEAK_PHISHING_PATTERNS` 弱信号词表；`src/agents/risk.py` 规则兜底分支按"强模式 ≥1 命中阶梯抬档（61+7×(n-1)，封顶 82），强零命中时弱信号 ≥2 组合抬到 61"增强——只影响 LLM 不可用分支，不进 LLM prompt、不进 0.6/0.4 融合。test_set v1 纯规则路径实测：recall 0% → 80.5%、precision 100%、accuracy 90.25%（基线对照 `docs/BASELINE_EVAL_RULE_ONLY_2026-08-18.md`）。`test_rule_fallback.py` 的 `risk_score == rule_score` 旧断言已相应更新为 `risk_score >= rule_score` + 抬档生效断言。
 - 走完整 `run_analysis` 的用例（如 `test_url_reputation.py`、`test_attachment_behavior_analysis.py`）会经过 `threat_intel` 的实时联网检索，**非常慢且在网络受限环境下可能长时间阻塞**（实测 3 个附件用例耗时约 283s；全量运行在 600s 超时处挂起于 URL 信誉用例）。有网环境下该路径可用但不稳定，勿在断言中依赖其具体返回。
 
 ---

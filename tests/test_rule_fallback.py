@@ -92,9 +92,13 @@ class RuleFallbackTest(unittest.TestCase):
         report = run_analysis(email)
         risk = report["risk"]
 
-        self.assertEqual(risk["risk_score"], risk["rule_score"])
+        # 兜底不得伪造 LLM 参与度
         self.assertEqual(risk["llm_score"], 0)
         self.assertFalse(risk["llm_participated"])
+        # 规则兜底专属增强：final = max(rule_score, 品类命中抬档)，只会向上抬
+        self.assertGreaterEqual(risk["risk_score"], risk["rule_score"])
+        # 该样本命中 ≥2 个强品类模式（中文凭证窃取/中文紧急施压），应被抬到 high 判定线以上
+        self.assertGreaterEqual(risk["risk_score"], 61)
         self.assertEqual(report["is_phishing"], risk["risk_level"] in {"high", "critical"})
 
 
