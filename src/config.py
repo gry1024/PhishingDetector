@@ -16,7 +16,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 
 class LLMConfig(BaseModel):
-    """LLM API 配置 — 通过 LLM_PROVIDER 切换 minimax / qwen"""
+    """LLM API 配置 — 通过 LLM_PROVIDER 切换 minimax / qwen / deepseek"""
     provider: str = os.getenv("LLM_PROVIDER", "minimax")
     api_key: str = ""
     base_url: str = "https://api.minimax.chat/v1"
@@ -33,6 +33,13 @@ class LLMConfig(BaseModel):
                 "https://dashscope.aliyuncs.com/compatible-mode/v1",
             )
             self.model = os.getenv("QWEN_MODEL", "qwen-plus")
+        elif self.provider == "deepseek":
+            self.api_key = os.getenv("DEEPSEEK_API_KEY", "")
+            self.base_url = os.getenv(
+                "DEEPSEEK_BASE_URL",
+                "https://api.deepseek.com/v1",
+            )
+            self.model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
         else:
             self.api_key = os.getenv("MINIMAX_API_KEY", "")
             self.base_url = os.getenv("MINIMAX_BASE_URL", "https://api.minimax.chat/v1")
