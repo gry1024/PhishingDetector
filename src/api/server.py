@@ -65,3 +65,9 @@ async def studio_page():
 async def knowledge_page():
     """知识库页：浏览与检索钓鱼威胁知识体系。"""
     return FileResponse(str(PAGES_DIR / "knowledge.html"), headers=NOCACHE)
+
+
+@app.get("/advanced")
+async def advanced_page():
+    """进阶任务页：RAG 知识库专业增强 + Knowledge Agent 介绍与执行链路。"""
+    return FileResponse(str(PAGES_DIR / "advanced.html"), headers=NOCACHE)

@@ -35,6 +35,7 @@
       --btn-text: #0a0a0a;
       --green: #4ade80;
       --blue: #60a5fa;
+      --purple: #a78bfa;
       --radius: 10px;
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -274,9 +275,9 @@
     /* ====== SUB-PROJECT CARDS ====== */
     .project-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
-      width: min(100%, 760px);
+      width: min(100%, 1120px);
       margin-top: 32px;
     }
 
@@ -309,6 +310,10 @@
 
     .project-card.arena::before {
       background: linear-gradient(90deg, var(--blue), rgba(96,165,250,0.2));
+    }
+
+    .project-card.advanced::before {
+      background: linear-gradient(90deg, var(--purple), rgba(167,139,250,0.2));
     }
 
     .project-card:hover {
@@ -344,6 +349,11 @@
       border: 1px solid rgba(96,165,250,0.2);
     }
 
+    .project-card.advanced .project-icon {
+      background: rgba(167,139,250,0.1);
+      border: 1px solid rgba(167,139,250,0.2);
+    }
+
     .project-icon svg { width: 18px; height: 18px; }
 
     .project-status {
@@ -366,6 +376,12 @@
       color: var(--blue);
       background: rgba(96,165,250,0.08);
       border: 1px solid rgba(96,165,250,0.15);
+    }
+
+    .project-card.advanced .project-status {
+      color: var(--purple);
+      background: rgba(167,139,250,0.08);
+      border: 1px solid rgba(167,139,250,0.15);
     }
 
     .project-title {
@@ -418,6 +434,7 @@
 
     .project-card.phishing .project-cta { color: var(--green); }
     .project-card.arena .project-cta { color: var(--blue); }
+    .project-card.advanced .project-cta { color: var(--purple); }
 
     .project-card:hover .project-cta { gap: 10px; }
 
@@ -577,6 +594,10 @@
       .project-grid { grid-template-columns: 1fr; max-width: 420px; }
     }
 
+    @media (max-width: 1100px) {
+      .project-grid { grid-template-columns: repeat(2, 1fr); max-width: 720px; }
+    }
+
     @media (max-width: 640px) {
       .topbar { padding: 0 14px; }
       .brand-name { font-size: 15px; }
@@ -606,6 +627,7 @@
       <a class="nav-link active" href="/landing">首页</a>
       <a class="nav-link" href="/studio">钓鱼检测</a>
       <a class="nav-link" href="/knowledge">知识库</a>
+      <a class="nav-link" href="/advanced">进阶任务</a>
       <a class="nav-link" href="https://github.com/gry1024/cyberorion" target="_blank" rel="noopener">GitHub</a>
       <a class="nav-link" href="javascript:void(0)" onclick="openModal('about')">关于</a>
       <a class="btn btn-primary" href="/studio">进入工作台 <span aria-hidden="true">→</span></a>
@@ -673,6 +695,31 @@
               <span class="project-tag">知识库 RAG</span>
             </div>
             <span class="project-cta">进入平台 <span aria-hidden="true">→</span></span>
+          </a>
+
+          <!-- Sub-project 3: RAG Knowledge Base Advanced -->
+          <a class="project-card advanced" href="/advanced">
+            <div class="project-header">
+              <div class="project-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  <path d="M9 7h7"/>
+                  <path d="M9 11h7"/>
+                  <path d="M9 15h4"/>
+                </svg>
+              </div>
+              <span class="project-status">已上线</span>
+            </div>
+            <div class="project-title">RAG 知识库专业增强</div>
+            <div class="project-desc">9 大类 60+ 条目覆盖法律法规、攻击手法、ATT&amp;CK、近期真实案例；Knowledge Agent 双路检索 + 蓝队精准注入。</div>
+            <div class="project-tags">
+              <span class="project-tag">知识库 RAG</span>
+              <span class="project-tag">Knowledge Agent</span>
+              <span class="project-tag">法律法规</span>
+              <span class="project-tag">ATT&amp;CK</span>
+            </div>
+            <span class="project-cta">进入知识中心 <span aria-hidden="true">→</span></span>
           </a>
         </div>
       </div>

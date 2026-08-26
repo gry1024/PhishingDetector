@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>CyberOrion | 进阶任务 · RAG 知识库专业增强</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Cormorant+Garamond:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'NotoSerifSC';
+      src: url('/static/fonts/NotoSerifSC.ttf') format('truetype-variations');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --bg: #0a0a0a;
+      --bg-elev: #111112;
+      --bg-hover: #171718;
+      --bg-active: #1d1d1f;
+      --border: rgba(255,255,255,0.09);
+      --border-strong: rgba(255,255,255,0.16);
+      --text: #f5f5f5;
+      --text-2: rgba(255,255,255,0.64);
+      --text-3: rgba(255,255,255,0.40);
+      --green: #4ade80;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --purple-soft: rgba(167,139,250,0.12);
+      --purple-border: rgba(167,139,250,0.28);
+      --radius: 10px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-pill: 999px;
+      --topbar-h: 60px;
+      --page-max: 1240px;
+
+      --font-serif: 'NotoSerifSC', 'Noto Serif SC', 'SimSun', '宋体', 'STSong', serif;
+      --font-sans: 'Inter', 'Noto Sans SC', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --font-display: 'Cormorant Garamond', 'NotoSerifSC', 'Noto Serif SC', serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); overflow-x: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body { padding-top: var(--topbar-h); }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font: inherit; color: inherit; background: none; border: none; outline: none; }
+
+    /* ====== TOPBAR ====== */
+    .topbar { position: fixed; inset: 0 0 auto 0; z-index: 50; height: var(--topbar-h); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 20px; background: rgba(10,10,10,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .brand { display: inline-flex; align-items: center; gap: 11px; min-width: 0; flex-shrink: 0; }
+    .brand-mark { width: 28px; height: 28px; border-radius: var(--radius-sm); background: linear-gradient(135deg, rgba(167,139,250,0.20), rgba(96,165,250,0.20)); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.9); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: -0.02em; flex-shrink: 0; }
+    .brand-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+    .nav-links { display: flex; align-items: center; gap: 2px; min-width: 0; }
+    .nav-links a { font-family: var(--font-sans); font-size: 13px; font-weight: 500; color: var(--text-2); padding: 8px 12px; border-radius: var(--radius-sm); white-space: nowrap; transition: background-color .15s ease, color .15s ease; }
+    .nav-links a:hover { background: var(--bg-hover); color: var(--text); }
+    .nav-links a.active { color: var(--text); background: var(--bg-active); }
+    .nav-links a.btn-primary { color: #0a0a0a; background: #f5f5f5; font-weight: 600; padding: 8px 14px; margin-left: 6px; }
+    .nav-links a.btn-primary:hover { background: #e8e8e8; }
+
+    /* ====== HERO ====== */
+    .hero { position: relative; padding: 80px 20px 48px; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; background: radial-gradient(1200px 600px at 50% -200px, rgba(167,139,250,0.10), transparent 70%), radial-gradient(900px 500px at 100% 30%, rgba(96,165,250,0.06), transparent 70%); pointer-events: none; }
+    .hero-inner { position: relative; z-index: 1; max-width: var(--page-max); margin: 0 auto; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: var(--radius-pill); border: 1px solid var(--purple-border); background: var(--purple-soft); color: rgba(255,255,255,0.78); font-size: 12px; font-weight: 500; letter-spacing: 0.04em; margin-bottom: 22px; }
+    .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 6px rgba(167,139,250,0.7); }
+    .hero-title { font-family: var(--font-display); font-size: clamp(40px, 6.4vw, 76px); line-height: 1.05; letter-spacing: -0.02em; font-weight: 600; background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.78)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-subtitle { margin-top: 12px; font-family: var(--font-serif); font-size: clamp(18px, 2.2vw, 24px); line-height: 1.4; font-weight: 500; color: rgba(255,255,255,0.78); }
+    .hero-desc { margin-top: 14px; max-width: 720px; font-size: clamp(13px, 1.3vw, 15px); line-height: 1.7; color: rgba(255,255,255,0.52); }
+
+    /* ====== STATS ====== */
+    .stats { margin-top: 32px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stat-card { padding: 18px 18px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); background: rgba(17,17,18,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .stat-card .v { font-family: var(--font-display); font-size: 36px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+    .stat-card .v .unit { font-size: 18px; color: var(--text-2); margin-left: 4px; }
+    .stat-card .l { margin-top: 6px; font-size: 12px; color: var(--text-2); letter-spacing: 0.04em; }
+
+    /* ====== SECTIONS ====== */
+    section.page-section { padding: 56px 20px; border-top: 1px solid var(--border); }
+    .section-inner { max-width: var(--page-max); margin: 0 auto; }
+    .section-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .section-title { margin-top: 14px; font-family: var(--font-serif); font-size: clamp(26px, 3.4vw, 36px); font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+    .section-desc { margin-top: 10px; max-width: 760px; font-size: 14px; line-height: 1.75; color: var(--text-2); }
+
+    /* ====== KB BROWSER ====== */
+    .kb-toolbar { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .kb-search { flex: 1; min-width: 240px; height: 44px; padding: 0 14px 0 40px; border-radius: var(--radius); border: 1px solid var(--border-strong); background: var(--bg-elev); color: var(--text); font-size: 14px; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'); background-repeat: no-repeat; background-position: 14px 50%; }
+    .kb-search:focus { border-color: rgba(167,139,250,0.5); }
+    .kb-mode { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-elev); }
+    .kb-mode button { padding: 6px 12px; border-radius: var(--radius-sm); color: var(--text-2); font-size: 12px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s; }
+    .kb-mode button.active { background: rgba(167,139,250,0.15); color: var(--text); }
+    .kb-mode button:hover:not(.active) { background: var(--bg-hover); color: var(--text); }
+
+    .kb-layout { margin-top: 22px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .kb-cats { position: sticky; top: calc(var(--topbar-h) + 14px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); padding: 8px; }
+    .kb-cats-title { font-size: 11px; letter-spacing: 0.08em; color: var(--text-3); text-transform: uppercase; padding: 8px 8px 10px; }
+    .kb-cats-list { display: flex; flex-direction: column; gap: 2px; max-height: 520px; overflow: auto; }
+    .kb-cat-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; border-radius: var(--radius-sm); color: var(--text-2); font-size: 13px; cursor: pointer; transition: background-color .15s, color .15s; }
+    .kb-cat-item:hover { background: var(--bg-hover); color: var(--text); }
+    .kb-cat-item.active { background: rgba(167,139,250,0.12); color: var(--text); border-left: 2px solid var(--purple); padding-left: 8px; }
+    .kb-cat-count { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+    .kb-cards { display: flex; flex-direction: column; gap: 12px; min-height: 280px; }
+    .kb-card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); padding: 18px 20px; cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+    .kb-card:hover { border-color: rgba(167,139,250,0.4); transform: translateY(-1px); }
+    .kb-card-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .kb-card-cat { font-size: 11px; color: var(--text-3); letter-spacing: 0.04em; }
+    .kb-card-title { font-family: var(--font-serif); font-size: 16px; line-height: 1.45; font-weight: 600; letter-spacing: -0.01em; }
+    .kb-card-summary { margin-top: 8px; font-size: 13.5px; line-height: 1.7; color: var(--text-2); }
+    .kb-card-tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px; }
+    .kb-card-tag { font-size: 10.5px; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); color: var(--text-3); }
+    .kb-card-footer { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-3); }
+    .risk-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 10.5px; font-weight: 600; }
+    .risk-critical { color: #fca5a5; background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.4); }
+    .risk-high { color: #fdba74; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.4); }
+    .risk-medium { color: #fcd34d; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.4); }
+    .risk-low { color: #86efac; background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.4); }
+    .kb-empty { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 36px 14px; text-align: center; color: var(--text-2); background: var(--bg-elev); font-size: 14px; }
+
+    /* ====== AGENT FLOW ====== */
+    .agent-grid { margin-top: 28px; display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 16px; align-items: start; }
+    .agent-panel { border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(17,17,18,0.5); padding: 22px; }
+    .agent-panel h3 { font-family: var(--font-serif); font-size: 17px; font-weight: 600; margin-bottom: 12px; }
+    .agent-panel p { font-size: 13px; line-height: 1.75; color: var(--text-2); margin-bottom: 10px; }
+    .agent-panel ul { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .agent-panel li { font-size: 12.5px; line-height: 1.65; color: var(--text-2); padding-left: 14px; position: relative; }
+    .agent-panel li::before { content: ""; position: absolute; left: 0; top: 8px; width: 4px; height: 4px; border-radius: 50%; background: var(--purple); }
+    .agent-flow { border: 1px solid var(--purple-border); border-radius: var(--radius-md); background: linear-gradient(180deg, rgba(167,139,250,0.05), rgba(167,139,250,0.02)); padding: 18px; }
+    .agent-flow svg { width: 100%; height: auto; display: block; }
+
+    /* ====== KB DESIGN ====== */
+    .kb-design { margin-top: 28px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .kb-design-card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-elev); padding: 22px; }
+    .kb-design-card h4 { font-family: var(--font-serif); font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .kb-design-card h4 .pill { font-family: var(--font-sans); font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--purple-border); color: var(--purple); background: var(--purple-soft); letter-spacing: 0.04em; }
+    .kb-design-card p { font-size: 13px; line-height: 1.75; color: var(--text-2); }
+    .kb-design-card .meta-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .kb-design-card .meta-list .row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-2); padding: 6px 0; border-top: 1px dashed var(--border); }
+    .kb-design-card .meta-list .row:first-child { border-top: 0; }
+    .kb-design-card .meta-list .row strong { color: var(--text); font-weight: 500; font-family: var(--font-mono); font-size: 11.5px; }
+
+    /* ====== MODAL ====== */
+    .modal-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.6); }
+    .modal-overlay.open { display: flex; }
+    .modal-panel { position: relative; width: min(100%, 820px); max-height: 86vh; overflow: auto; padding: 32px 36px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-elev); color: var(--text); }
+    .modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text-2); cursor: pointer; line-height: 1; }
+    .modal-close:hover { background: var(--bg-hover); color: var(--text); }
+    .modal-cat { font-size: 12px; color: var(--text-3); letter-spacing: 0.04em; }
+    .modal-title { margin-top: 6px; font-family: var(--font-serif); font-size: 26px; font-weight: 600; line-height: 1.25; }
+    .modal-meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .modal-section { margin-top: 22px; }
+    .modal-section-title { font-size: 12px; letter-spacing: 0.08em; color: var(--text-3); text-transform: uppercase; margin-bottom: 8px; }
+    .modal-content { font-size: 14px; line-height: 1.85; color: var(--text-2); white-space: pre-wrap; }
+    .modal-recommendation { padding: 14px 16px; border-left: 2px solid var(--purple); background: var(--purple-soft); border-radius: var(--radius-sm); font-size: 13.5px; line-height: 1.75; color: var(--text); }
+    .modal-list { display: flex; flex-direction: column; gap: 4px; }
+    .modal-list .row { font-size: 12.5px; color: var(--text-2); padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); }
+    .modal-list .row code { font-family: var(--font-mono); font-size: 11.5px; color: var(--text); }
+
+    /* ====== FOOTER ====== */
+    .site-footer { border-top: 1px solid var(--border); color: var(--text-3); font-size: 11.5px; letter-spacing: 0.04em; text-align: center; padding: 18px 16px; }
+
+    /* ====== RESPONSIVE ====== */
+    @media (max-width: 980px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .agent-grid { grid-template-columns: 1fr; }
+      .kb-design { grid-template-columns: 1fr; }
+      .kb-layout { grid-template-columns: 1fr; }
+      .kb-cats { position: static; }
+      .kb-cats-list { max-height: 220px; }
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 0 14px; }
+      .nav-links a.nav-link { display: none; }
+      .hero { padding: 56px 14px 36px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      section.page-section { padding: 40px 14px; }
+      .modal-panel { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/landing" aria-label="CyberOrion 首页">
+      <div class="brand-mark">C</div>
+      <div class="brand-name">CyberOrion</div>
+    </a>
+    <nav class="nav-links" aria-label="主导航">
+      <a class="nav-link" href="/landing">首页</a>
+      <a class="nav-link" href="/studio">钓鱼检测</a>
+      <a class="nav-link" href="/knowledge">知识库</a>
+      <a class="nav-link active" href="/advanced">进阶任务</a>
+      <a class="nav-link" href="https://github.com/gry1024/cyberorion" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-primary" href="/studio">进入工作台 <span aria-hidden="true">→</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============================== HERO ============================== -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="eyebrow">
+          <span class="eyebrow-dot" aria-hidden="true"></span>
+          <span>进阶任务 · ADVANCED TASK</span>
+        </div>
+        <h1 class="hero-title">RAG 知识库专业增强</h1>
+        <p class="hero-subtitle">法律法规 · 攻击手法 · ATT&amp;CK · 近期真实案例 · Knowledge Agent 智能注入</p>
+        <p class="hero-desc">面向蓝队分析师的智能知识底座：9 大分类 60+ 条目覆盖钓鱼全谱，配合 Knowledge Agent 双路检索与字符预算感知注入，让蓝队推理始终扎根于权威知识。</p>
+
+        <div class="stats" id="stats">
+          <div class="stat-card"><div class="v" id="stat-total">--</div><div class="l">知识库条目</div></div>
+          <div class="stat-card"><div class="v" id="stat-cats">--</div><div class="l">分类覆盖</div></div>
+          <div class="stat-card"><div class="v">3<span class="unit">角色</span></div><div class="l">蓝队注入角色</div></div>
+          <div class="stat-card"><div class="v" id="stat-bytes">~<span id="stat-mb">3</span><span class="unit">MB</span></div><div class="l">知识库规模</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== KB BROWSER ============================== -->
+    <section class="page-section" id="kb-section">
+      <div class="section-inner">
+        <span class="section-eyebrow">SECTION 01</span>
+        <h2 class="section-title">威胁情报与法律法规知识库</h2>
+        <p class="section-desc">覆盖"三法一条例"等国内合规、攻击手法、ATT&amp;CK 技术、IoC 指标、品牌仿冒、真实案例、术语表与防御指南——每个条目均有完整正文、检测要点与处置建议。</p>
+
+        <div class="kb-toolbar">
+          <input id="kb-search" class="kb-search" type="search" placeholder="检索知识库（如：网络安全法、APT28、深度伪造、DMARC…）" autocomplete="off">
+          <div class="kb-mode" role="tablist" aria-label="检索模式">
+            <button data-mode="hybrid" class="active" type="button">混合检索</button>
+            <button data-mode="keyword" type="button">关键词</button>
+          </div>
+        </div>
+
+        <div class="kb-layout">
+          <aside class="kb-cats" aria-label="分类导航">
+            <div class="kb-cats-title">分类</div>
+            <div class="kb-cats-list" id="kb-cats-list">
+              <div class="kb-cat-item active" data-cat=""><span>全部</span><span class="kb-cat-count" id="cat-count-all">--</span></div>
+            </div>
+          </aside>
+
+          <div class="kb-cards" id="kb-cards">
+            <div class="kb-empty">加载中…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== KNOWLEDGE AGENT ============================== -->
+    <section class="page-section" id="agent-section">
+      <div class="section-inner">
+        <span class="section-eyebrow">SECTION 02</span>
+        <h2 class="section-title">Knowledge Agent：智能注入蓝队推理链</h2>
+        <p class="section-desc">Knowledge Agent 来自 CyberOrion 项目的 <code style="font-family: var(--font-mono); color: var(--purple); background: rgba(167,139,250,0.10); padding: 2px 6px; border-radius: 4px;">KnowledgeInjector</code> 组件。它只对蓝队角色（triage / threat_hunter / host_harden）开放，红队严禁调用——从权限层到测试层均硬性隔离。</p>
+
+        <div class="agent-grid">
+          <!-- Left: agent roles -->
+          <div class="agent-panel">
+            <h3>蓝队 Agent 角色</h3>
+            <p>每个蓝队子 Agent 在执行意图前都会调用 KnowledgeInjector 检索知识。</p>
+            <ul>
+              <li><strong style="color:var(--text)">triage</strong> · 告警分诊：判断告警真伪与严重度</li>
+              <li><strong style="color:var(--text)">threat_hunter</strong> · 威胁狩猎：基于 IOC/技术编号搜索历史活动</li>
+              <li><strong style="color:var(--text)">host_harden</strong> · 主机加固：检索对应 ATT&amp;CK 缓解措施</li>
+            </ul>
+            <p style="margin-top:14px;font-size:11.5px;color:var(--text-3);">红队（red / 渗透测试）严禁调用——<code style="font-family:var(--font-mono);color:#fca5a5;">SecurityError</code> 立即抛出，确保红队完全凭训练知识决策。</p>
+          </div>
+
+          <!-- Middle: flow diagram -->
+          <div class="agent-flow">
+            <svg viewBox="0 0 720 740" role="img" aria-label="Knowledge Agent 执行链路图">
+              <defs>
+                <linearGradient id="purpleGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="rgba(167,139,250,0.25)"/>
+                  <stop offset="100%" stop-color="rgba(167,139,250,0.08)"/>
+                </linearGradient>
+                <linearGradient id="purpleSolid" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="rgba(167,139,250,0.95)"/>
+                  <stop offset="100%" stop-color="rgba(167,139,250,0.65)"/>
+                </linearGradient>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.7)"/>
+                </marker>
+                <marker id="arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.4)"/>
+                </marker>
+                <style>
+                  .node { fill: rgba(17,17,18,0.92); stroke: rgba(167,139,250,0.45); stroke-width: 1.2; }
+                  .node-title { font: 600 13px Inter, 'Noto Sans SC', sans-serif; fill: #f5f5f5; }
+                  .node-sub { font: 400 10.5px Inter, 'Noto Sans SC', sans-serif; fill: rgba(255,255,255,0.55); }
+                  .node-mono { font: 500 10.5px 'JetBrains Mono', monospace; fill: rgba(167,139,250,0.95); }
+                  .node-red { fill: rgba(17,17,18,0.92); stroke: rgba(248,113,113,0.45); stroke-width: 1.2; }
+                  .node-red .node-title { fill: #fca5a5; }
+                  .lane-label { font: 600 11px 'JetBrains Mono', monospace; fill: rgba(255,255,255,0.45); letter-spacing: 0.08em; }
+                  .lane-bg { fill: rgba(255,255,255,0.02); stroke: rgba(255,255,255,0.06); stroke-width: 1; stroke-dasharray: 3 4; }
+                </style>
+              </defs>
+
+              <!-- Lanes -->
+              <rect x="10" y="40" width="700" height="660" rx="14" class="lane-bg"/>
+              <text x="22" y="64" class="lane-label">KNOWLEDGE AGENT · RAG INJECTION PIPELINE</text>
+
+              <!-- Row 1: trigger -->
+              <g>
+                <rect class="node" x="80" y="90" width="280" height="60" rx="10"/>
+                <text class="node-title" x="220" y="115" text-anchor="middle">蓝队 Agent · triage / threat_hunter / host_harden</text>
+                <text class="node-sub" x="220" y="135" text-anchor="middle">注入意图 intent + 当前状态 current_state</text>
+                <rect class="node-red" x="400" y="90" width="240" height="60" rx="10"/>
+                <text class="node-red node-title" x="520" y="115" text-anchor="middle">红队 Agent · 渗透测试</text>
+                <text class="node-sub" x="520" y="135" text-anchor="middle">严禁调用 RAG（凭训练知识决策）</text>
+              </g>
+
+              <!-- Arrow down to Injector -->
+              <line x1="220" y1="150" x2="220" y2="180" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="520" y1="150" x2="520" y2="180" stroke="rgba(248,113,113,0.5)" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrow-soft)"/>
+              <text class="node-sub" x="380" y="172" text-anchor="middle" style="fill: rgba(248,113,113,0.7);">SecurityError 拦截</text>
+
+              <!-- Row 2: Injector entry -->
+              <g>
+                <rect class="node" x="80" y="185" width="560" height="56" rx="10" fill="url(#purpleGrad)"/>
+                <text class="node-title" x="360" y="208" text-anchor="middle">KnowledgeInjector.inject_for(side, role, intent, state, emitter)</text>
+                <text class="node-sub" x="360" y="227" text-anchor="middle">1. 权限检查 ALLOWED_SIDES = {blue, host_harden}  2. KB 可用性检查  3. 构造查询  4. 双路检索</text>
+              </g>
+
+              <!-- Arrow down to Query Builder -->
+              <line x1="220" y1="241" x2="220" y2="270" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="500" y1="241" x2="500" y2="270" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <!-- Row 3: Query Builder + Security Check -->
+              <g>
+                <rect class="node" x="80" y="275" width="240" height="62" rx="10"/>
+                <text class="node-title" x="200" y="298" text-anchor="middle">Query Builder</text>
+                <text class="node-sub" x="200" y="316" text-anchor="middle">role + intent + techniques</text>
+                <text class="node-sub" x="200" y="330" text-anchor="middle">state.active_alerts / techniques_detected</text>
+
+                <rect class="node" x="360" y="275" width="280" height="62" rx="10"/>
+                <text class="node-title" x="500" y="298" text-anchor="middle">Security Check</text>
+                <text class="node-sub" x="500" y="316" text-anchor="middle">side ∈ {blue, host_harden}?  → 白名单</text>
+                <text class="node-sub" x="500" y="330" text-anchor="middle">否则抛 SecurityError（红队）</text>
+              </g>
+
+              <!-- Arrows down to retrieve -->
+              <line x1="200" y1="337" x2="200" y2="365" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="500" y1="337" x2="500" y2="365" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <!-- Row 4: Dual-path retrieve -->
+              <g>
+                <rect class="node" x="60" y="370" width="600" height="58" rx="10" fill="url(#purpleGrad)"/>
+                <text class="node-title" x="360" y="395" text-anchor="middle">_retrieve() 双路检索</text>
+                <text class="node-sub" x="360" y="414" text-anchor="middle">Path A: kb.lookup(tid) 精确查 ATT&amp;CK 编号  ｜  Path B: kb.search(query, k=3) 语义/关键词检索</text>
+              </g>
+
+              <!-- Branch: Path A vs Path B -->
+              <line x1="200" y1="428" x2="200" y2="455" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+              <line x1="520" y1="428" x2="520" y2="455" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <!-- Path A: lookup -->
+              <g>
+                <rect class="node" x="60" y="460" width="280" height="80" rx="10"/>
+                <text class="node-title" x="200" y="483" text-anchor="middle">Path A · kb.lookup(tid)</text>
+                <text class="node-sub" x="200" y="501" text-anchor="middle">精确查 ATT&amp;CK 技术编号（T1566.001 等）</text>
+                <text class="node-mono" x="200" y="519" text-anchor="middle">_by_id[tid.upper()]</text>
+                <text class="node-sub" x="200" y="535" text-anchor="middle">补 name_zh 中文标题 + 完整正文</text>
+              </g>
+
+              <!-- Path B: search -->
+              <g>
+                <rect class="node" x="380" y="460" width="280" height="80" rx="10"/>
+                <text class="node-title" x="520" y="483" text-anchor="middle">Path B · kb.search(query)</text>
+                <text class="node-sub" x="520" y="501" text-anchor="middle">embedding 模式 (cosine)  /  BM25 (idf + CJK bigram)</text>
+                <text class="node-mono" x="520" y="519" text-anchor="middle">TID_BOOST = 100.0</text>
+                <text class="node-sub" x="520" y="535" text-anchor="middle">embedding 失败自动回退 BM25</text>
+              </g>
+
+              <!-- Arrows merge down to truncate -->
+              <line x1="200" y1="540" x2="200" y2="568" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+              <line x1="520" y1="540" x2="520" y2="568" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+              <line x1="200" y1="568" x2="360" y2="568" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+              <line x1="520" y1="568" x2="360" y2="568" stroke="rgba(167,139,250,0.6)" stroke-width="1.5"/>
+              <line x1="360" y1="568" x2="360" y2="588" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <!-- Row 5: Truncate -->
+              <g>
+                <rect class="node" x="60" y="592" width="600" height="58" rx="10" fill="url(#purpleGrad)"/>
+                <text class="node-title" x="360" y="617" text-anchor="middle">_truncate_by_chars() · 字符预算感知截断</text>
+                <text class="node-sub" x="360" y="636" text-anchor="middle">blue = 2500 chars / 8 docs  ｜  host_harden = 1800 chars / 6 docs  ｜  命中按字符贪心取满，剩余 ≥100 字才截断</text>
+              </g>
+
+              <line x1="360" y1="650" x2="360" y2="675" stroke="rgba(167,139,250,0.6)" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+              <!-- Row 6: SSE events -->
+              <g>
+                <rect class="node" x="60" y="680" width="600" height="56" rx="10"/>
+                <text class="node-title" x="360" y="703" text-anchor="middle">SSE 事件发射 → 注入 LLM Prompt（蓝队 only）</text>
+                <text class="node-sub" x="360" y="721" text-anchor="middle">rag_retrieval / rag_no_match / rag_unavailable  ｜  完整 doc id + 中文标题 + 命中正文</text>
+              </g>
+
+            </svg>
+          </div>
+
+          <!-- Right: KB design -->
+          <div class="agent-panel">
+            <h3>知识库设计</h3>
+            <p>Knowledge Agent 后端是多源异构的知识库集合：</p>
+            <ul>
+              <li><strong style="color:var(--text)">attack_kb.jsonl</strong> · MITRE ATT&amp;CK 企业矩阵（8126 文档）</li>
+              <li><strong style="color:var(--text)">enterprise-attack.json</strong> · ATT&amp;CK STIX 完整定义</li>
+              <li><strong style="color:var(--text)">cve_critical.json</strong> · 关键 CVE 情报</li>
+              <li><strong style="color:var(--text)">regulations.json</strong> · 中国法律法规（已对接三法一条例）</li>
+              <li><strong style="color:var(--text)">sandbox_knowledge.json</strong> · 靶场环境知识</li>
+              <li><strong style="color:var(--text)">malpedia_families.json</strong> · 恶意软件家族</li>
+            </ul>
+            <p style="margin-top:14px;font-size:11.5px;color:var(--text-3);">PhishingDetector 内置 kb_entries（60+ 条）作为 attack_kb 的钓鱼专项补强：法律法规、近期案例、攻击手法、防御指南。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== KB DESIGN DETAIL ============================== -->
+    <section class="page-section" id="kb-design-section">
+      <div class="section-inner">
+        <span class="section-eyebrow">SECTION 03</span>
+        <h2 class="section-title">检索策略与字符预算</h2>
+        <p class="section-desc">Knowledge Agent 的工程约束确保检索既全面（双路互补）又可控（字符预算），让蓝队推理不会因为 RAG 而变得臃肿或拖沓。</p>
+
+        <div class="kb-design">
+          <div class="kb-design-card">
+            <h4>双路检索策略 <span class="pill">DUAL-PATH</span></h4>
+            <p>Path A 精确查用于技术编号（T1566.001 等），命中权重极高；Path B 语义查覆盖意图关键词与中文长句。两者结果按 doc id 去重合并。</p>
+            <div class="meta-list">
+              <div class="row"><span>Path A · 精确查</span><strong>kb.lookup(tid)</strong></div>
+              <div class="row"><span>Path B · 语义查</span><strong>kb.search(q, k=3)</strong></div>
+              <div class="row"><span>embedding 模式</span><strong>cosine · npz cache</strong></div>
+              <div class="row"><span>回退 BM25</span><strong>idf + CJK bigram</strong></div>
+              <div class="row"><span>技术编号加权</span><strong>TID_BOOST = 100.0</strong></div>
+              <div class="row"><span>嵌入模型</span><strong>text-embedding-v3</strong></div>
+            </div>
+          </div>
+
+          <div class="kb-design-card">
+            <h4>字符预算与角色策略 <span class="pill">BUDGET</span></h4>
+            <p>不同蓝队角色对应不同字符预算——避免提示词被知识库内容淹没，也避免关键信息因截断而丢失。</p>
+            <div class="meta-list">
+              <div class="row"><span>blue · 蓝队响应</span><strong>2500 chars / 8 docs</strong></div>
+              <div class="row"><span>host_harden · 主机加固</span><strong>1800 chars / 6 docs</strong></div>
+              <div class="row"><span>截断阈值</span><strong>剩余 &lt; 100 字则丢弃该块</strong></div>
+              <div class="row"><span>命中策略</span><strong>全量命中后再贪心截断</strong></div>
+              <div class="row"><span>失败事件</span><strong>rag_unavailable vs rag_no_match</strong></div>
+              <div class="row"><span>中文标题</span><strong>zh_translations.py 静态映射</strong></div>
+            </div>
+          </div>
+
+          <div class="kb-design-card">
+            <h4>前端可视化事件 <span class="pill">SSE</span></h4>
+            <p>每次检索都会通过 SSE 实时下发事件，前端可按 doc id + 中文标题 + 命中正文逐条展示，让分析师看清"AI 是依据什么知识做出判断"。</p>
+            <div class="meta-list">
+              <div class="row"><span>rag_retrieval</span><strong>命中 + 完整 doc 列表</strong></div>
+              <div class="row"><span>rag_no_match</span><strong>KB 中无相关条目</strong></div>
+              <div class="row"><span>rag_unavailable</span><strong>KB 索引不可用</strong></div>
+              <div class="row"><span>前端组件</span><strong>KnowledgeView.tsx · KbGraph.tsx</strong></div>
+              <div class="row"><span>展示样式</span><strong>紫色边框 + 可展开正文</strong></div>
+              <div class="row"><span>trace 状态</span><strong>查询/角色/意图/命中条数</strong></div>
+            </div>
+          </div>
+
+          <div class="kb-design-card">
+            <h4>安全边界与红蓝隔离 <span class="pill">SECURITY</span></h4>
+            <p>KnowledgeInjector 在代码层、调用层、测试层三重保证 RAG 仅供蓝队使用——这是为了保证"红队完全凭训练知识与现场侦察决策"，不因 RAG 注入而获得不公平优势。</p>
+            <div class="meta-list">
+              <div class="row"><span>代码层白名单</span><strong>ALLOWED_SIDES = {blue, host_harden}</strong></div>
+              <div class="row"><span>违规异常</span><strong>SecurityError(PermissionError)</strong></div>
+              <div class="row"><span>红队系统提示</span><strong>明确禁止 KB 检索段落</strong></div>
+              <div class="row"><span>测试覆盖</span><strong>test_knowledge_injector_rejects_red</strong></div>
+              <div class="row"><span>工具调用校验</span><strong>tool_call messages 不含 RAG 段</strong></div>
+              <div class="row"><span>审计</span><strong>SSE 事件含完整 side 字段</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <span style="font-family: var(--font-serif); color: var(--purple);">CyberOrion</span> · RAG 知识库专业增强 · 进阶任务
+    </footer>
+  </main>
+
+  <!-- ============================== KB Detail Modal ============================== -->
+  <div class="modal-overlay" id="kbModal" onclick="if (event.target === this) closeKbModal()">
+    <div class="modal-panel" role="dialog" aria-modal="true">
+      <button class="modal-close" type="button" onclick="closeKbModal()" aria-label="关闭">×</button>
+      <div class="modal-cat" id="modal-cat"></div>
+      <h2 class="modal-title" id="modal-title"></h2>
+      <div class="modal-meta">
+        <span class="risk-badge" id="modal-severity"></span>
+        <span class="modal-cat" id="modal-updated"></span>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">摘要</div>
+        <div class="modal-content" id="modal-summary"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">正文</div>
+        <div class="modal-content" id="modal-content"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">建议处置</div>
+        <div class="modal-recommendation" id="modal-recommendation"></div>
+      </div>
+
+      <div class="modal-section" id="modal-techniques-section">
+        <div class="modal-section-title">ATT&amp;CK 技术</div>
+        <div class="modal-list" id="modal-techniques"></div>
+      </div>
+
+      <div class="modal-section" id="modal-detection-section">
+        <div class="modal-section-title">检测要点</div>
+        <div class="modal-list" id="modal-detection"></div>
+      </div>
+
+      <div class="modal-section" id="modal-iocs-section">
+        <div class="modal-section-title">IoC 威胁指标</div>
+        <div class="modal-list" id="modal-iocs"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">关键词 &amp; 标签</div>
+        <div class="modal-list" id="modal-meta-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATE = {
+      categories: [],
+      currentCat: '',
+      searchTimer: null,
+      entries: [],
+    };
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function safeList(v) {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+      }
+      return [];
+    }
+
+    function renderCategories(cats) {
+      const list = document.getElementById('kb-cats-list');
+      const allCount = cats.reduce((sum, c) => sum + (c.count || 0), 0);
+      document.getElementById('cat-count-all').textContent = allCount;
+      let html = `<div class="kb-cat-item active" data-cat=""><span>全部</span><span class="kb-cat-count">${allCount}</span></div>`;
+      for (const c of cats) {
+        html += `<div class="kb-cat-item" data-cat="${escapeHtml(c.name || c.id)}"><span>${escapeHtml(c.name || c.id)}</span><span class="kb-cat-count">${c.count}</span></div>`;
+      }
+      list.innerHTML = html;
+      list.querySelectorAll('.kb-cat-item').forEach(el => {
+        el.addEventListener('click', () => {
+          list.querySelectorAll('.kb-cat-item').forEach(x => x.classList.remove('active'));
+          el.classList.add('active');
+          STATE.currentCat = el.dataset.cat || '';
+          loadEntries();
+        });
+      });
+    }
+
+    function riskClass(sev) {
+      const s = (sev || '').toLowerCase();
+      if (s === 'critical') return 'risk-critical';
+      if (s === 'high') return 'risk-high';
+      if (s === 'medium') return 'risk-medium';
+      return 'risk-low';
+    }
+
+    function renderEntries(entries) {
+      const wrap = document.getElementById('kb-cards');
+      if (!entries || !entries.length) {
+        wrap.innerHTML = '<div class="kb-empty">未找到匹配的知识库条目。换个关键词试试？</div>';
+        return;
+      }
+      let html = '';
+      for (const e of entries) {
+        const sev = (e.severity || 'low').toLowerCase();
+        const tags = safeList(e.tags).slice(0, 5);
+        const techniques = safeList(e.attack_techniques);
+        const cat = escapeHtml(e.category || '未分类');
+        const title = escapeHtml(e.title || '');
+        const summary = escapeHtml(e.summary || '');
+        html += `<article class="kb-card" data-id="${e.id}">
+          <div class="kb-card-head">
+            <span class="kb-card-cat">${cat}</span>
+            <span class="risk-badge ${riskClass(sev)}">${sev}</span>
+            ${techniques.length ? `<span class="kb-card-cat" style="color:var(--text-3);">·</span><span class="kb-card-cat">${escapeHtml(techniques.join(' / '))}</span>` : ''}
+          </div>
+          <div class="kb-card-title">${title}</div>
+          <div class="kb-card-summary">${summary}</div>
+          <div class="kb-card-tags">${tags.map(t => `<span class="kb-card-tag">${escapeHtml(t)}</span>`).join('')}</div>
+          <div class="kb-card-footer">
+            <span>${escapeHtml(e.match_type ? ('匹配 · ' + e.match_type) : '关键词命中')}${e.fused_score ? ' · ' + Math.round(e.fused_score) + ' 分' : ''}</span>
+            <span>查看详情 →</span>
+          </div>
+        </article>`;
+      }
+      wrap.innerHTML = html;
+      wrap.querySelectorAll('.kb-card').forEach(el => {
+        el.addEventListener('click', () => openEntry(Number(el.dataset.id)));
+      });
+    }
+
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/kb/categories');
+        if (!res.ok) throw new Error('categories HTTP ' + res.status);
+        const cats = await res.json();
+        STATE.categories = cats;
+        renderCategories(cats);
+        const kbSize = cats.reduce((sum, c) => sum + (c.count || 0), 0);
+        document.getElementById('stat-total').textContent = kbSize;
+        document.getElementById('stat-cats').textContent = cats.length;
+        document.getElementById('stat-mb').textContent = Math.max(3, Math.round(kbSize * 0.05));
+      } catch (err) {
+        console.error('loadCategories failed', err);
+      }
+    }
+
+    async function loadEntries() {
+      const wrap = document.getElementById('kb-cards');
+      wrap.innerHTML = '<div class="kb-empty">加载中…</div>';
+      const q = (document.getElementById('kb-search').value || '').trim();
+      const mode = document.querySelector('.kb-mode button.active').dataset.mode;
+
+      try {
+        let entries = [];
+        if (q) {
+          const url = `/api/kb/search?q=${encodeURIComponent(q)}&mode=${mode}&limit=30`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('search HTTP ' + res.status);
+          const data = await res.json();
+          entries = Array.isArray(data) ? data : (data.results || []);
+          // filter by category client-side when searching
+          if (STATE.currentCat) {
+            entries = entries.filter(e => (e.category || '') === STATE.currentCat);
+          }
+        } else if (STATE.currentCat) {
+          const res = await fetch(`/api/kb/entries?limit=200&category=${encodeURIComponent(STATE.currentCat)}`);
+          if (!res.ok) throw new Error('entries HTTP ' + res.status);
+          entries = await res.json();
+        } else {
+          const res = await fetch('/api/kb/entries?limit=200');
+          if (!res.ok) throw new Error('entries HTTP ' + res.status);
+          entries = await res.json();
+        }
+        STATE.entries = entries;
+        renderEntries(entries);
+      } catch (err) {
+        console.error('loadEntries failed', err);
+        wrap.innerHTML = '<div class="kb-empty">加载失败：' + escapeHtml(err.message || '') + '</div>';
+      }
+    }
+
+    async function openEntry(id) {
+      try {
+        const res = await fetch(`/api/kb/entries/${id}`);
+        if (!res.ok) throw new Error('entry HTTP ' + res.status);
+        const e = await res.json();
+        showModal(e);
+      } catch (err) {
+        console.error('openEntry failed', err);
+      }
+    }
+
+    function showModal(e) {
+      document.getElementById('modal-cat').textContent = e.category || '未分类';
+      document.getElementById('modal-title').textContent = e.title || '';
+      const sev = (e.severity || 'low').toLowerCase();
+      const sevEl = document.getElementById('modal-severity');
+      sevEl.className = 'risk-badge ' + riskClass(sev);
+      sevEl.textContent = sev;
+      document.getElementById('modal-updated').textContent = '更新于 ' + (e.updated_at || '').slice(0, 10);
+
+      document.getElementById('modal-summary').textContent = e.summary || '';
+      document.getElementById('modal-content').textContent = e.content || '';
+      document.getElementById('modal-recommendation').textContent = e.recommendation || '';
+
+      const techniques = safeList(e.attack_techniques);
+      const techniquesSection = document.getElementById('modal-techniques-section');
+      const techniquesWrap = document.getElementById('modal-techniques');
+      if (techniques.length) {
+        techniquesSection.style.display = '';
+        techniquesWrap.innerHTML = techniques.map(t => `<div class="row"><code>${escapeHtml(t)}</code></div>`).join('');
+      } else {
+        techniquesSection.style.display = 'none';
+      }
+
+      const detection = safeList(e.detection_points);
+      const detectionSection = document.getElementById('modal-detection-section');
+      const detectionWrap = document.getElementById('modal-detection');
+      if (detection.length) {
+        detectionSection.style.display = '';
+        detectionWrap.innerHTML = detection.map(t => `<div class="row">${escapeHtml(t)}</div>`).join('');
+      } else {
+        detectionSection.style.display = 'none';
+      }
+
+      const iocs = safeList(e.iocs);
+      const iocsSection = document.getElementById('modal-iocs-section');
+      const iocsWrap = document.getElementById('modal-iocs');
+      if (iocs.length) {
+        iocsSection.style.display = '';
+        iocsWrap.innerHTML = iocs.map(t => `<div class="row">${escapeHtml(t)}</div>`).join('');
+      } else {
+        iocsSection.style.display = 'none';
+      }
+
+      const kws = safeList(e.keywords);
+      const tags = safeList(e.tags);
+      const metaWrap = document.getElementById('modal-meta-list');
+      let metaRows = '';
+      if (kws.length) metaRows += `<div class="row"><strong style="margin-right:8px;">关键词</strong>${kws.map(k => `<code style="margin-right:6px;">${escapeHtml(k)}</code>`).join('')}</div>`;
+      if (tags.length) metaRows += `<div class="row"><strong style="margin-right:8px;">标签</strong>${tags.map(k => `<code style="margin-right:6px;">${escapeHtml(k)}</code>`).join('')}</div>`;
+      metaWrap.innerHTML = metaRows || '<div class="row">—</div>';
+
+      document.getElementById('kbModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeKbModal() {
+      document.getElementById('kbModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeKbModal();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCategories();
+      loadEntries();
+
+      document.querySelectorAll('.kb-mode button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.kb-mode button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          loadEntries();
+        });
+      });
+
+      const searchInput = document.getElementById('kb-search');
+      searchInput.addEventListener('input', () => {
+        clearTimeout(STATE.searchTimer);
+        STATE.searchTimer = setTimeout(loadEntries, 250);
+      });
+    });
+  </script>
+</body>
+</html>
