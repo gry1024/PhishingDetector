@@ -231,7 +231,7 @@
         <p class="section-desc">Knowledge Agent 是 CyberOrion 项目中负责知识库 RAG 检索、联网搜索增强、自动入库与持续学习的核心智能体。它严格隔离蓝白红权限——只服务蓝队（triage / threat_hunter / host_harden），红队严禁调用，确保红队完全凭训练知识与现场侦察决策。架构图按 <code style="font-family: var(--font-mono); color: var(--purple); background: rgba(167,139,250,0.10); padding: 2px 6px; border-radius: 4px;">cyberorion/core/knowledge_injector.py</code> 真实实现绘制。</p>
 
         <div class="agent-wrap">
-          <svg class="agent-svg" viewBox="0 0 1320 900" role="img" aria-label="Knowledge Agent 持续学习闭环架构图">
+          <svg class="agent-svg" viewBox="0 0 1600 1000" role="img" aria-label="Knowledge Agent 持续学习闭环架构图">
             <defs>
               <linearGradient id="laneFill" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stop-color="rgba(167,139,250,0.04)"/>
@@ -254,26 +254,27 @@
                 <stop offset="100%" stop-color="rgba(248,113,113,0.05)"/>
               </linearGradient>
               <marker id="arrowMain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.85)"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.9)"/>
               </marker>
               <marker id="arrowData" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(74,222,128,0.85)"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(74,222,128,0.9)"/>
               </marker>
               <marker id="arrowWarn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(248,113,113,0.85)"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(248,113,113,0.9)"/>
               </marker>
               <marker id="arrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.6)"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(167,139,250,0.7)"/>
               </marker>
               <style>
                 .nbox { fill: url(#nodeGrad); stroke: rgba(255,255,255,0.10); stroke-width: 1; }
                 .npurple { fill: url(#purpleNodeGrad); stroke: rgba(167,139,250,0.45); stroke-width: 1.4; }
                 .nred { fill: url(#redNodeGrad); stroke: rgba(248,113,113,0.50); stroke-width: 1.4; stroke-dasharray: 5 4; }
                 .nkb { fill: url(#kbGrad); stroke: rgba(74,222,128,0.45); stroke-width: 1.6; }
-                .label { font: 600 13px Inter, 'Noto Sans SC', sans-serif; fill: #f5f5f5; }
-                .sublabel { font: 400 11px Inter, 'Noto Sans SC', sans-serif; fill: rgba(255,255,255,0.58); }
-                .tag { font: 500 10px 'JetBrains Mono', monospace; fill: rgba(167,139,250,0.95); }
-                .lane-label { font: 600 11px 'JetBrains Mono', monospace; fill: rgba(255,255,255,0.36); letter-spacing: 0.10em; }
+                .label { font: 600 14px Inter, 'Noto Sans SC', sans-serif; fill: #f5f5f5; }
+                .sublabel { font: 400 11.5px Inter, 'Noto Sans SC', sans-serif; fill: rgba(255,255,255,0.62); }
+                .tag { font: 500 10.5px 'JetBrains Mono', monospace; fill: rgba(167,139,250,0.95); }
+                .stage-num { font: 700 22px 'Cormorant Garamond', 'NotoSerifSC', serif; fill: rgba(167,139,250,0.85); }
+                .stage-title { font: 600 12px 'JetBrains Mono', monospace; fill: rgba(255,255,255,0.45); letter-spacing: 0.18em; }
                 .flow-label { font: 500 11px Inter, 'Noto Sans SC', sans-serif; fill: rgba(255,255,255,0.78); }
                 .flow-label-em { font: 600 11px Inter, 'Noto Sans SC', sans-serif; fill: #f5f5f5; }
                 .flow-label-mono { font: 500 10.5px 'JetBrains Mono', monospace; fill: rgba(167,139,250,0.95); }
@@ -289,197 +290,221 @@
               </style>
             </defs>
 
-            <!-- Background lanes -->
-            <rect x="0" y="0" width="1320" height="900" fill="#0a0a0a"/>
-            <text class="lane-label" x="32" y="32">KNOWLEDGE AGENT · RAG + CONTINUOUS LEARNING LOOP</text>
+            <!-- Background -->
+            <rect x="0" y="0" width="1600" height="1000" fill="#0a0a0a"/>
+            <text class="stage-title" x="40" y="46">KNOWLEDGE AGENT · RAG + CONTINUOUS LEARNING LOOP</text>
 
-            <!-- ===================== LANE 1: TRIGGER ===================== -->
-            <text class="lane-label" x="32" y="74">▍ 01 · TRIGGER</text>
-            <!-- Blue Agent -->
-            <rect class="nbox" x="60" y="92" width="240" height="68" rx="10"/>
-            <text class="label" x="180" y="118" text-anchor="middle">蓝队 Agent 角色</text>
-            <text class="sublabel" x="180" y="136" text-anchor="middle">triage · threat_hunter · host_harden</text>
-            <rect class="pill" x="74" y="142" width="74" height="14" rx="7"/>
-            <text class="tag" x="111" y="152" text-anchor="middle">inject_for</text>
+            <!-- =========== ROW 1: 触发 + 注入 (Trigger + Inject) =========== -->
+            <!-- Stage 01: TRIGGER  (包含蓝 / 红 Agent) -->
+            <text class="stage-num" x="40" y="120" text-anchor="start">01</text>
+            <text class="stage-title" x="78" y="120">TRIGGER</text>
 
-            <!-- Red Agent -->
-            <rect class="nred" x="60" y="184" width="240" height="60" rx="10"/>
-            <text class="label" x="180" y="208" text-anchor="middle" style="fill:#fca5a5;">红队 Agent</text>
-            <text class="sublabel" x="180" y="224" text-anchor="middle">严禁调用 RAG · 凭训练知识决策</text>
-            <rect class="pill-warn" x="74" y="230" width="60" height="14" rx="7"/>
-            <text class="flow-label-warn" x="104" y="240" text-anchor="middle">blocked</text>
+            <!-- 蓝队 Agent -->
+            <rect class="nbox" x="60" y="140" width="240" height="86" rx="10"/>
+            <text class="label" x="180" y="166" text-anchor="middle">蓝队 Agent 角色</text>
+            <text class="sublabel" x="180" y="184" text-anchor="middle">triage · threat_hunter · host_harden</text>
+            <rect class="pill" x="84" y="194" width="192" height="20" rx="10"/>
+            <text class="tag" x="180" y="208" text-anchor="middle">inject_for(side=blue)</text>
 
-            <!-- ===================== LANE 2: INJECT ===================== -->
-            <text class="lane-label" x="32" y="276">▍ 02 · INJECT</text>
-            <!-- KnowledgeInjector -->
-            <rect class="npurple" x="360" y="116" width="280" height="120" rx="12"/>
-            <text class="label" x="500" y="146" text-anchor="middle" style="fill:#c4b5fd;">KnowledgeInjector</text>
-            <text class="sublabel" x="500" y="166" text-anchor="middle">白名单 + KB 惰性初始化</text>
-            <rect class="pill" x="376" y="180" width="248" height="20" rx="10"/>
-            <text class="tag" x="500" y="194" text-anchor="middle">ALLOWED_SIDES = {blue, host_harden}</text>
-            <text class="sublabel" x="500" y="218" text-anchor="middle">side check → single instance → load</text>
+            <!-- 红队 Agent -->
+            <rect class="nred" x="60" y="246" width="240" height="62" rx="10"/>
+            <text class="label" x="180" y="274" text-anchor="middle" style="fill:#fca5a5;">红队 Agent</text>
+            <text class="sublabel" x="180" y="291" text-anchor="middle">严禁调用 RAG</text>
+            <rect class="pill-warn" x="100" y="297" width="160" height="0" rx="0" style="display:none"/>
 
-            <!-- ===================== LANE 3: RETRIEVE ===================== -->
-            <text class="lane-label" x="32" y="280">▍ 03 · RETRIEVE</text>
-            <!-- Query Builder -->
-            <rect class="nbox" x="700" y="92" width="220" height="80" rx="10"/>
-            <text class="label" x="810" y="118" text-anchor="middle">Query Builder</text>
-            <text class="sublabel" x="810" y="136" text-anchor="middle">role + intent + techniques</text>
-            <rect class="pill" x="716" y="146" width="68" height="14" rx="7"/>
-            <text class="tag" x="750" y="156" text-anchor="middle">去重 ≤ 5</text>
+            <!-- Stage 02: INJECT (KnowledgeInjector) -->
+            <text class="stage-num" x="370" y="120" text-anchor="start">02</text>
+            <text class="stage-title" x="408" y="120">INJECT</text>
 
-            <!-- Dual-Path Retrieve -->
-            <rect class="npurple" x="980" y="76" width="280" height="120" rx="12"/>
-            <text class="label" x="1120" y="104" text-anchor="middle" style="fill:#c4b5fd;">Dual-Path Retrieve</text>
-            <text class="sublabel" x="1120" y="124" text-anchor="middle">Path A: lookup(tid)  /  Path B: search(q, k=3)</text>
-            <rect class="pill" x="996" y="136" width="118" height="18" rx="9"/>
-            <text class="tag" x="1055" y="148" text-anchor="middle">TID_BOOST = 100</text>
-            <text class="sublabel" x="1120" y="170" text-anchor="middle">embedding 余弦 (npz 缓存) · BM25 回退</text>
+            <rect class="npurple" x="370" y="140" width="240" height="168" rx="12"/>
+            <text class="label" x="490" y="166" text-anchor="middle" style="fill:#c4b5fd;">KnowledgeInjector</text>
+            <text class="sublabel" x="490" y="184" text-anchor="middle">白名单校验 + KB 惰性初始化</text>
+            <rect class="pill" x="386" y="196" width="208" height="22" rx="11"/>
+            <text class="tag" x="490" y="211" text-anchor="middle">ALLOWED_SIDES = {blue, host_harden}</text>
+            <text class="sublabel" x="490" y="236" text-anchor="middle">side check</text>
+            <text class="sublabel" x="490" y="252" text-anchor="middle">↓</text>
+            <text class="sublabel" x="490" y="266" text-anchor="middle">single instance</text>
+            <text class="sublabel" x="490" y="282" text-anchor="middle">↓</text>
+            <text class="sublabel" x="490" y="296" text-anchor="middle">load (lazy)</text>
 
-            <!-- Char Truncate -->
-            <rect class="nbox" x="700" y="200" width="220" height="74" rx="10"/>
-            <text class="label" x="810" y="226" text-anchor="middle">字符预算截断</text>
-            <text class="sublabel" x="810" y="244" text-anchor="middle">blue 2500  /  host_harden 1800</text>
-            <rect class="pill" x="716" y="254" width="92" height="14" rx="7"/>
-            <text class="tag" x="762" y="264" text-anchor="middle">≤ 8 docs 贪心</text>
+            <!-- =========== ROW 2: 查询 / 检索 / 截断 (Query / Retrieve / Truncate) =========== -->
+            <!-- Stage 03: QUERY -->
+            <text class="stage-num" x="680" y="120" text-anchor="start">03</text>
+            <text class="stage-title" x="718" y="120">QUERY</text>
+            <rect class="nbox" x="680" y="140" width="180" height="100" rx="10"/>
+            <text class="label" x="770" y="166" text-anchor="middle">Query Builder</text>
+            <text class="sublabel" x="770" y="184" text-anchor="middle">role + intent + techniques</text>
+            <rect class="pill" x="700" y="194" width="140" height="22" rx="11"/>
+            <text class="tag" x="770" y="209" text-anchor="middle">去重 ≤ 5</text>
 
-            <!-- ===================== LANE 4: AUGMENT ===================== -->
-            <text class="lane-label" x="32" y="304">▍ 04 · AUGMENT · 联网增强</text>
+            <!-- Stage 04: RETRIEVE -->
+            <text class="stage-num" x="930" y="120" text-anchor="start">04</text>
+            <text class="stage-title" x="980" y="120">RETRIEVE</text>
+            <rect class="npurple" x="930" y="140" width="320" height="160" rx="12"/>
+            <text class="label" x="1090" y="166" text-anchor="middle" style="fill:#c4b5fd;">Dual-Path Retrieve</text>
+            <text class="sublabel" x="1090" y="186" text-anchor="middle">Path A · lookup(tid)  ·  Path B · search(q, k=3)</text>
+            <rect class="pill" x="950" y="198" width="180" height="22" rx="11"/>
+            <text class="tag" x="1040" y="213" text-anchor="middle">TID_BOOST = 100</text>
+            <text class="sublabel" x="990" y="246" text-anchor="middle">embedding · 余弦相似度 (npz cache)</text>
+            <text class="sublabel" x="990" y="262" text-anchor="middle">BM25 · 关键词通道 (fallback)</text>
+            <text class="sublabel" x="990" y="278" text-anchor="middle">按 doc_id 去重，top-k 排序</text>
+            <text class="sublabel" x="990" y="294" text-anchor="middle">fused_score = 0.4·kw + 0.6·vec</text>
+
+            <!-- Stage 05: TRUNCATE -->
+            <text class="stage-num" x="1320" y="120" text-anchor="start">05</text>
+            <text class="stage-title" x="1356" y="120">TRUNCATE</text>
+            <rect class="nbox" x="1320" y="140" width="220" height="100" rx="10"/>
+            <text class="label" x="1430" y="166" text-anchor="middle">字符预算截断</text>
+            <text class="sublabel" x="1430" y="184" text-anchor="middle">blue 2500  ·  host_harden 1800</text>
+            <rect class="pill" x="1340" y="194" width="180" height="22" rx="11"/>
+            <text class="tag" x="1430" y="209" text-anchor="middle">≤ 8 docs · 贪心取满</text>
+
+            <!-- =========== ROW 3: 增强 (Augment) =========== -->
+            <!-- Stage 06: AUGMENT -->
+            <text class="stage-num" x="370" y="370" text-anchor="start">06</text>
+            <text class="stage-title" x="420" y="370">AUGMENT · 联网增强</text>
+
             <!-- Web Search -->
-            <rect class="nbox" x="380" y="300" width="260" height="80" rx="10"/>
-            <text class="label" x="510" y="326" text-anchor="middle">联网搜索增强</text>
-            <text class="sublabel" x="510" y="344" text-anchor="middle">VirusTotal · MITRE · NVD · 公开报告</text>
-            <rect class="pill" x="394" y="354" width="118" height="16" rx="8"/>
-            <text class="tag" x="453" y="365" text-anchor="middle">no_match / 低置信触发</text>
+            <rect class="nbox" x="370" y="390" width="320" height="120" rx="10"/>
+            <text class="label" x="530" y="418" text-anchor="middle">联网搜索增强</text>
+            <text class="sublabel" x="530" y="436" text-anchor="middle">VirusTotal · MITRE · NVD · 公开报告</text>
+            <rect class="pill" x="400" y="448" width="260" height="22" rx="11"/>
+            <text class="tag" x="530" y="463" text-anchor="middle">no_match / 低置信触发</text>
+            <text class="sublabel" x="530" y="488" text-anchor="middle">外部证据回填到候选池</text>
 
             <!-- LLM-as-Judge -->
-            <rect class="npurple" x="700" y="300" width="220" height="84" rx="12"/>
-            <text class="label" x="810" y="328" text-anchor="middle" style="fill:#c4b5fd;">LLM-as-Judge</text>
-            <text class="sublabel" x="810" y="346" text-anchor="middle">相关性 · 置信度 · 是否入库</text>
-            <rect class="pill" x="716" y="356" width="80" height="16" rx="8"/>
-            <text class="tag" x="756" y="367" text-anchor="middle">质量门控</text>
+            <rect class="npurple" x="720" y="390" width="280" height="120" rx="12"/>
+            <text class="label" x="860" y="418" text-anchor="middle" style="fill:#c4b5fd;">LLM-as-Judge</text>
+            <text class="sublabel" x="860" y="436" text-anchor="middle">相关性 · 置信度 · 是否入库</text>
+            <rect class="pill" x="750" y="448" width="220" height="22" rx="11"/>
+            <text class="tag" x="860" y="463" text-anchor="middle">质量门控</text>
+            <text class="sublabel" x="860" y="488" text-anchor="middle">高价值 KB 候选 → 入库</text>
 
-            <!-- ===================== LANE 5: INJECT (LLM) ===================== -->
-            <text class="lane-label" x="32" y="416">▍ 05 · DELIVER · 注入蓝队推理</text>
-            <!-- LLM Prompt -->
-            <rect class="nbox" x="60" y="440" width="260" height="100" rx="10"/>
-            <text class="label" x="190" y="466" text-anchor="middle">蓝队 LLM Prompt</text>
-            <text class="sublabel" x="190" y="484" text-anchor="middle">context_text 注入</text>
-            <text class="sublabel" x="190" y="500" text-anchor="middle">推理链透明 · 可审计</text>
-            <rect class="pill" x="74" y="510" width="106" height="16" rx="8"/>
-            <text class="tag" x="127" y="521" text-anchor="middle">Blue Team Only</text>
+            <!-- =========== ROW 4: 投递 (Deliver) =========== -->
+            <!-- Stage 07: DELIVER -->
+            <text class="stage-num" x="40" y="570" text-anchor="start">07</text>
+            <text class="stage-title" x="92" y="570">DELIVER · 注入蓝队推理</text>
 
-            <!-- SSE Stream -->
-            <rect class="nbox" x="380" y="440" width="260" height="84" rx="10"/>
-            <text class="label" x="510" y="466" text-anchor="middle">SSE 事件流</text>
-            <text class="sublabel" x="510" y="484" text-anchor="middle">rag_retrieval · rag_no_match · rag_unavailable</text>
-            <text class="sublabel" x="510" y="500" text-anchor="middle">前端可视化 · 命中 doc + 中文标题</text>
+            <rect class="nbox" x="60" y="590" width="320" height="120" rx="10"/>
+            <text class="label" x="220" y="618" text-anchor="middle">蓝队 LLM Prompt</text>
+            <text class="sublabel" x="220" y="636" text-anchor="middle">context_text 注入</text>
+            <rect class="pill" x="100" y="648" width="240" height="22" rx="11"/>
+            <text class="tag" x="220" y="663" text-anchor="middle">推理链透明 · 可审计</text>
+            <text class="sublabel" x="220" y="688" text-anchor="middle">Blue Team Only · 旁路红队</text>
 
-            <!-- ===================== LANE 6: KB + CONTINUOUS LEARNING ===================== -->
-            <text class="lane-label" x="32" y="572">▍ 06 · PERSIST · 持续学习闭环</text>
-            <!-- KB Auto-Write + Embed -->
-            <rect class="nbox" x="700" y="440" width="220" height="84" rx="10"/>
-            <text class="label" x="810" y="466" text-anchor="middle">KB Auto-Write + Embed</text>
-            <text class="sublabel" x="810" y="484" text-anchor="middle">title · category · content · embedding</text>
-            <rect class="pill" x="716" y="494" width="148" height="16" rx="8"/>
-            <text class="tag" x="790" y="505" text-anchor="middle">幂等去重 · 向量失效重建</text>
+            <rect class="nbox" x="410" y="590" width="320" height="120" rx="10"/>
+            <text class="label" x="570" y="618" text-anchor="middle">SSE 事件流</text>
+            <text class="sublabel" x="570" y="636" text-anchor="middle">rag_retrieval · rag_no_match · rag_unavailable</text>
+            <rect class="pill" x="450" y="648" width="240" height="22" rx="11"/>
+            <text class="tag" x="570" y="663" text-anchor="middle">命中 doc + 中文标题</text>
+            <text class="sublabel" x="570" y="688" text-anchor="middle">前端可视化 · RAG 透明可追</text>
 
-            <!-- AttackKB (big green) -->
-            <rect class="nkb" x="380" y="600" width="880" height="170" rx="14"/>
-            <text class="label" x="820" y="630" text-anchor="middle" style="fill:#86efac;">AttackKB · 持久知识库</text>
-            <text class="sublabel" x="820" y="648" text-anchor="middle">持续学习闭环（Continuous Learning Loop）· 越用越准</text>
+            <!-- =========== ROW 5: 持久化 + 持续学习闭环 (Persist) =========== -->
+            <!-- Stage 08: PERSIST -->
+            <text class="stage-num" x="800" y="570" text-anchor="start">08</text>
+            <text class="stage-title" x="852" y="570">PERSIST</text>
 
-            <!-- KB Sources -->
-            <rect x="404" y="668" width="200" height="86" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.08)"/>
-            <text class="label" x="504" y="690" text-anchor="middle">attack_kb.jsonl</text>
-            <text class="sublabel" x="504" y="706" text-anchor="middle">MITRE ATT&amp;CK 企业矩阵</text>
-            <text class="flow-label-data" x="504" y="724" text-anchor="middle">8,126 文档</text>
-            <text class="sublabel" x="504" y="742" text-anchor="middle">v18 / STIX 3.x</text>
+            <rect class="nbox" x="820" y="590" width="320" height="120" rx="10"/>
+            <text class="label" x="980" y="618" text-anchor="middle">KB Auto-Write + Embed</text>
+            <text class="sublabel" x="980" y="636" text-anchor="middle">title · category · content · embedding</text>
+            <rect class="pill" x="860" y="648" width="240" height="22" rx="11"/>
+            <text class="tag" x="980" y="663" text-anchor="middle">幂等去重 · 向量失效重建</text>
+            <text class="sublabel" x="980" y="688" text-anchor="middle">写入即触发 embed_kb_entries()</text>
 
-            <rect x="620" y="668" width="160" height="86" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.08)"/>
-            <text class="label" x="700" y="690" text-anchor="middle">cve_critical</text>
-            <text class="sublabel" x="700" y="706" text-anchor="middle">关键 CVE 情报</text>
-            <text class="flow-label-data" x="700" y="724" text-anchor="middle">70 KB</text>
+            <!-- KB Foundation (federated sources) -->
+            <rect class="nkb" x="60" y="760" width="1480" height="200" rx="14"/>
+            <text class="label" x="800" y="794" text-anchor="middle" style="fill:#86efac;">AttackKB · 持久知识库</text>
+            <text class="sublabel" x="800" y="812" text-anchor="middle">持续学习闭环（Continuous Learning Loop）· 越用越准</text>
 
-            <rect x="796" y="668" width="180" height="86" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.08)"/>
-            <text class="label" x="886" y="690" text-anchor="middle">regulations</text>
-            <text class="sublabel" x="886" y="706" text-anchor="middle">中国法律法规</text>
-            <text class="flow-label-data" x="886" y="724" text-anchor="middle">42 条</text>
+            <!-- KB sources (4 sub-tiles, evenly spaced) -->
+            <rect x="100" y="828" width="320" height="110" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.10)"/>
+            <text class="label" x="260" y="852" text-anchor="middle">attack_kb.jsonl</text>
+            <text class="sublabel" x="260" y="870" text-anchor="middle">MITRE ATT&amp;CK 企业矩阵</text>
+            <text class="flow-label-data" x="260" y="892" text-anchor="middle">8,126 文档</text>
+            <text class="sublabel" x="260" y="912" text-anchor="middle">v18 / STIX 3.x</text>
+            <text class="sublabel" x="260" y="930" text-anchor="middle">embedding 余弦检索</text>
 
-            <rect x="992" y="668" width="240" height="86" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.08)"/>
-            <text class="label" x="1112" y="690" text-anchor="middle">PhishingDetector kb_entries</text>
-            <text class="sublabel" x="1112" y="706" text-anchor="middle">钓鱼专项统一知识</text>
-            <text class="flow-label-data" x="1112" y="724" text-anchor="middle">97+ 条 · 9 分类</text>
-            <text class="sublabel" x="1112" y="742" text-anchor="middle">kb_expansion.json 增量播种</text>
+            <rect x="440" y="828" width="280" height="110" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.10)"/>
+            <text class="label" x="580" y="852" text-anchor="middle">cve_critical</text>
+            <text class="sublabel" x="580" y="870" text-anchor="middle">关键 CVE 情报</text>
+            <text class="flow-label-data" x="580" y="892" text-anchor="middle">实时同步 NVD</text>
+            <text class="sublabel" x="580" y="912" text-anchor="middle">CVSS ≥ 7.0 自动入库</text>
+            <text class="sublabel" x="580" y="930" text-anchor="middle">关联 ATT&amp;CK T-ID</text>
 
-            <rect x="404" y="820" width="380" height="32" rx="8" fill="rgba(20,20,30,0.55)" stroke="rgba(74,222,128,0.25)"/>
-            <text class="sublabel" x="594" y="840" text-anchor="middle">embedding：npz 缓存 · 余弦 · 0.4×kw + 0.6×vec 融合</text>
-            <rect x="800" y="820" width="432" height="32" rx="8" fill="rgba(20,20,30,0.55)" stroke="rgba(167,139,250,0.25)"/>
-            <text class="sublabel" x="1016" y="840" text-anchor="middle">检索通道：Path A 精确查 · Path B 语义查 · 关键词 + 向量混合</text>
+            <rect x="740" y="828" width="280" height="110" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.10)"/>
+            <text class="label" x="880" y="852" text-anchor="middle">regulations</text>
+            <text class="sublabel" x="880" y="870" text-anchor="middle">中国法律法规</text>
+            <text class="flow-label-data" x="880" y="892" text-anchor="middle">42 条</text>
+            <text class="sublabel" x="880" y="912" text-anchor="middle">网安法 / 数安法 / PIPL / 关基</text>
+            <text class="sublabel" x="880" y="930" text-anchor="middle">条款级引用</text>
 
-            <!-- ===================== FLOWS ===================== -->
-            <!-- Blue call -->
-            <path class="flow-main" d="M 300 124 L 360 156" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="320" y="130">intent + role + state</text>
+            <rect x="1040" y="828" width="460" height="110" rx="10" fill="rgba(20,20,30,0.55)" stroke="rgba(255,255,255,0.10)"/>
+            <text class="label" x="1270" y="852" text-anchor="middle">PhishingDetector kb_entries</text>
+            <text class="sublabel" x="1270" y="870" text-anchor="middle">钓鱼专项统一知识 · 本仓库自有</text>
+            <text class="flow-label-data" x="1270" y="892" text-anchor="middle">97+ 条 · 9 分类</text>
+            <text class="sublabel" x="1270" y="912" text-anchor="middle">攻击手法 / ATT&amp;CK 映射 / IoC / 防御指南 / 案例</text>
+            <text class="sublabel" x="1270" y="930" text-anchor="middle">kb_expansion.json + KB_SEED_ENTRIES 双通道</text>
 
-            <!-- Red blocked (security error) -->
-            <path class="flow-warn" d="M 300 214 L 360 200" marker-end="url(#arrowWarn)"/>
-            <text class="flow-label-warn" x="320" y="225">SecurityError 拦截</text>
+            <!-- =========== FLOWS =========== -->
+            <!-- Blue call (Trigger Blue → Inject) -->
+            <path class="flow-main" d="M 300 184 L 370 200" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="305" y="176">intent + role + state</text>
 
-            <!-- Injector → Query -->
-            <path class="flow-main" d="M 640 154 L 700 124" marker-end="url(#arrowMain)"/>
-            <text class="flow-label" x="650" y="124">side check pass</text>
+            <!-- Red blocked (Trigger Red → Inject with SecurityError) -->
+            <path class="flow-warn" d="M 300 274 L 370 250" marker-end="url(#arrowWarn)"/>
+            <text class="flow-label-warn" x="305" y="266">SecurityError</text>
+
+            <!-- Inject → Query -->
+            <path class="flow-main" d="M 610 215 L 680 195" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-mono" x="616" y="207">side pass</text>
 
             <!-- Query → Retrieve -->
-            <path class="flow-main" d="M 920 116 L 980 116" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-mono" x="935" y="110">queries ≤ 5</text>
+            <path class="flow-main" d="M 860 195 L 930 215" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-mono" x="868" y="187">queries ≤ 5</text>
 
             <!-- Retrieve → Truncate -->
-            <path class="flow-main" d="M 1120 196 L 920 220" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="950" y="218">merged docs (top-k)</text>
+            <path class="flow-main" d="M 1250 215 L 1320 195" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="1258" y="187">top-k docs</text>
 
-            <!-- Retrieve → KB (read) -->
-            <path class="flow-data" d="M 1260 196 L 1260 540 L 980 600" marker-end="url(#arrowData)"/>
-            <text class="flow-label-data" x="1290" y="380">read · lookup / search</text>
+            <!-- Truncate → Augment (no_match path) -->
+            <path class="flow-dash" d="M 1380 240 L 1380 320 L 580 320 L 580 390" marker-end="url(#arrowDash)"/>
+            <text class="flow-label-mono" x="900" y="315">no_match 触发联网补全</text>
 
-            <!-- Truncate → Web Search (no_match) -->
-            <path class="flow-dash" d="M 810 274 L 810 296 L 640 296 L 640 340" marker-end="url(#arrowDash)"/>
-            <text class="flow-label-mono" x="650" y="290">no_match → augment</text>
+            <!-- Truncate → Augment (KB hits path → LLM Judge) -->
+            <path class="flow-main" d="M 1430 240 L 1430 320 L 920 320 L 920 390" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="930" y="315">KB 命中片段</text>
 
-            <!-- Truncate → Judge (KB hits) -->
-            <path class="flow-main" d="M 810 274 L 810 300" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="730" y="290">KB 命中片段</text>
+            <!-- Web Search → Judge -->
+            <path class="flow-main" d="M 690 450 L 720 450" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-mono" x="697" y="442">外部证据</text>
 
-            <!-- Web → Judge -->
-            <path class="flow-main" d="M 640 340 L 700 340" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-mono" x="650" y="334">外部证据</text>
-
-            <!-- Judge → KB Writer -->
-            <path class="flow-main" d="M 810 384 L 810 440" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="668" y="418">高价值 → 入库</text>
-
-            <!-- KB Writer → KB Storage -->
-            <path class="flow-data" d="M 810 524 L 810 600" marker-end="url(#arrowData)"/>
-            <text class="flow-label-data" x="826" y="566">增量写入 + 重算 embedding</text>
-
-            <!-- Truncate → LLM Prompt (inject) -->
-            <path class="flow-main" d="M 700 250 L 380 250 L 380 488 L 320 488" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="384" y="244">context_text 注入 (蓝队)</text>
+            <!-- Truncate → Deliver (LLM Prompt) -->
+            <path class="flow-main" d="M 1380 240 L 1380 540 L 220 540 L 220 590" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="700" y="535">context_text 注入 (Blue)</text>
 
             <!-- Truncate → SSE Stream -->
-            <path class="flow-main" d="M 810 250 L 510 250 L 510 440" marker-end="url(#arrowMain)"/>
-            <text class="flow-label-em" x="528" y="244">rag_retrieval event</text>
+            <path class="flow-main" d="M 1430 240 L 1430 560 L 570 560 L 570 590" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="700" y="555">rag_retrieval event</text>
 
-            <!-- KB Storage feedback → Retrieve (continuous learning loop) -->
-            <path class="flow-dash" d="M 1260 600 L 1260 540 L 1260 136 L 1260 116 L 1260 136" marker-end="url(#arrowDash)"/>
-            <path class="flow-dash" d="M 1260 600 L 1260 540 L 1260 60 L 1260 60" />
-            <path class="flow-dash" d="M 1260 770 L 1260 770 L 1240 770 L 1240 60 L 1240 60" marker-end="url(#arrowDash)"/>
+            <!-- Judge → Persist (high-value KB write) -->
+            <path class="flow-main" d="M 860 510 L 860 540 L 980 540 L 980 590" marker-end="url(#arrowMain)"/>
+            <text class="flow-label-em" x="872" y="532">高价值 → 入库</text>
 
-            <text class="flow-label-mono" x="1240" y="710">新向量回流</text>
-            <text class="flow-label-mono" x="1230" y="725">下次检索更准</text>
+            <!-- Persist → KB (write) -->
+            <path class="flow-data" d="M 1140 650 L 1500 650 L 1500 760" marker-end="url(#arrowData)"/>
+            <text class="flow-label-data" x="1196" y="645">增量写入 + 重算 embedding</text>
 
-            <!-- Continuous Learning arc (top right corner) -->
-            <path class="flow-dash" d="M 1260 770 Q 1300 770 1300 720 L 1300 280 Q 1300 140 1260 136" stroke-dasharray="6 5" fill="none" stroke="rgba(167,139,250,0.5)" stroke-width="1.5" marker-end="url(#arrowDash)"/>
+            <!-- KB → Retrieve (continuous learning feedback, single clean arrow on far right) -->
+            <path class="flow-dash" d="M 1540 860 Q 1580 860 1580 820 L 1580 220 Q 1580 180 1540 180" marker-end="url(#arrowDash)"/>
+            <text class="flow-label-mono" x="1480" y="430" transform="rotate(-90 1480 430)">持续学习 · 新向量回流</text>
+
+            <!-- Retrieve → KB (read) — single short arrow on far right going down to KB -->
+            <path class="flow-data" d="M 1090 300 L 1090 760" marker-end="url(#arrowData)" style="display:none"/>
+            <!-- (visual read arrow drawn above; remove overlap) -->
+
+            <!-- Retrieve → KB (read — short downward arrow, single channel) -->
+            <path class="flow-data" d="M 1250 240 L 1250 320 L 1250 760" marker-end="url(#arrowData)"/>
+            <text class="flow-label-data" x="1258" y="500">read · lookup / search</text>
 
           </svg>
 
@@ -607,6 +632,16 @@
   </div>
 
   <script>
+    // nginx 公开路径前缀：/PhishingDetector/ 下页面 → /PhishingDetector/api/*
+    // 本机直连（端口 8001）下页面 → /api/*（无前缀）
+    // 用 window.location.pathname 推断，避免相对路径误命中 CyberOrion 主站首页。
+    const API_BASE = (function () {
+      const p = window.location.pathname || '';
+      const m = p.match(/^(\/PhishingDetector)(\/|$)/);
+      return m ? m[1] : '';
+    })();
+    const apiUrl = (path) => `${API_BASE}${path.startsWith('/') ? path : '/' + path}`;
+
     const STATE = { categories: [], currentCat: '', searchTimer: null };
 
     function escapeHtml(s) {
@@ -686,7 +721,7 @@
     }
     async function loadCategories() {
       try {
-        const res = await fetch('/api/kb/categories');
+        const res = await fetch(apiUrl('/api/kb/categories'));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const cats = await res.json();
         STATE.categories = cats;
@@ -706,18 +741,18 @@
       try {
         let entries = [];
         if (q) {
-          const url = `/api/kb/search?q=${encodeURIComponent(q)}&mode=${mode}&limit=60`;
+          const url = apiUrl(`/api/kb/search?q=${encodeURIComponent(q)}&mode=${mode}&limit=60`);
           const res = await fetch(url);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
           entries = Array.isArray(data) ? data : (data.results || []);
           if (STATE.currentCat) entries = entries.filter(e => (e.category || '') === STATE.currentCat);
         } else if (STATE.currentCat) {
-          const res = await fetch(`/api/kb/entries?limit=200&category=${encodeURIComponent(STATE.currentCat)}`);
+          const res = await fetch(apiUrl(`/api/kb/entries?limit=200&category=${encodeURIComponent(STATE.currentCat)}`));
           if (!res.ok) throw new Error('HTTP ' + res.status);
           entries = await res.json();
         } else {
-          const res = await fetch('/api/kb/entries?limit=200');
+          const res = await fetch(apiUrl('/api/kb/entries?limit=200'));
           if (!res.ok) throw new Error('HTTP ' + res.status);
           entries = await res.json();
         }
@@ -729,7 +764,7 @@
     }
     async function openEntry(id) {
       try {
-        const res = await fetch(`/api/kb/entries/${id}`);
+        const res = await fetch(apiUrl(`/api/kb/entries/${id}`));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const e = await res.json();
         showModal(e);
