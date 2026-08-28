@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -22,7 +23,15 @@ from src.llm import embed, EmbeddingUnavailableError, LLMUnavailableError
 logger = logging.getLogger(__name__)
 
 # 数据库文件路径（使用绝对路径，避免 WAL 模式下相对路径权限问题）
-DB_PATH = Path(settings.data_dir).resolve().parent / "phishing_detector.db"
+#
+# 兼容 Windows / WSL 双场景：
+# - 默认放在项目根目录（开发体验好）；但 WSL+Windows 跨平台场景下
+#   上一个异常退出进程可能留有 Windows 文件锁，导致新进程连不上 DB。
+# - 可通过 PHISHING_DB_PATH 环境变量改放到纯 WSL 原生目录（如 /tmp/），
+#   避免跨平台锁竞争，便于调试。
+import os as _os
+_DEFAULT_DB = Path(settings.data_dir).resolve().parent / "phishing_detector.db"
+DB_PATH = Path(_os.environ.get("PHISHING_DB_PATH", str(_DEFAULT_DB)))
 KB_EXPANSION_PATH = Path(settings.data_dir).resolve() / "kb_expansion.json"
 KB_EMBEDDING_MODEL = settings.embedding_model
 KB_EMBEDDING_DIM = settings.embedding_dim
@@ -919,16 +928,195 @@ KB_SEED_ENTRIES = [
         sample_email="",
         related_titles=["钓鱼工具包与PhaaS投递", "术语：钓鱼邮件（Phishing）"],
     ),
+
+    # ====== 新增分类：供应链攻击 ======
+    _kb(
+        title="供应链攻击 · SolarWinds SUNBURST 事件",
+        category="供应链攻击",
+        severity="critical",
+        keywords=["solarwinds", "sunburst", "supply chain", "APT29", "CISA AA20-352A", "供应链"],
+        summary="APT29 通过污染 SolarWinds Orion 更新在全球植入 SUNBURST 后门，2020-12 被披露。",
+        content="2020-12-13 FireEye 披露其红队工具被盗并发现 SolarWinds Orion 平台被植入恶意更新（SUNBURST / TEARDROP / SUNSPOT），追溯到 2020-03 开始的 APT29（SVR）行动。CISA 发布 AA20-352A 联合咨询，受影响客户约 18,000 家，包括美国财政部 / 国土安全部 / 国务院 / 微软 / FireEye / CrowdStrike 等。SUNBURST 利用 SolarWinds Orion 的合法更新通道投递恶意 DLL (SolarWinds.Orion.Core.BusinessLayer.dll)，通过休眠期（最长 14 天）+ 域白名单 + 子进程混淆绕过检测。TEARDROP 是内存驻留的 Cobalt Strike Beacon loader。事件暴露了『合法签名 + 合法分发渠道 + 长期休眠』」组合构成的纵深防御盲区。该事件定义了 2020 年代供应链攻击的范式：信任链中的任何环节被污染即等于全局失守。",
+        recommendation="(1) 所有使用 SolarWinds Orion 14.x 及以下版本的组织必须升级到 2020-12 后的安全更新；(2) 部署供应链完整性验证：SBOM（软件物料清单）+ 制品签名验证 + 运行时行为基线；(3) 网络出口流量对 SolarWinds 子进程建立专门监控（Orion 业务层进程不应有出站 HTTP）；(4) 凭据轮换：受影响系统的所有凭据 + API key 必须重置；(5) 谨记：信任签名 ≠ 信任软件 —— 必须凭运行时行为而非签名验证供应链。",
+        tags=["供应链", "SolarWinds", "APT29", "SUNBURST", "CISA AA20-352A"],
+        iocs=["SolarWinds.Orion.Core.BusinessLayer.dll 异常出站 / SUNBURST DNS 模式"],
+        attack_techniques=["T1195.002", "T1059.001", "T1027"],
+        detection_points=[
+            "SolarWinds Orion 业务层进程出现异常出站网络请求",
+            "子进程派生包含 Cobalt Strike Beacon 特征",
+            "SolarWinds 配置数据库被未授权访问"
+        ],
+        sample_email="",
+        related_titles=["MITRE ATT&CK · APT29 (Cozy Bear / NOBELIUM)", "ATT&CK-T1195.002 供应链入侵"],
+    ),
+
+    # ====== 新增分类：勒索软件 ======
+    _kb(
+        title="勒索软件 · Cl0p 利用 MOVEit Transfer 0day 大规模攻击",
+        category="勒索软件",
+        severity="critical",
+        keywords=["cl0p", "clop", "MOVEit", "CVE-2023-34362", "ransomware", "供应链"],
+        summary="Cl0p (TA505 / FIN11) 利用 MOVEit Transfer 0day 在 2023 年大规模窃取数据，影响 2700+ 组织。",
+        content="2023-05-31 Progress Software 披露 MOVEit Transfer SQL 注入 0day (CVE-2023-34362)，并发现 Cl0p（TA505 / Lace Tempest）团伙在 2023-05-27 已开始利用。该团伙通过 SQL 注入在 MOVEit 服务器上部署 LEMURLOOT web shell，进而窃取文件、部署 Cl0p 勒索软件。Progress 2023-07 报告全球受影响组织超过 2700 家，包括英国广播公司 (BBC)、英国航空、美国能源部、Shell、Zellis（英国薪资服务商）等。Cl0p 此次行动成为 2023 年最大规模勒索 / 数据窃取事件之一，也是 Cl0p 在 2023 年第二次成功的大规模供应链攻击（前一次是 GoAnywhere MFT 0day）。Cl0p 的商业模式是『专注于 0day + 大规模数据窃取 + 不加密只公开』—— 通过泄露站威胁公开数据而非加密磁盘，体现了勒索软件 2.0 的演化方向。",
+        recommendation="(1) 立即升级 MOVEit Transfer 到 Progress 官方补丁版本，并核查 2023-05-27 之后的所有访问日志；(2) 检查是否有 LEMURLOOT web shell 痕迹（人字形 GUID 文件名等）；(3) 对受影响组织启用强制 MFA + 凭据轮换；(4) 文件传输服务器 (MFT) 严禁暴露公网，启用 IP 白名单 + WAF；(5) SBOM 跟踪：所有 MFT / 文件同步组件必须有 CVE 监测流程；(6) 谨记：Cl0p 的成功不是因为技术强，而是因为『合法服务的信任默认』。",
+        tags=["Cl0p", "MOVEit", "勒索软件", "CVE-2023-34362"],
+        iocs=["MOVEit Transfer 异常 SQL 请求 / LEMURLOOT web shell 痕迹"],
+        attack_techniques=["T1190", "T1505.003", "T1486"],
+        detection_points=[
+            "MOVEit 服务器出现异常 SQL 注入请求",
+            "服务器上出现非预期的 .asp 文件",
+            "MOVEit 人字形 GUID 文件夹被发现"
+        ],
+        sample_email="",
+        related_titles=["LockBit 3.0 勒索软件家族", "供应链攻击 · SolarWinds SUNBURST 事件"],
+    ),
+
+    # ====== 新增分类：SaaS 仿冒 ======
+    _kb(
+        title="SaaS 仿冒 · Salesforce 凭据钓鱼",
+        category="SaaS仿冒",
+        severity="high",
+        keywords=["salesforce", "saas", "credential phishing", "mandiant", "Muddled Libra"],
+        summary="Muddled Libra (UNC3944 / Scattered Spider) 利用 Salesforce 仿冒登录页发起凭据钓鱼。",
+        content="Salesforce 作为全球最大的 CRM 平台，是 SaaS 钓鱼的高价值目标。Mandiant 2024 报告披露 Muddled Libra / Scattered Spider（UNC3944）利用仿冒 Salesforce 登录页对企业销售 / 客户成功团队发起凭据钓鱼，结合 vishing（冒充 IT Helpdesk）完成 MFA 重置后接管账户。该团伙在 2024 年多次利用 Salesforce Data Loader 等合法工具从受害账户批量导出客户数据。Muddled Libra 的攻击链：(1) 通过 LinkedIn / 数据经纪人识别 Salesforce 管理员 / 销售运营人员；(2) 仿冒 Salesforce 登录页（salesforce.com 形近域 / Lookalike URL）；(3) 收集账号密码 + MFA OTP；(4) 接管后立即创建 OAuth 应用并导出客户数据。Salesforce 仿冒成功率高（误报率低）的原因是：『客户数据』是企业最敏感资产之一，紧急场景下员工容易绕过流程。",
+        recommendation="(1) 强制 Salesforce 用户启用 Phishing-Resistant MFA（FIDO2 / Passkey），消除 OTP 中继面；(2) Salesforce IP 限制 + Login Geo Restriction；(3) 检测 Salesforce OAuth 应用可见性：数据导出权限应用立刻告警；(4) 销售运营 / CRM 管理员账号启用 conditional access；(5) 培训销售团队：合法 Salesforce 通知不通过邮件链接验证身份，登录门户处理；(6) 谨记：CRM 仿冒的杀伤面是『客户数据外泄 + GDPR / PIPL 处罚』，不仅 IT 风险，更是合规风险。",
+        tags=["Salesforce", "SaaS", "钓鱼", "Muddled Libra"],
+        iocs=["形近 salesforce.com 域名 / salesforce-secure.com"],
+        attack_techniques=["T1566.002", "T1078.004", "T1556"],
+        detection_points=[
+            "Salesforce 登录来自形近域 / 异常 Geo",
+            "OAuth 应用新增『数据导出』权限",
+            "短时间内大量客户记录被下载"
+        ],
+        sample_email={
+            "subject": "Salesforce 账户异常登录提醒",
+            "sender": "no-reply@salesforce-secure.com",
+            "body": "我们检测到您的 Salesforce 账户出现非常用地区登录，请立即通过邮件链接验证身份以保障账户安全。",
+        },
+        related_titles=["Okta 支持钓鱼 / IT Helpdesk 冒充", "仿冒Microsoft 365安全通知"],
+    ),
+
+    # ====== 新增分类：加密货币/Web3 钓鱼 ======
+    _kb(
+        title="加密货币钓鱼 · EIP-712 Permit 钓鱼签名",
+        category="加密货币钓鱼",
+        severity="critical",
+        keywords=["cryptocurrency", "web3", "permit", "eip-712", "wallet drainer", "eth", "钓鱼签名"],
+        summary="EIP-2612 Permit 钓鱼签名允许攻击者在无 gas 情况下从用户钱包转移资产。",
+        content="EIP-2612 Permit 是以太坊 ERC-20 代币标准中的一个扩展，允许用户通过链下签名授权（permit signature）让第三方代为支付 gas 并在链上执行 transferFrom。攻击者利用该机制构造『钓鱼签名』：伪装为 NFT 空投 / 治理投票 / 跨链桥等场景诱导用户对恶意的 permit 数据签名，签名内容包含 (owner, spender, value, deadline, nonce)。一旦用户签名，攻击者立即调用 permit() + transferFrom() 完成代币转账，整个过程用户感知不到（无任何交易弹出）。该机制衍生出 Inferno Drainer / Pink Drainer / Angel Drainer / Pussy Drainer 等多个 wallet drainer 套件，2023-2024 年造成数亿美元损失。钓鱼签名比传统钓鱼更具欺骗性：『签名』字面看起来无害，但实际授予了完整代币操作权。",
+        recommendation="(1) 钱包用户教育：理解『签名的就是授权』，对任何 permit / setApprovalForAll 签名保持警惕；(2) EIP-1271 智能合约钱包可实现白名单签名验证；(3) 钱包 UI 应明确警告『该签名将授权 X 代币给 Y 地址』；(4) 启用交易模拟（tenderly / Pocket Universe）预览签名效果；(5) 谨记：钱包钓鱼的核心是『签名前不看内容、签完后追溯太晚』，唯一防御是『签名前 100% 理解』。",
+        tags=["Web3", "加密货币", "Permit", "钓鱼签名", "Wallet Drainer"],
+        iocs=["形似 mint / claim / approve 的恶意签名请求"],
+        attack_techniques=["T1204.002", "T1059"],
+        detection_points=[
+            "用户对未经验证的合约执行 permit 签名",
+            "短时间内多笔 transferFrom 交易来自同一 owner",
+            "新合约对老用户的代币操作"
+        ],
+        sample_email="",
+        related_titles=["OWASP LLM Top 10 · LLM01 提示词注入"],
+    ),
+
+    # ====== 新增分类：AI 深度伪造 ======
+    _kb(
+        title="AI 深度伪造 · Arup 香港 2500 万美元视频会议 BEC",
+        category="AI深度伪造",
+        severity="critical",
+        keywords=["deepfake", "ai fraud", "bec", "video conference", "arup", "实时换脸"],
+        summary="2024-02 香港 Arup 财务被骗 2500 万美元，攻击者使用实时换脸 + 视频会议冒充 CFO。",
+        content="2024-02 香港工程咨询公司 Arup 披露其香港办公室财务员工被深度伪造视频会议骗走 HK$200M（约 US$25M）。攻击者使用深度伪造视频实时冒充英国总部 CFO + 其他高管，财务员工在『视频会议』上看到熟悉的脸孔并按指示完成 15 笔转账。该事件是全球首例公开披露的『实时换脸 + 视频会议』BEC 攻击成功案例。攻击链路：(1) 通过 LinkedIn 公开信息梳理 Arup 财务组织结构；(2) 利用公开视频素材训练 CFO 等高管的深度伪造模型；(3) 通过 WhatsApp 等 IM 渠道发起『视频会议』；(4) 实时换脸 + AI 语音克隆模拟多人发言；(5) 财务员工在『熟悉的高管』」形象下完成付款。同月香港警方披露类似剧本造成 HK$200M 损失总额。深度伪造把 BEC 的『信任链攻击』推到了新维度。",
+        recommendation="(1) 财务付款必须建立『带外回回确认』：任何视频会议 / 邮件付款指令必须电话回拨通讯录白名单二次确认；(2) 付款冷静期 ≥ 24 小时（> 某阈值金额时强制）；(3) 深度伪造检测工具：Microsoft Video Authenticator / Intel FakeCatcher 等可用于实时验证；(4) 高敏感视频会议启用『安全词』机制（如『我们的约定词是 XXX』）；(5) 财务 / HR / C-Level 培训：AI 时代『脸熟 ≠ 人对』；(7) 谨记：深度伪造的最大威胁不是技术，而是『它能骗过人眼』 —— 必须在流程上建立『非视觉验证』冗余。",
+        tags=["深度伪造", "AI", "BEC", "视频会议", "Arup"],
+        iocs=["AI 生成视频伪影 / 异常眨眼频率 / 头部运动不自然"],
+        attack_techniques=["T1566.003", "T1657", "T1078"],
+        detection_points=[
+            "视频会议中人物眨眼频率异常低（深度伪造典型）",
+            "嘴唇运动与音频有微秒级偏移",
+            "财务付款模式异常（> 某阈值的紧急付款）"
+        ],
+        sample_email="",
+        related_titles=["Vishing语音回拨诱导", "BEC/CEO欺诈转账邮件"],
+    ),
+
+    # --- 法律法规（新增分类种子） ---
+    _kb(
+        title="法规：网络安全等级保护 2.0",
+        category="法律法规",
+        severity="low",
+        keywords=["等保2.0", "网络安全等级保护", "GB/T 22239-2019", "定级备案", "测评"],
+        summary="等保2.0是网络运营者的强制性合规基线，邮件入口防护属于等保要求的'访问控制'与'安全计算环境'范畴。",
+        content="网络安全等级保护 2.0（GB/T 22239-2019）由公安部第三研究所牵头修订，2019年12月正式实施，替代等保1.0（GB/T 22239-2008）。等保2.0 将云计算、移动互联网、物联网、工业控制系统纳入扩展要求，并强调'一个中心、三重防护'（安全管理中心 + 安全计算环境、安全区域边界、安全通信网络）。与钓鱼邮件防护直接相关的条款：(1) 安全区域边界——应在邮件入口部署反垃圾邮件网关，识别并阻断钓鱼邮件（8.1.4 访问控制）；(2) 安全计算环境——终端应安装并及时更新恶意代码防范工具（8.1.4.3 入侵防范）；(3) 安全管理中心——应集中收集邮件网关日志、终端杀毒日志并进行关联分析（8.1.5 集中管控）。等级分为五级（用户自主保护级 / 指导保护级 / 安全标记保护级 / 专家保护级 / 专控保护级），金融、能源、政务、电信等行业普遍要求三级及以上。三级系统要求每年度至少开展一次等级测评，四级系统每半年一次。钓鱼邮件失陷若未达到等保要求项的合规基线，可能在年度测评中被出具'高风险'结论，影响业务连续性与监管处罚。",
+        recommendation="(1) 邮件网关与终端 EDR 的部署与策略覆盖度需在等保年度测评中可证明——保留策略快照、阻断日志、告警记录至少6个月；(2) 三级系统的邮件入口策略至少包含：SPF/DKIM/DMARC 校验 + URL 信誉 + 附件沙箱 + 高危类型拦截；(3) 安全管理中心应统一汇聚邮件、终端、网络、认证日志，钓鱼事件处置全流程可追溯；(4) 关键岗位人员签订安全保密协议，定期开展钓鱼演练（年度合规指标之一）；(5) 跟踪 2025 年 GB/T 22239 修订动向与行业实施细则（如金融行业 JR/T 0067、政务 GM/T 0054）。",
+        tags=["法律法规", "等保2.0", "合规"],
+        iocs=[],
+        attack_techniques=[],
+        detection_points=[
+            "邮件网关策略完整性与年度测评记录",
+            "日志留存时长（≥ 180天）",
+            "安全管理中心对多源日志的汇聚与关联分析",
+            "钓鱼演练年度覆盖率"
+        ],
+        sample_email="",
+        related_titles=["法规：关键信息基础设施安全保护条例", "防御：DMARC 渐进式部署实战手册"],
+    ),
+
+    # --- 近期真实案例（新增分类种子） ---
+    _kb(
+        title="案例：Snowflake SaaS 凭据填充致 30 亿+ 记录泄露（2024）",
+        category="近期真实案例",
+        severity="high",
+        keywords=["Snowflake", "凭据填充", "credential stuffing", "MFA缺失", "AT&T", "Ticketmaster"],
+        summary="2024 年针对 Snowflake 客户环境的凭据填充攻击横扫 AT&T / Ticketmaster / Santander 等巨头，核心成因是目标账号长期未启用 MFA。",
+        content="2024 年 4-6 月，多个使用 Snowflake 数据云服务的大型客户接连遭遇大规模数据泄露：AT&T 约 1.1 亿条通话与短信记录；Ticketmaster 超过 5.6 亿客户档案（含信用卡信息）；Santander 员工与客户数据；Advance Auto Parts 等数十家受影响。Mandiant 调查结论：这不是 Snowflake 平台的漏洞，而是针对性凭据填充（credential stuffing）—— 攻击者使用从以往数据泄露中回收的用户名/密码组合，对客户在 Snowflake 上未启用 MFA 的服务账号进行大规模撞库。攻击者 UNC5537（成员包括 'Sp1d3r' / 'ShinyHunters'）使用被攻陷的员工账号在 Snowflake 实例中创建临时表导出数据，并在部分实例部署勒索软件。直接成因：受影响账号普遍长期未启用 MFA，部分账号甚至使用已泄露超过 10 年的旧密码。该案让'MFA 强制执行'从安全最佳实践上升为安全底线，Snowflake 后续为所有管理员账号强制启用 MFA 并支持 FIDO2 硬件密钥。战术 ATT&CK 映射：T1110.004（凭据填充）、T1078（有效账户滥用）、T1530（云存储数据窃取）。",
+        recommendation="(1) 所有云端账号（含 Snowflake、AWS、Azure、GCP、GitHub 等）强制启用 MFA，优先 FIDO2 硬件密钥；(2) 定期审计未启用 MFA 的账号与最近登录日志；(3) 对长期未更换的服务账号密码实施强制轮换；(4) 与 haveibeenpwned 等泄露库联动，对已知泄露密码拒绝登录；(5) 关注 SaaS 平台对外暴露的临时凭据（演示账号、试用密钥），及时关闭。",
+        tags=["近期案例", "凭据填充", "MFA缺失", "SaaS安全"],
+        iocs=[
+            "SaaS 账号长期未启用 MFA",
+            "账号密码出现在已知泄露库",
+            "云存储桶异常 SELECT/EXPORT 操作"
+        ],
+        attack_techniques=["T1110.004", "T1078"],
+        detection_points=[
+            "未启用 MFA 的账号清单",
+            "已知泄露密码登录尝试",
+            "云存储桶异常访问模式",
+            "服务账号凭据轮换记录"
+        ],
+        sample_email="",
+        related_titles=["FIDO2/通行密钥为什么能免疫钓鱼", "零信任与条件访问如何限制钓鱼后果"],
+    ),
 ]
 
 
 def get_connection() -> sqlite3.Connection:
-    """获取数据库连接（使用 DELETE 日志模式避免 Windows WAL 锁定问题）"""
-    conn = sqlite3.connect(str(DB_PATH))
+    """获取数据库连接（使用 DELETE 日志模式避免 Windows WAL 锁定问题）。
+
+    设置 busy_timeout = 30s，让 WSL + Windows 跨平台场景下的瞬时文件锁能自动解除，
+    避免上一个异常退出进程留下的锁导致 init_db 直接抛 OperationalError。
+
+    失败时会**重试** + **降级**：重试 5 次（覆盖 WSL inode 延迟释放）；
+    仍失败则返回只读连接让上层路由按需处理（不阻塞启动）。
+    """
+    last_err: Exception | None = None
+    for _ in range(5):
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=30)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout = 30000")
+            try:
+                conn.execute("PRAGMA journal_mode=DELETE")
+            except sqlite3.OperationalError:
+                # 极个别情况 journal_mode 切换需要短暂 exclusive lock；保留默认即可
+                pass
+            conn.execute("PRAGMA synchronous=NORMAL")
+            return conn
+        except sqlite3.OperationalError as exc:
+            last_err = exc
+            time.sleep(0.5)
+    # 5 次重试仍失败：返回只读连接，让上层路由能继续响应（不阻塞启动）
+    logger.warning(f"数据库连接多次重试仍失败，返回只读连接: {last_err}")
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=10)
     conn.row_factory = sqlite3.Row
-    # Windows 环境下 WAL 模式容易因进程异常退出导致 readonly 锁定，改用 DELETE 模式
-    conn.execute("PRAGMA journal_mode=DELETE")
-    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 
@@ -941,6 +1129,12 @@ def init_db():
     并执行 KB 种子填充与知识库向量按需补齐。
     可安全重复调用（IF NOT EXISTS / 按 title 幂等）；
     嵌入服务不可用时向量补齐自动跳过，不影响主流程。
+
+    设计为幂等且容忍瞬时锁：
+    - 任何表创建 / 种子写入失败都只告警，不抛异常；
+    - 这样即便上一个进程因异常退出留下短时间锁文件，
+      当前进程依然能启动起来，API 路由可正常响应（API 路由
+      自身按需取连接，会再次走过 get_connection 的 busy_timeout）。
     """
     conn = get_connection()
     try:
@@ -1012,8 +1206,15 @@ def init_db():
         _seed_kb_entries(conn)
         conn.commit()
         logger.info(f"数据库初始化完成: {DB_PATH}")
+    except sqlite3.OperationalError as exc:
+        # WSL + Windows 跨平台场景下前一个进程异常退出可能留有锁文件，
+        # 表已存在时不应阻断服务启动；记录后让上层路由按需重试。
+        logger.warning(f"数据库初始化跳过（{exc}），路由层将在请求时按需重试")
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
 
     # 播种完成后按需补齐知识库向量；嵌入服务未配置/失败只告警，不阻断启动
     try:
@@ -1040,6 +1241,7 @@ def _ensure_kb_schema(conn: sqlite3.Connection):
         ("related", "TEXT DEFAULT '[]'"),
         ("embedding", "TEXT DEFAULT ''"),
         ("embedding_model", "TEXT DEFAULT ''"),
+        ("source_url", "TEXT DEFAULT ''"),
     ]
     for col_name, col_def in required:
         if col_name not in columns:
@@ -1093,6 +1295,7 @@ def _seed_kb_entries(conn: sqlite3.Connection):
                     attack_techniques = ?,
                     detection_points = ?,
                     sample_email = ?,
+                    source_url = ?,
                     updated_at = ?
                 WHERE title = ?
                 """,
@@ -1108,6 +1311,7 @@ def _seed_kb_entries(conn: sqlite3.Connection):
                     attack_techniques,
                     detection_points,
                     sample_email,
+                    item.get("source_url") or "",
                     now,
                     title,
                 ),
@@ -1118,8 +1322,8 @@ def _seed_kb_entries(conn: sqlite3.Connection):
             """
             INSERT INTO kb_entries
             (title, category, severity, keywords, content, recommendation, enabled, created_at, updated_at,
-             summary, tags, iocs, attack_techniques, detection_points, sample_email, related)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             summary, tags, iocs, attack_techniques, detection_points, sample_email, related, source_url)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 title,
@@ -1137,6 +1341,7 @@ def _seed_kb_entries(conn: sqlite3.Connection):
                 detection_points,
                 sample_email,
                 "[]",
+                item.get("source_url") or "",
             ),
         )
 
@@ -1147,7 +1352,47 @@ def _iter_all_seed_entries() -> list[dict]:
     """返回内置种子 + 外部扩展包条目。"""
     entries = list(KB_SEED_ENTRIES)
     entries.extend(_load_kb_expansion_entries())
+    entries.extend(_load_kb_datasets_entries())
     return entries
+
+
+def _load_kb_datasets_entries() -> list[dict]:
+    """从 data/datasets.json 读取公开威胁情报批量入库条目（MITRE ATT&CK、CISA KEV、GTFOBins、MISP Galaxy）。缺失时跳过。"""
+    datasets_path = Path(settings.data_dir).resolve() / "datasets.json"
+    if not datasets_path.exists():
+        logger.warning("知识库 datasets 文件不存在，跳过外部扩展播种: %s", datasets_path)
+        return []
+    try:
+        raw = json.loads(datasets_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("知识库 datasets 文件读取失败，跳过外部扩展播种: %s", exc)
+        return []
+    entries = raw.get("entries") if isinstance(raw, dict) else None
+    if not isinstance(entries, list):
+        logger.warning("知识库 datasets 文件格式无效（缺少 entries 数组），跳过外部扩展播种")
+        return []
+    normalized = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        normalized.append({
+            "title": item.get("title") or "",
+            "category": item.get("category") or "未分类",
+            "severity": item.get("severity") or "medium",
+            "keywords": item.get("keywords") or [],
+            "summary": item.get("summary") or "",
+            "content": item.get("content") or "",
+            "recommendation": item.get("recommendation") or "",
+            "tags": item.get("tags") or [],
+            "iocs": item.get("iocs") or [],
+            "attack_techniques": item.get("attack_techniques") or [],
+            "detection_points": item.get("detection_points") or [],
+            "sample_email": item.get("sample_email") if item.get("sample_email") is not None else "",
+            "related_titles": [],
+            "source_url": item.get("source_url") or "",
+        })
+    logger.info(f"从 datasets.json 加载 {len(normalized)} 条公开威胁情报条目")
+    return normalized
 
 
 def _load_kb_expansion_entries() -> list[dict]:
@@ -1186,6 +1431,7 @@ def _load_kb_expansion_entries() -> list[dict]:
                 "detection_points": item.get("detection_points") or [],
                 "sample_email": item.get("sample_email") if item.get("sample_email") is not None else "",
                 "related_titles": [],
+                "source_url": item.get("source_url") or "",
             }
         )
 
@@ -1762,6 +2008,8 @@ def _parse_kb_row(item: dict) -> dict:
         item["sample_email"] = sample_email_raw
 
     item["enabled"] = bool(item.get("enabled", 1))
+    # 暴露 source_url（可能为空字符串），便于审计条目来源 URL
+    item["source_url"] = item.get("source_url") or ""
     return item
 
 
@@ -1774,7 +2022,7 @@ def list_kb_entries(limit: int = 100, category: str = None) -> list[dict]:
                 rows = conn.execute(
                     """SELECT id, title, category, severity, keywords, content, recommendation,
                               enabled, updated_at, summary, tags, iocs, attack_techniques,
-                              detection_points, sample_email, related
+                              detection_points, sample_email, related, source_url
                        FROM kb_entries
                        WHERE category = ?
                        ORDER BY updated_at DESC
@@ -1785,7 +2033,7 @@ def list_kb_entries(limit: int = 100, category: str = None) -> list[dict]:
                 rows = conn.execute(
                     """SELECT id, title, category, severity, keywords, content, recommendation,
                               enabled, updated_at, summary, tags, iocs, attack_techniques,
-                              detection_points, sample_email, related
+                              detection_points, sample_email, related, source_url
                        FROM kb_entries
                        ORDER BY updated_at DESC
                        LIMIT ?""",
@@ -1844,6 +2092,77 @@ def list_kb_categories() -> list[dict]:
             {"id": r[0], "name": r[0], "count": int(r[1])}
             for r in rows
         ]
+    finally:
+        conn.close()
+
+
+def get_kb_stats() -> dict:
+    """返回知识库总体统计：总条数 / 分类数 / 严重度分布 / ATT&CK 技术词条数。
+
+    用于 advanced.html hero 区的实时统计卡片（不再写死 8K+ / 9 分类等数字）。
+    ATT&CK 技术词条数 = keywords / content / attack_techniques 中含 Txxxx 编号的去重计数。
+    """
+    conn = get_connection()
+    try:
+        try:
+            total = conn.execute("SELECT COUNT(*) FROM kb_entries").fetchone()[0] or 0
+            cat_count = conn.execute(
+                "SELECT COUNT(DISTINCT category) FROM kb_entries"
+            ).fetchone()[0] or 0
+
+            severity_rows = conn.execute(
+                """SELECT severity, COUNT(*) AS cnt
+                   FROM kb_entries
+                   GROUP BY severity"""
+            ).fetchall()
+            severity_dist = {r[0]: int(r[1]) for r in severity_rows}
+
+            cat_rows = conn.execute(
+                """SELECT category, COUNT(*) AS cnt
+                   FROM kb_entries
+                   GROUP BY category
+                   ORDER BY cnt DESC"""
+            ).fetchall()
+            category_dist = {r[0]: int(r[1]) for r in cat_rows}
+
+            # 累计 attack_techniques 字段里出现的 T-IDs 总数（去重）
+            tech_rows = conn.execute(
+                "SELECT attack_techniques FROM kb_entries WHERE attack_techniques != '[]'"
+            ).fetchall()
+            tech_ids: set[str] = set()
+            for r in tech_rows:
+                try:
+                    items = json.loads(r[0] or "[]")
+                except Exception:
+                    continue
+                if isinstance(items, list):
+                    for it in items:
+                        if isinstance(it, str) and it.upper().startswith("T"):
+                            tech_ids.add(it.upper())
+
+            avg_content_len = conn.execute(
+                "SELECT AVG(LENGTH(content)) FROM kb_entries"
+            ).fetchone()[0] or 0
+
+            return {
+                "total_entries": int(total),
+                "category_count": int(cat_count),
+                "severity_distribution": severity_dist,
+                "category_distribution": category_dist,
+                "attack_technique_unique_count": len(tech_ids),
+                "attack_technique_sample": sorted(tech_ids)[:20],
+                "avg_content_chars": int(avg_content_len),
+            }
+        except sqlite3.OperationalError:
+            return {
+                "total_entries": 0,
+                "category_count": 0,
+                "severity_distribution": {},
+                "category_distribution": {},
+                "attack_technique_unique_count": 0,
+                "attack_technique_sample": [],
+                "avg_content_chars": 0,
+            }
     finally:
         conn.close()
 
