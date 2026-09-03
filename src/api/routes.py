@@ -695,6 +695,17 @@ async def list_reports(limit: int = 50):
     return db.get_recent_reports(limit)
 
 
+@router.delete("/reports")
+async def delete_all_reports():
+    """清空全部报告。
+
+    仅删除 reports 表，email 行保留（不影响 emails 统计）。
+    注意：当前无鉴权，仅适合本地开发；部署到非本地环境前需加访问保护。
+    """
+    deleted = db.delete_all_reports()
+    return {"deleted": deleted}
+
+
 @router.delete("/reports/{report_id}")
 async def delete_report(report_id: str):
     """删除指定报告。
