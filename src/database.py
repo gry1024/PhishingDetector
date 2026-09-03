@@ -1590,6 +1590,25 @@ def delete_report(report_id: int) -> bool:
         conn.close()
 
 
+def delete_all_reports() -> int:
+    """清空全部报告（仅 reports 表，emails 行保留，不影响 emails 统计）。
+
+    会同步重置 reports 表的 AUTOINCREMENT 自增计数，清空后新报告序号从 1 重新开始。
+
+    Returns:
+        实际删除的行数
+    """
+    conn = get_connection()
+    try:
+        cursor = conn.execute("DELETE FROM reports")
+        # 重置自增序号（AUTOINCREMENT 的计数存于 sqlite_sequence，DELETE 不会自动归零）
+        conn.execute("DELETE FROM sqlite_sequence WHERE name = 'reports'")
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()
+
+
 def get_email_by_id(email_id: int) -> Optional[dict]:
     """根据 ID 获取单封邮件"""
     conn = get_connection()

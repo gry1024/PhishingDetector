@@ -887,6 +887,18 @@ a {
 }
 
 .btn-run:hover { background: #e9e9e9; }
+
+.btn-ghost {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--bg-hover, #f3f3f3); color: var(--text); }
 .btn-run:disabled { opacity: 0.55; cursor: not-allowed; }
 .btn-run.running { background: var(--amber); border-color: var(--amber); color: #111; }
 
@@ -1127,6 +1139,18 @@ a {
 }
 
 .recent-delete:hover { color: var(--red); }
+
+.recent-clear-all {
+  margin-left: auto;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.recent-clear-all:hover { color: var(--red); }
 
 .recent-delete-error {
   font-size: 11px;
@@ -1530,11 +1554,11 @@ a {
         <div class="input-card">
           <div class="input-fields">
             <div class="input-row-1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <input id="subject" value="【紧急】请立即验证账户安全" placeholder="邮件主题">
-              <input id="sender" value="security@bankofchina-verify.com" placeholder="发件人">
+              <input id="subject" value="" placeholder="邮件主题">
+              <input id="sender" value="" placeholder="发件人">
             </div>
             <div class="input-row-2">
-              <textarea id="body" placeholder="邮件正文">尊敬的用户，我们检测到异常登录。请立即访问 http://192.168.1.100:8080/verify?id=u123 完成验证，否则账户将被冻结。</textarea>
+              <textarea id="body" placeholder="邮件正文（支持整段粘贴，点「智能识别填充」自动拆分主题/发件人）"></textarea>
             </div>
             <div class="input-row-3">
               <textarea id="prompt" placeholder="补充提示词（可选）：例如要求重点关注发件人仿冒、URL 异常，或输入“联网搜索”让 Agent 检索公开情报..."></textarea>
@@ -1543,6 +1567,7 @@ a {
           <div class="input-divider"></div>
           <div class="input-actions">
             <div class="input-hint">Ctrl+Enter 快速运行 · 支持邮件+提示词同时输入</div>
+            <button class="btn-ghost" id="parseBtn" onclick="smartParseEmail()" title="把整段邮件文本（含主题/发件人标签）粘贴到正文框，点击自动拆分填充">智能识别填充</button>
             <button class="btn-run" id="runBtn" onclick="runFlow()">▶ 运行检测</button>
           </div>
         </div>
@@ -1619,7 +1644,10 @@ a {
 
       <!-- Recent Reports -->
       <div class="panel-card">
-        <div class="panel-card-title">最近报告</div>
+        <div class="panel-card-title" style="display:flex;align-items:center;">
+          最近报告
+          <span class="recent-clear-all" title="清空全部报告（不可恢复）" onclick="clearAllReports()">清空</span>
+        </div>
         <div class="recent-list" id="recentList">
           <div class="kb-item-empty">暂无报告</div>
         </div>
@@ -1645,16 +1673,19 @@ a {
       <input id="datasetSearch" type="text" placeholder="搜索主题/发件人..." oninput="onDatasetSearchInput()">
     </div>
     <div class="dataset-meta" id="datasetMeta"></div>
-    <!-- 批量评测面板（纯规则路径，不调 LLM）：置于邮件列表之前，避免被长列表压到弹窗底部 -->
+    <!-- 批量评测面板：默认纯规则路径（不调 LLM），可勾选调用 LLM -->
     <div class="eval-panel" id="evalPanel">
       <div class="eval-panel-header">
         <span class="eval-panel-title">批量评测</span>
-        <span class="eval-panel-note">纯规则路径，未调用 LLM，指标不代表最终效果</span>
+        <span class="eval-panel-note">默认纯规则路径（约 2 秒/条）；勾选调用 LLM 后约 1 分钟/条</span>
       </div>
       <div class="eval-controls">
         <label>样本量 <input id="evalLimit" type="number" value="20" min="1" max="400"></label>
         <label class="eval-skip-label" title="跳过 threat_intel 的联网检索，单样本耗时从约 96s 降到约 2.5s">
           <input type="checkbox" id="evalSkipWeb" checked> 跳过联网检索（大幅提速）
+        </label>
+        <label class="eval-skip-label" title="调用真实 LLM 评测，更接近线上效果，但单样本约 60s，40 条约 40 分钟">
+          <input type="checkbox" id="evalUseLlm"> 调用 LLM（慢）
         </label>
         <button class="btn-new" id="evalRunBtn" onclick="startEvalRun()">开始评测</button>
         <button class="btn-clear" id="evalStopPollBtn" onclick="stopEvalPolling()" style="display:none">停止刷新</button>
@@ -2677,6 +2708,65 @@ function updatePanelFromAgentResult(agentKey, resultSummary) {
 }
 
 // ===== Run Flow =====
+// 智能识别填充：把整段带标签的邮件文本拆分为 主题/发件人/正文 三个输入框
+// 支持格式：「主题：xx」「Subject: xx」「发件人：xx」「From: xx」（可带 • - * 列表前缀），
+// 以及标准邮件头格式（From:/To:/Subject: 开头 + 空行 + 正文）
+function smartParseEmail() {
+  const bodyEl = document.getElementById("body");
+  const parseBtn = document.getElementById("parseBtn");
+  const raw = bodyEl.value;
+  if (!raw.trim()) {
+    flashParseBtn("正文框为空");
+    return;
+  }
+
+  const stripBullet = (s) => s.replace(/^\s*[•\-\*·▪◦]+\s*/, "");
+  const lines = raw.split(/\r?\n/);
+  let subject = "", sender = "";
+  const bodyLines = [];
+  let bodyStarted = false;
+  let matched = false;
+
+  for (const line of lines) {
+    const t = stripBullet(line).trim();
+    if (!bodyStarted) {
+      let m = t.match(/^(主题|subject)\s*[:：]\s*(.+)$/i);
+      if (m) { subject = m[2].trim(); matched = true; continue; }
+      m = t.match(/^(发件人|发件人地址|from)\s*[:：]\s*(.+)$/i);
+      if (m) { sender = m[2].trim(); matched = true; continue; }
+      m = t.match(/^(正文|内容|body)\s*[:：]\s*(.*)$/i);
+      if (m) { bodyStarted = true; matched = true; if (m[2].trim()) bodyLines.push(m[2]); continue; }
+      // 邮件头里的其他字段（收件人/抄送/日期等），仅在已识别到头字段时跳过
+      if (matched && /^(收件人|抄送|密送|日期|时间|to|cc|bcc|date|sent)\s*[:：]/i.test(t)) continue;
+      // 头字段之后的空行：视为头/正文分隔
+      if (matched && t === "") { bodyStarted = true; continue; }
+      // 第一行就是普通文本：认为没有标签头，整体作为正文
+      bodyStarted = true;
+      bodyLines.push(line);
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  if (!matched) {
+    flashParseBtn("未识别到标签");
+    return;
+  }
+
+  if (subject) document.getElementById("subject").value = subject;
+  if (sender) document.getElementById("sender").value = sender;
+  const newBody = bodyLines.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
+  if (newBody) bodyEl.value = newBody;
+  flashParseBtn("识别成功");
+}
+
+function flashParseBtn(text) {
+  const parseBtn = document.getElementById("parseBtn");
+  const original = "智能识别填充";
+  parseBtn.textContent = text;
+  setTimeout(() => { parseBtn.textContent = original; }, 1500);
+}
+
 function startNewChat() {
   activeConversationId = null;
   renderConversationList();
@@ -3055,6 +3145,7 @@ async function startEvalRun() {
   const label = datasetLabelTab;
   const limit = Math.max(1, Math.min(400, parseInt(document.getElementById("evalLimit").value || "20", 10)));
   const skipWeb = document.getElementById("evalSkipWeb").checked;
+  const useLlm = document.getElementById("evalUseLlm").checked;
   const btn = document.getElementById("evalRunBtn");
   btn.disabled = true;
   stopEvalPolling();
@@ -3066,7 +3157,7 @@ async function startEvalRun() {
     const resp = await fetch("/api/eval/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataset_id: datasetId, label, limit, use_llm: true, skip_web_search: skipWeb }),
+      body: JSON.stringify({ dataset_id: datasetId, label, limit, use_llm: useLlm, skip_web_search: skipWeb }),
     });
     if (!resp.ok) {
       let detail = `HTTP ${resp.status}`;
@@ -3452,6 +3543,22 @@ async function deleteReport(reportId, ev) {
     const hint = document.createElement("div");
     hint.className = "recent-delete-error";
     hint.textContent = "删除失败，请重试";
+    list.appendChild(hint);
+    setTimeout(() => hint.remove(), 3000);
+  }
+}
+
+async function clearAllReports() {
+  if (!confirm("确定清空全部检测报告吗？此操作不可恢复。")) return;
+  const list = document.getElementById("recentList");
+  try {
+    const resp = await fetch("/api/reports", { method: "DELETE" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    await updateRecentReports();
+  } catch (e) {
+    const hint = document.createElement("div");
+    hint.className = "recent-delete-error";
+    hint.textContent = "清空失败，请重试";
     list.appendChild(hint);
     setTimeout(() => hint.remove(), 3000);
   }
