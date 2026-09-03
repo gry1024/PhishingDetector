@@ -10,9 +10,11 @@
    供 scripts/tune_rule_fallback.py 离线调参，避免每次调参都重跑全量链路。
 
 用法：
-    python scripts/eval_rule_offline.py                # 全量 400 条，8 线程
+    python scripts/eval_rule_offline.py                # 全量 400 条纯规则，8 线程
     python scripts/eval_rule_offline.py --limit 50     # 快速试跑
     python scripts/eval_rule_offline.py --workers 1    # 串行（调试）
+    python scripts/eval_rule_offline.py --use-llm --workers 4 \
+        --dump datasets/llm_eval_dump.jsonl            # 在线双轨路径（需可用 LLM）
 """
 
 import argparse
@@ -53,13 +55,16 @@ def _pattern_hits(text: str) -> list[str]:
     return [desc for pattern, desc in PHISHING_PATTERNS if re.search(pattern, text, re.IGNORECASE)]
 
 
-def evaluate_one(item: dict) -> dict:
-    """单样本规则兜底链路评测，返回特征+判定明细。
+def evaluate_one(item: dict, use_llm: bool = False) -> dict:
+    """单样本链路评测（semantic → detector → risk），返回特征+判定明细。
 
-    ContextVar 不跨线程传播，必须在 worker 线程内显式禁用 LLM，
-    否则 worker 会拿到默认值 False 并发起真实 LLM 请求。
+    use_llm=False（纯规则模式）：ContextVar 不跨线程传播，必须在 worker
+    线程内显式禁用 LLM，否则 worker 会拿到默认值 False 并发起真实 LLM 请求。
+    use_llm=True（在线模式）：放行 LLM，与线上双轨融合路径一致；
+    risk 只消费 semantic/detection 两个上游结果，verdict 与完整管线相同
+    （threat_intel 联网检索不影响 risk 判定，故本脚本不涉及）。
     """
-    token = llm_module.set_llm_disabled(True)
+    token = None if use_llm else llm_module.set_llm_disabled(True)
     try:
         email = _build_email(item)
         text = f"{email.subject} {email.body}"
@@ -69,7 +74,8 @@ def evaluate_one(item: dict) -> dict:
         risk_out = RiskAgent().analyze(email, semantic_result=sem, detection_result=det)
         risk = risk_out["risk"]
     finally:
-        llm_module.reset_llm_disabled(token)
+        if token is not None:
+            llm_module.reset_llm_disabled(token)
 
     hits = _pattern_hits(text)
     return {
@@ -91,6 +97,9 @@ def evaluate_one(item: dict) -> dict:
             "content_flags": list(det.content_flags),
         },
         "rule_score": risk.rule_score,
+        "llm_score": risk.llm_score,
+        "llm_participated": risk.llm_participated,
+        "fallback_reason": risk.fallback_reason,
         "final_score": risk.risk_score,
         "risk_level": risk.risk_level,
         "predicted": bool(risk_out["is_phishing"]),
@@ -100,16 +109,19 @@ def evaluate_one(item: dict) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="离线纯规则批量评测 + 特征导出")
+    parser = argparse.ArgumentParser(description="批量评测 + 特征导出（默认纯规则，--use-llm 走在线双轨路径）")
     parser.add_argument("--limit", type=int, default=0, help="只评测前 N 条（0=全量）")
     parser.add_argument("--workers", type=int, default=8, help="并发线程数")
+    parser.add_argument("--dataset", default=DATASET_PATH, help="数据集 jsonl 路径")
     parser.add_argument("--dump", default=DUMP_PATH, help="特征导出路径")
+    parser.add_argument("--use-llm", action="store_true",
+                        help="在线模式：放行 LLM（双轨融合），默认纯规则路径")
     args = parser.parse_args()
 
     db.init_db()
 
     items = []
-    with open(DATASET_PATH, "r", encoding="utf-8") as f:
+    with open(args.dataset, "r", encoding="utf-8") as f:
         for idx, line in enumerate(f):
             line = line.strip()
             if not line:
@@ -126,12 +138,19 @@ def main():
     dump_f = open(args.dump, "w", encoding="utf-8")
     try:
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
-            for i, res in enumerate(pool.map(evaluate_one, items), 1):
+            futures = [pool.submit(evaluate_one, item, args.use_llm) for item in items]
+            for i, fut in enumerate(futures, 1):
+                res = fut.result()
                 results.append(res)
                 dump_f.write(json.dumps(res, ensure_ascii=False) + "\n")
                 dump_f.flush()
                 if i % 25 == 0 or i == len(items):
-                    print(f"进度 {i}/{len(items)}，已耗时 {time.time() - start:.0f}s", flush=True)
+                    llm_yes = sum(1 for r in results if r.get("llm_participated"))
+                    print(
+                        f"进度 {i}/{len(items)}，已耗时 {time.time() - start:.0f}s"
+                        + (f"，LLM 参与 {llm_yes}/{i}" if args.use_llm else ""),
+                        flush=True,
+                    )
     finally:
         dump_f.close()
 
@@ -168,6 +187,8 @@ def main():
         "precision": round(precision, 4), "recall": round(recall, 4),
         "f1": round(f1, 4),
         "accuracy": round((tp + tn) / len(results), 4) if results else 0.0,
+        "use_llm": args.use_llm,
+        "llm_participated": sum(1 for r in results if r.get("llm_participated")),
         "elapsed_sec": round(time.time() - start, 1),
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
